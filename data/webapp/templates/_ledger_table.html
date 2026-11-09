@@ -1,0 +1,37 @@
+{% set L = v.ledger %}
+{% macro editor(r) %}
+<details class="lded">
+  <summary>Edit</summary>
+  <form class="lded-form" hx-post="/money/txn" hx-disabled-elt="find button">
+    <input type="hidden" name="id" value="{{ r.id }}">
+    {% for k, val in L.back.items() %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
+    <label>Category <input name="category" maxlength="40" list="ledger-cats" value="{{ r.cat_raw }}" placeholder="Uncategorized"></label>
+    <label>Type <select name="txn_type">{% for k, lbl in L.types %}<option value="{{ k }}" {% if k == r.type_key %}selected{% endif %}>{{ lbl }}</option>{% endfor %}{% if r.type_key not in L.types|map(attribute=0)|list %}<option value="" selected>{{ r.type }}</option>{% endif %}</select></label>
+    <label class="chk"><input type="checkbox" name="similar" value="1"> Do the same for every line like this one, now and later</label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+</details>
+{% endmacro %}
+{# "How the tiles add up" sits in the side panel with the tiles (_fpart.html) #}
+<nav class="fchips wrap lchips" aria-label="Kind of line">{% for label, n, total, href, on in L.chips %}<a href="{{ href }}" {% if on %}class="on" aria-current="true"{% endif %}>{{ label }} <span class="muted">{{ n }}{% if total %} · {{ total }}{% endif %}</span></a>{% endfor %}</nav>
+<section class="card rblock">
+  <h2>Transactions <span class="muted">{{ L.n }}</span></h2>
+  <p class="muted small">Negative = money out. Open a description to see the line in full; Edit changes only the category and type. A line you edit stays as you set it.</p>
+  {% if L.rows %}
+  <datalist id="ledger-cats">{% for c in L.cats %}<option value="{{ c }}">{% endfor %}</datalist>
+  <ul class="rlist fl-phone">{% for r in L.rows %}
+    <li class="lrow lt-{{ r.type_key }}"><a href="{{ link('transactions:' ~ r.id) }}" hx-get="/money/txn/{{ r.id }}?{{ L.qs }}" hx-target="#txn-body" hx-swap="innerHTML">
+      <span class="rl-main"><span class="rl-t">{{ r.description }}</span><span class="rl-m">{{ r.date }} · {{ r.account }}{% if r.member %} · {{ r.member }}{% endif %} · {{ r.cat_raw or 'Uncategorized' }} · {{ r.type }}{% if r.pair == 'matched' %} · between your accounts{% elif r.pair == 'open' %} · no other side loaded{% endif %}</span></span>
+      <span class="rl-r"><b>{{ r.amount_text }}</b>{% if r.manual %}<span class="chip-s t-n" title="Set by hand; rules leave it alone">edited</span>{% endif %}</span></a>
+      {{ editor(r) }}</li>
+  {% endfor %}</ul>
+  <div class="tablewrap fl-wide"><table class="ledger{{ ' has-member' if L.members }}">
+    <thead><tr><th class="c-date">Date</th><th class="c-acct">Account</th><th class="num c-amt">Amount</th><th class="c-cat">Category</th><th class="c-desc">Description</th>{% if L.members %}<th class="c-mem">Card member</th>{% endif %}<th class="c-type">Type</th><th class="c-edit"><span class="vh">Edit</span></th></tr></thead>
+    <tbody>{% for r in L.rows %}<tr class="lt-{{ r.type_key }}">
+      <td class="c-date">{{ r.date }}</td><td class="c-acct">{{ r.account }}</td><td class="num c-amt">{{ r.amount_text }}</td><td class="c-cat">{{ r.cat_raw or 'Uncategorized' }}</td>
+      <td class="c-desc"><a href="{{ link('transactions:' ~ r.id) }}" hx-get="/money/txn/{{ r.id }}?{{ L.qs }}" hx-target="#txn-body" hx-swap="innerHTML">{{ r.description }}</a>{% if r.manual %} <span class="chip-s t-n" title="Set by hand; rules leave it alone">edited</span>{% endif %}</td>
+      {% if L.members %}<td class="c-mem">{{ r.member }}</td>{% endif %}<td class="c-type">{{ r.type }}{% if r.pair == 'matched' %} <span class="chip-s t-ok" title="The other side is in another of your accounts">matched</span>{% elif r.pair == 'open' %} <span class="chip-s t-need" title="No line for the other side in these accounts yet">no other side</span>{% endif %}</td>
+      <td class="lded-cell c-edit">{{ editor(r) }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted">{{ L.empty }}</p>{% endif %}
+</section>

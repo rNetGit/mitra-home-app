@@ -1,0 +1,10 @@
+{
+  "country": "IN",
+  "title": "National holidays of India (festival dates come from your traditions)",
+  "observed": "",
+  "holidays": [
+    {"name": "Republic Day", "date": "01-26"},
+    {"name": "Independence Day", "date": "08-15"},
+    {"name": "Gandhi Jayanti", "date": "10-02"}
+  ]
+}

@@ -1,0 +1,49 @@
+<!doctype html>
+{# The Mitra Wall's frame (webapp/routes_wall.py): the rail (landscape) / bottom bar (portrait) and the page. #}
+{% from "_wall_ui.html" import icon with context %}
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="csrf-token" content="{{ csrf }}">
+  <meta name="theme-color" content="#FBFAF7">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/static/icon-180.png">
+  <link rel="stylesheet" href="/static/wall.css?v={{ version }}">
+  {% if season %}<link rel="stylesheet" href="/wall/season.css?v={{ version }}">{% endif %}
+  <script src="/static/wall.js?v={{ version }}" defer></script>
+  <title>{% block title %}{{ family }}{% endblock %}</title>
+</head>
+<body{{ ' data-preview="1"'|safe if preview }} class="wall theme-{{ screen.theme if screen else 'paper' }}{{ ' has-photo' if theme_photo }}{{ ' seasonal season-' ~ season.key if season }} {% block bodyclass %}{% endblock %}" data-idle="{% block idle %}{{ idle }}{% endblock %}" data-refresh="{% block refresh %}{{ refresh }}{% endblock %}"
+  data-night-from="{{ screen.night_from if screen else '22:00' }}" data-night-to="{{ screen.night_to if screen else '06:00' }}"
+  data-rotate="{{ screen.rotate_seconds if screen else 0 }}"
+  data-made="{{ now.strftime('%Y-%m-%dT%H:%M:%S') }}"{% block bodydata %}{% endblock %}>
+{% block page %}
+{% if theme_photo %}<img class="themebg" src="{{ theme_photo }}" alt="" aria-hidden="true">{% endif %}
+<div class="shell">
+  <nav class="wrail" aria-label="Wall">
+    <a class="mark" href="/wall" aria-label="{{ family }}, Today"><img src="/static/icon.svg" alt="" width="52" height="52"></a>
+    {% for key, label, href, ic in nav %}
+    <a class="tab{{ ' on' if active == key }}" href="{{ href }}"{% if active == key %} aria-current="page"{% endif %}>
+      {{ icon(ic) }}<span>{{ label }}</span>{% if key == 'money' and unlock_left %}<span class="left">open</span>{% endif %}</a>
+    {% endfor %}
+    <span class="grow"></span>
+    {% for key, label, href, ic in quick or [] %}
+    <a class="tab quick" href="{{ href }}">{{ icon(ic) }}<span>{{ label }}</span></a>
+    {% endfor %}
+  </nav>
+  <main class="wmain">
+    {% if season %}<span class="schip">{{ season.name }}</span>{% endif %}
+    {% block main %}{% endblock %}
+    <p class="alert" id="wmsg" role="status"></p>
+  </main>
+  <dialog id="wpop" class="wpop" aria-label="Details">
+    <form method="dialog" class="wpx"><button class="x" value="close" aria-label="Close">{{ icon('x') }}</button></form>
+    <div class="wpop-body"></div></dialog>
+</div>
+{% endblock %}
+<p class="woff" id="woff" role="status"></p>
+</body>
+</html>

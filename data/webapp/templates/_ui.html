@@ -1,0 +1,85 @@
+{# Shared pieces for Today, Family and This month: person chips, a row with avatar and urgency pill. #}
+{% macro chips(cs, base) %}
+<nav class="pchips" aria-label="Show one person">
+  {% for c in cs %}
+  <a href="{{ base }}{% if c.name %}who={{ c.name|urlencode }}{% endif %}" class="pchip{{ ' on' if c.on }}"{% if c.on %} aria-current="true"{% endif %}>
+    {% if c.av[0] %}<span class="av sm {{ c.av[1] }}" aria-hidden="true">{{ c.av[0] }}</span>{% endif %}{{ c.label }}</a>
+  {% endfor %}
+</nav>
+{% endmacro %}
+
+{# A row; with `act` it gets Done / Paid (or Back up) and, with `menu`, the ⋯ menu: details, Open record, snooze, hide. #}
+{# Family's chip row (app.FAMILY_TABS): Everyone, People, Home, Cars, Papers & IDs, Wallet; `on` = the key shown. #}
+{% macro ftabs(tabs, on) %}
+<nav class="pchips mtabs" aria-label="Family">
+  {% for k, label, href in tabs %}<a href="{{ href }}" class="pchip{{ ' on' if k == on }}"{% if k == on %} aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}
+</nav>
+{% endmacro %}
+
+{% macro row(r, money=True, act='', who='', menu=False) %}
+{% set can = act and r.key and r.src in ('item', 'seasonal') %}
+{% set bak = act and r.key and r.src == 'backup' %}
+<div class="trow{{ ' act' if can or bak }}">
+  <span class="av {{ r.av[1] }}" aria-hidden="true">{{ r.av[0] or '' }}</span>
+  <div class="tmain">
+    <span class="ttl">{{ r.title }}</span>
+    <small class="muted">{% if can or bak %}<b class="pt {{ r.tone }}">{{ r.pill }}</b> · {% endif %}{% if r.time %}{{ r.time }} · {% endif %}{{ r.kind }}{% for k in r.also %} · {{ k }}{% endfor %}{% if money and r.amount %} · {{ r.amount|money2 }}{% endif %}{% if r.person and r.person != 'House' %} · {{ r.person }}{% endif %}</small>
+  </div>
+  {% if can %}
+  <button type="button" class="btn alt sm" hx-post="{{ act }}" hx-swap="none" hx-vals='{{ {"op": "done", "key": r.key, "who": who}|tojson }}'
+    aria-label="{{ 'Paid' if r.kind == 'Bill' else 'Done' }}: {{ r.title }}">{{ 'Paid' if r.kind == 'Bill' else 'Done' }}</button>
+  {% elif bak %}
+  <button type="button" class="btn alt sm" hx-post="{{ act }}" hx-swap="none" hx-vals='{{ {"op": "backup", "who": who}|tojson }}'>Back up</button>
+  {% else %}<span class="pill {{ r.tone }}">{{ r.pill }}</span>{% endif %}
+  {% if menu and act and r.key %}
+  <details class="more"><summary aria-label="Details, snooze, hide: {{ r.title }}"><i class="ic ic-more" aria-hidden="true"></i></summary>
+    <div class="menu">
+      <p><b>{{ r.full or r.title }}</b><br><small class="muted">{{ r.kind }} · {{ r.date.strftime('%a %b %d, %Y') }}{% if r.amount %} · {{ r.amount|money2 }}{% endif %}</small></p>
+      {% if r.detail %}<p>{{ r.detail }}</p>{% endif %}
+      {% if r.record %}<p><a href="{{ r.record }}">Open record</a></p>{% endif %}
+      {% for d in ((1, 7) if r.src in ('backup', 'task') else (1, 7, 30)) %}
+      <button type="button" class="btn alt" hx-post="{{ act }}" hx-swap="none"
+        hx-vals='{{ {"op": "snooze", "key": r.key, "days": d|string, "who": who}|tojson }}'>Snooze {{ d }} day{{ 's' if d > 1 }}</button>
+      {% endfor %}
+      {% if r.src not in ('backup', 'task') %}
+      <button type="button" class="btn alt" hx-post="{{ act }}" hx-swap="none" hx-vals='{{ {"op": "hide", "key": r.key, "who": who}|tojson }}'>Hide</button>
+      {% endif %}
+    </div>
+  </details>
+  {% endif %}
+</div>
+{% endmacro %}
+
+{% macro block(rows, empty, money=True, act='', who='', menu=False) %}
+<div class="card rows">
+  {% for r in rows %}{{ row(r, money, act, who, menu) }}{% else %}<p class="muted quiet">{{ empty }}</p>{% endfor %}
+</div>
+{% endmacro %}
+
+{# Story card: gradient slides, tap or swipe left / right (app.js). cls: '' compact, 'tall' 9:16, 'deck' = side by side on a PC. #}
+{% macro story(label, cls='') %}
+<div class="story {{ cls }}" data-story tabindex="0" aria-roledescription="carousel" aria-label="{{ label }}">
+  {{ caller() }}
+  <p class="shint" aria-hidden="true">Tap or swipe</p>
+</div>
+{% endmacro %}
+
+{% macro slide(g, label, kick='') %}
+<article class="slide {{ g }}" aria-label="{{ label }}">{% if kick %}<p class="kick">{{ kick }}</p>{% endif %}{{ caller() }}</article>
+{% endmacro %}
+
+{% macro tile(label, value, sub='', cls='') %}
+<div class="gtile {{ cls }}"><small>{{ label }}</small><b>{{ value }}</b>{% if sub %}<span>{{ sub }}</span>{% endif %}</div>
+{% endmacro %}
+
+{# Spending donut (segments from trends.month_summary categories), centre text from the caller. #}
+{% macro donut(cats, label='Spending by category', w=14) %}
+<svg viewBox="0 0 120 120" role="img" aria-label="{{ label }}">
+  <circle class="ring" cx="60" cy="60" r="46" fill="none" stroke-width="{{ w }}"/>
+  {% set ns = namespace(off=0) %}
+  {% for c in cats %}{% if c.pct > 0 %}
+  <circle class="dseg s{{ loop.index0 % 7 }}" cx="60" cy="60" r="46" fill="none" stroke-width="{{ w }}" pathLength="100"
+          stroke-dasharray="{{ [c.pct - 0.6, 0.1]|max }} {{ 100 - [c.pct - 0.6, 0.1]|max }}" stroke-dashoffset="{{ -ns.off }}" transform="rotate(-90 60 60)"><title>{{ c.category|capitalize }} {{ c.amount|money }}</title></circle>
+  {% set ns.off = ns.off + c.pct %}{% endif %}{% endfor %}
+</svg>
+{% endmacro %}

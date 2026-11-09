@@ -1,0 +1,10 @@
+pypdf>=6.19,<7          # PDF text for the Python inbox pipeline (data/doc_text.py); without it PDFs go to the review queue
+markdown>=3.11,<4       # briefings in the app and phone-sized PDF briefs for Google Drive (data/sync_drive.py)
+cryptography>=46,<51    # encrypted backups, release signatures, the phones' HTTPS certificate
+fastapi>=0.143,<0.163   # the app (data/web_app.py); minor releases change behaviour, so one at a time
+uvicorn>=0.54,<0.55     # serves the app
+jinja2>=3.1.6,<3.2      # the app's pages (autoescaped)
+pillow>=11.1,<14        # iPhone HEIC photos turned into JPEG for the AI (data/heic.py); without it they wait
+pillow-heif>=1.1,<2     #   for a person, as before
+# Bounded on purpose (audit A4): a new major or minor release of these reaches families only after the maintainers
+# raise the bound and the whole suite passes on it. launch.py reinstalls when this file changes.

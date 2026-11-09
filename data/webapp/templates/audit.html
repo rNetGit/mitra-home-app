@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Data check · {{ brand }}{% endblock %}
+{% block main %}
+{% set x = a.x %}
+{% set lv = {'money': ('bad', 'Numbers off'), 'decide': ('warn', 'Decide'), 'note': ('n', 'Note')} %}
+<header class="head fhead"><div><a class="fback" href="/settings?group=data">Data</a><h1>Data check</h1>
+  <p class="sub">{% if x %}Last run {{ x.run.started_at[:10]|sd }} at {{ x.run.started_at[11:16] }}{% if x.run.trigger == 'now' %} (on demand){% endif %} &middot; {% endif %}Runs {{ a.when }}</p></div></header>
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+<div class="optrow audit-act">
+  <button type="button" class="btn" hx-post="/settings/audit" hx-disabled-elt="this" hx-indicator="#audit-wait">Check now</button>
+  <span id="audit-wait" class="setting-up muted" role="status">Checking the records...</span>
+</div>
+
+{% if not x %}
+<section class="card"><h2>Not run yet</h2>
+  <p class="muted">The data check looks through the records for charges entered twice, bills still open long after their
+    due date, phone bills that do not add up, filed papers missing on disk and more. It fixes only what cannot be wrong
+    (and lists those fixes here with Undo); everything else waits for you in the Inbox. No AI is used and nothing leaves
+    this PC. Check now runs it for the first time.</p>
+</section>
+{% else %}
+<div class="kpis">
+  <div class="kpi"><span>Data score</span><b>{{ x.run.score if x.run.score is not none else '-' }}%</b>
+    {% if x.history|length > 1 and x.history[-2].score is not none and x.run.score is not none %}{% set d = x.run.score - x.history[-2].score %}
+    <i>{% if d > 0 %}up {{ d }} from last run{% elif d < 0 %}down {{ -d }} from last run{% else %}same as last run{% endif %}</i>{% endif %}</div>
+  <div class="kpi"><span>Need you</span><b {% if x.counts.money or x.counts.decide %}class="bad"{% endif %}>{{ x.counts.money + x.counts.decide }}</b><i>numbers off or to decide</i></div>
+  <div class="kpi"><span>Notes</span><b>{{ x.counts.note }}</b><i>to know or do</i></div>
+  <div class="kpi"><span>Checks clear</span><b>{{ x.run.checks_ok }} / {{ x.run.checks_total }}</b>{% if x.run.errors %}<i>some could not run</i>{% endif %}</div>
+</div>
+
+{% if a.explain and a.explain.summary %}
+<section class="card"><h2>What this means</h2>
+  <p>{{ a.explain.summary }}</p>
+  <p class="muted small">Written by your AI helper from the findings below ({{ a.explain.at }}); a records check, not
+    financial advice.</p>
+</section>
+{% elif x.findings and a.ai_ok %}
+<p class="optrow"><button type="button" class="btn alt" hx-post="/settings/audit/explain" hx-disabled-elt="this" hx-indicator="#ex-wait">Explain with AI</button>
+  <span id="ex-wait" class="setting-up muted" role="status">Asking your AI helper...</span></p>
+{% endif %}
+<section class="card fneeds"><h2>{{ 'Needs a look' if x.findings else 'Nothing found' }}</h2>
+{% if x.findings %}
+  <ul class="rlist">{% for f in x.findings %}{% set t = lv.get(f.level, ('n', f.level)) %}
+    <li>{% if f.ref_table and f.ref_id %}<a href="/records?ref={{ f.ref_table }}:{{ f.ref_id }}">{% else %}<div>{% endif %}
+      <span class="chip-s t-{{ t[0] }}">{{ t[1] }}</span>
+      <span class="rl-main"><span class="rl-t">{{ f.summary }}{% if f.new %} <span class="chip-s t-ok">new</span>{% endif %}</span>
+        <span class="rl-m">{{ f.label }}{% if f.detail %} &middot; {{ f.detail }}{% endif %}</span>
+        {% if f.why %}<span class="rl-m"><i>{{ f.why }}</i></span>{% endif %}</span>
+      {% if f.asked %}<span class="rl-r"><small class="chip-s t-{{ 'warn' if f.asked.status in ('open', 'snoozed') else 'ok' if f.asked.status == 'done' else 'n' }}">{{
+        {'open': 'In the Inbox', 'snoozed': 'Later', 'done': 'Fixed', 'dismissed': 'Left as it is', 'expired': 'Gone'}.get(f.asked.status, f.asked.status) }}</small></span>{% endif %}
+      {% if f.ref_table and f.ref_id %}<span class="rl-go" aria-hidden="true">›</span></a>{% else %}</div>{% endif %}</li>
+  {% endfor %}</ul>
+  {% set waiting = x.findings|selectattr('asked')|map(attribute='asked')|selectattr('status', 'equalto', 'open')|list %}
+  {% if waiting %}<p><a class="btn alt" href="/add?view=money">Decide {{ waiting|length }} in the Inbox</a></p>{% endif %}
+  <p class="muted small">Open a row to see the record. Charges entered twice, bills listed twice and bills still open are
+    also in the Inbox, where you accept the fix or leave it as it is.</p>
+{% else %}
+  <p class="muted">Every check came back clear.</p>
+{% endif %}
+</section>
+
+{% if x.fixes %}
+<details class="card sfold" open id="audit-fixes"><summary><h2>Fixes</h2><span class="muted">The last 60 days; each one can be undone</span></summary>
+  <ul class="rlist">{% for fx in x.fixes %}
+    <li><div><span class="chip-s t-{{ 'n' if fx.undone_at else 'ok' }}">{{ 'Undone' if fx.undone_at else 'Fixed' }}</span>
+      <span class="rl-main"><span class="rl-t">{{ fx.summary }}</span>
+        <span class="rl-m">{{ fx.done_at[:10]|sd }} &middot; {{ 'by itself (safe fix)' if fx.done_by == 'auto' else 'by ' ~ fx.done_by }}{% if fx.undone_at %} &middot; undone {{ fx.undone_at[:10]|sd }}{% if fx.undone_by and fx.undone_by != '-' %} by {{ fx.undone_by }}{% endif %}{% endif %}</span></span>
+      {% if not fx.undone_at %}<span class="rl-r"><button type="button" class="btn alt sm" hx-post="/settings/audit/undo" hx-vals='{"fix": "{{ fx.id }}"}' hx-disabled-elt="this">Undo</button></span>{% endif %}</div></li>
+  {% endfor %}</ul>
+  <p class="muted small">The safe fix runs by itself before each check: spending with no category gets one when one of
+    your category rules matches it.</p>
+</details>
+{% endif %}
+
+<details class="card sfold" open><summary><h2>Every check</h2><span class="muted">{{ x.run.checks_ok }} of {{ x.checks|length }} clear</span></summary>
+  <ul class="rlist">{% for c in x.checks %}
+    <li><div><span class="dotm t-{{ 'ok' if c.state == 'ok' else lv.get(c.state, ('warn',))[0] if c.state != 'error' else 'warn' }}" aria-hidden="true"></span>
+      <span class="rl-main"><span class="rl-t">{{ c.label }}</span></span>
+      <span class="rl-r"><small class="muted">{% if c.state == 'ok' %}clear{% elif c.state == 'error' %}could not run{% else %}{{ c.n }} found{% endif %}</small></span></div></li>
+  {% endfor %}</ul>
+  {% if x.history|length > 1 %}<p class="muted small">Score over the last {{ x.history|length }} runs:
+    {% for h in x.history %}{{ h.score if h.score is not none else '-' }}%{{ ' · ' if not loop.last }}{% endfor %}</p>{% endif %}
+  {% if 'auto_fix' in (x.run.errors or '') %}<p class="alert small">The safe fixes could not run this time; nothing was changed.</p>{% endif %}
+  <p class="muted small">A check only reads: it uses no AI and sends nothing anywhere. Only the safe fixes above and the
+    fixes you accept in the Inbox change a record, and each one can be undone here.</p>
+</details>
+{% endif %}
+{% endblock %}

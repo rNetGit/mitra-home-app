@@ -1,0 +1,48 @@
+{
+  "key": "wildfire",
+  "title": "Add-on: wildfire",
+  "kind": "addon",
+  "description": "Fire-prone areas. Season varies by region.",
+  "tasks": [
+    {
+      "name": "Defensible space: clear brush, leaves and debris near the house",
+      "category": "Home",
+      "start": "04-01",
+      "end": "05-31",
+      "lead_days": 21,
+      "notes": "Follow your local fire department's zone guidance."
+    },
+    {
+      "name": "Check roof, gutters and vents for embers",
+      "category": "Home",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Go-bag, documents and evacuation route plan",
+      "category": "Safety",
+      "start": "05-01",
+      "end": "06-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Review wildfire / loss-of-use coverage",
+      "category": "Safety",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 21,
+      "notes": ""
+    },
+    {
+      "name": "Air quality prep: purifier filters and N95 masks",
+      "category": "Health",
+      "start": "06-01",
+      "end": "07-15",
+      "lead_days": 14,
+      "notes": ""
+    }
+  ]
+}

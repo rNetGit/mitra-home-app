@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% block title %}Calendar · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Calendar</h1><p class="sub">Every due date, appointment and birthday from your records.</p></div><a class="btn alt" href="/calendar/manage">Manage calendar</a></header>
+<section id="calendar">{{ body|safe }}</section>
+<section id="gcal" hx-get="/calendar/google?days={{ days[1] }}" hx-trigger="load" hx-swap="innerHTML"></section>
+{% endblock %}

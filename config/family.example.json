@@ -1,0 +1,14 @@
+{
+  "family_name": "Example Family",
+  "members": [
+    {"name": "Parent One", "role": "adult", "birth_month_day": "01-15"},
+    {"name": "Child One", "role": "child", "birth_month_day": "06-30"}
+  ],
+  "region": {"place": "", "state": "", "county": "", "zip": ""},
+  "cold_climate": true,
+  "currency": "USD",
+  "agent_email": "family.agent@example.com",
+  "drive_path": "",
+  "backup_dest": "",
+  "packs": {"festivals": false, "contracts": false, "amazon": false, "shopping": false}
+}

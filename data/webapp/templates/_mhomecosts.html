@@ -1,0 +1,48 @@
+{# Money > Home costs (data/home_costs.py): what the house costs to run over 12 months. Needs `hc`. SVG, no inline styles (CSP). #}
+{% if not hc %}
+<div class="card"><h2>No statements yet</h2><p class="muted">Drop a bank or card statement in the <a href="/add">Inbox</a> and home costs fill in.</p></div>
+{% else %}
+<section class="mst" id="hcosts" aria-label="Home costs, 12 months to {{ hc.long }}">
+  <header class="mst-head">
+    {% if hc.older %}<a class="btn alt" href="{{ furl('homecosts', ym=hc.older) }}" aria-label="Earlier">‹</a>{% endif %}
+    <form class="mpick" method="get" action="/money" hx-get="/money" hx-trigger="change" hx-target="main" hx-select="main" hx-swap="outerHTML"><input type="hidden" name="part" value="homecosts"><label for="hym" class="vh">Last month shown</label>
+      <select id="hym" name="ym">{% for x, xl in hc.months %}<option value="{{ x }}"{% if x == hc.month %} selected{% endif %}>{{ xl }}</option>{% endfor %}</select>
+      <noscript><button class="btn alt" type="submit">Show</button></noscript></form>
+    {% if hc.newer %}<a class="btn alt" href="{{ furl('homecosts', ym=hc.newer) }}" aria-label="Later">›</a>{% endif %}
+    <button type="button" class="btn alt mst-print" data-print-list>Print</button>
+  </header>
+  <div class="print-list">
+  <div class="mo-top">
+    <div class="card"><span class="muted">{{ hc.label }}</span><b>{{ hc.this|money }}</b>
+      <small class="muted">{% if hc.vs_avg is not none %}{{ '%+d'|format(hc.vs_avg) }}% against the average{% else %}No lines this month{% endif %}</small></div>
+    <div class="card"><span class="muted">Average a month</span><b>{{ hc.avg|money }}</b><small class="muted">over {{ hc.months_counted }} month{{ 's' if hc.months_counted != 1 }} with statements</small></div>
+    <div class="card"><span class="muted">Last 12 months</span><b>{{ hc.year|money }}</b><small class="muted">{% if hc.share is not none %}{{ hc.share }}% of income{% else %}no income filed{% endif %}</small></div>
+  </div>
+  <div class="card">
+    <h2 class="row-h">Month by month</h2>
+    <svg class="hc-chart" viewBox="0 0 300 150" role="img" aria-label="Home costs per month, last 12 months">
+      {% for s in hc.series %}{% set x = 8 + loop.index0 * 24 %}{% set h = s.h * 1.12 %}
+      <g class="{{ 'on' if s.month == hc.month }}">
+        {% if s.rows %}<rect class="bar{{ ' now' if s.month == hc.month }}" x="{{ x }}" y="{{ 128 - h }}" width="16" height="{{ [h, 0.5]|max }}" rx="3"><title>{{ s.label }} {{ s.total|money }}</title></rect>
+        {% else %}<rect class="off" x="{{ x }}" y="126" width="16" height="2" rx="1"><title>{{ s.label }}: no statements</title></rect>{% endif %}
+        <text x="{{ x + 8 }}" y="144" text-anchor="middle">{{ s.label }}</text>
+      </g>{% endfor %}
+    </svg>
+  </div>
+  <div class="card tablewrap">
+    <h2 class="row-h">Where it goes</h2>
+    {% if hc.groups %}
+    <table class="mst-t nocards hc-t">
+      <thead><tr><th>Cost</th><th class="num">{{ hc.label[:3] }}</th><th class="num">Avg / mo</th><th class="num">12 months</th><th class="num">Share</th></tr></thead>
+      <tbody>{% for g in hc.groups %}
+        <tr class="mst-grp"><th>{{ g.name }}</th><td class="num">{{ g.now|money }}</td><td class="num">{{ g.avg|money }}</td><td class="num">{{ g.year|money }}</td><td class="num"></td></tr>
+        {% for r in g.rows if not g.single %}<tr class="mst-cat"><td>{{ r.category|capitalize }}</td><td class="num">{{ r.now|money }}</td><td class="num">{{ r.avg|money }}</td><td class="num">{{ r.year|money }}</td><td class="num">{{ r.pct }}%</td></tr>{% endfor %}
+      {% endfor %}</tbody>
+      <tfoot><tr class="mst-tot"><th>Total</th><td class="num">{{ hc.this|money }}</td><td class="num">{{ hc.avg|money }}</td><td class="num">{{ hc.year|money }}</td><td class="num">100%</td></tr></tfoot>
+    </table>
+    <p class="muted small">Housing (rent or mortgage, repairs, upkeep), Utilities, and insurance whose category names the home. Grouped by category name as on the Statement; a category named another way (a property tax under "tax", say) is not counted here. <a href="{{ furl('statement', ym=hc.month) }}">Open the Statement</a>.</p>
+    {% else %}<p class="muted">No housing, utility or home insurance spending found in these months.</p>{% endif %}
+  </div>
+  </div>
+</section>
+{% endif %}

@@ -1,0 +1,72 @@
+{# Money > Statement: one month as a home income statement (data/month_statement.py): income by source, expenses by kind
+   with last month and last year beside, tax / saved / left, then the variance table. Needs `st`. No inline styles (CSP). #}
+{% macro cell(v) %}{% if v is none %}<span class="muted">-</span>{% else %}{{ v|money }}{% endif %}{% endmacro %}
+{% macro delta(now, before, good_up=false) %}{% if before is none or before == 0 %}<span class="muted">-</span>{% else %}{% set d = now - before %}{% if d|abs < 0.5 %}{{ 0|money }}{% else %}<span class="{{ ('down' if good_up else 'up') if d > 0 else ('up' if good_up else 'down') if d < 0 }}">{{ '▲' if d > 0 else '▼' if d < 0 else '' }}{{ d|abs|money }}</span>{% endif %}{% endif %}{% endmacro %}
+{% if not st %}
+<div class="card"><h2>No statements yet</h2><p class="muted">Drop a bank or card statement in the <a href="/add">Inbox</a> and the statement fills in.</p></div>
+{% else %}
+<section class="mst" id="mst" aria-label="Month statement, {{ st.long }}">
+  <header class="mst-head">
+    {% if st.older %}<a class="btn alt" href="{{ furl('statement', ym=st.older) }}" aria-label="Older month">‹</a>{% endif %}
+    <form class="mpick" method="get" action="/money" hx-get="/money" hx-trigger="change" hx-target="main" hx-select="main" hx-swap="outerHTML"><input type="hidden" name="part" value="statement"><label for="sym" class="vh">Month</label>
+      <select id="sym" name="ym">{% for x, xl in st.months %}<option value="{{ x }}"{% if x == st.month %} selected{% endif %}>{{ xl }}</option>{% endfor %}</select>
+      <noscript><button class="btn alt" type="submit">Show</button></noscript></form>
+    {% if st.newer %}<a class="btn alt" href="{{ furl('statement', ym=st.newer) }}" aria-label="Newer month">›</a>{% endif %}
+    {% if st.partial %}<span class="mchip">so far</span>{% endif %}
+    <button type="button" class="btn alt mst-print" data-print-list>Print</button>
+  </header>
+
+  {% set ck = st.check %}
+  <section class="card mck" aria-label="Month check">
+    <h2 class="row-h">Month check <span class="{{ 'ready' if ck.ready else 'notready' }}">{{ 'Ready to count as final' if ck.ready else ck.todo ~ ' to do' }}</span></h2>
+    <ul>{% for i in ck.lines %}<li class="{{ i.status }}"><span class="ck" aria-hidden="true">{{ '✓' if i.status == 'ok' else '!' }}</span>
+      <span>{{ i.label }}{% if i.detail %}<small class="muted">{{ i.detail }}{% if i.url %} <a href="{{ i.url }}">Open</a>{% endif %}</small>{% endif %}</span></li>{% endfor %}</ul>
+  </section>
+
+  <div class="print-list">
+  <div class="card tablewrap">
+    <h2 class="row-h">{{ st.long }}</h2>
+    <table class="mst-t nocards st-main">
+      <thead><tr><th>Home income statement</th><th class="num">{{ st.names.now }}</th><th class="num">{{ st.names.prev }}</th><th class="num">{{ st.names.ly }}</th><th class="num">Change</th></tr></thead>
+      <tbody>
+        <tr class="mst-sec"><th colspan="5">Income</th></tr>
+        {% for l in st.income.lines %}<tr><td>{{ l.payee }}</td><td class="num">{{ l.amount|money }}</td><td class="num"></td><td class="num"></td><td class="num"></td></tr>
+        {% else %}<tr><td class="muted">No income filed for {{ st.names.now }} yet.</td><td></td><td></td><td></td><td></td></tr>{% endfor %}
+        <tr class="mst-tot"><th>Total income</th><td class="num">{{ st.income.now|money }}</td><td class="num">{{ cell(st.income.prev) }}</td><td class="num">{{ cell(st.income.ly) }}</td><td class="num">{{ delta(st.income.now, st.income.prev, true) }}</td></tr>
+
+        <tr class="mst-sec"><th colspan="5">Expenses</th></tr>
+        {% for g in st.groups %}
+        <tr class="mst-grp"><th>{{ g.name }}</th><td class="num">{{ g.now|money }}</td><td class="num">{{ cell(g.prev if st.have.prev else none) }}</td><td class="num">{{ cell(g.ly if st.have.ly else none) }}</td><td class="num">{{ delta(g.now, g.prev if st.have.prev else none) }}</td></tr>
+        {% for r in g.rows if (r.now or r.prev) and not g.single %}<tr class="mst-cat"><td>{{ r.category|capitalize }}</td><td class="num">{{ r.now|money }}</td><td class="num">{{ cell(r.prev) }}</td><td class="num">{{ cell(r.ly) }}</td><td class="num">{{ delta(r.now, r.prev) }}</td></tr>{% endfor %}
+        {% else %}<tr><td class="muted">No spending in {{ st.names.now }}.</td><td></td><td></td><td></td><td></td></tr>{% endfor %}
+        {% if st.unitemised %}<tr class="mst-cat"><td>Not itemised <small class="muted">card payments with no card statement</small></td><td class="num">{{ st.unitemised|money }}</td><td></td><td></td><td></td></tr>{% endif %}
+        <tr class="mst-tot"><th>Total expenses</th><td class="num">{{ st.expenses.now|money }}</td><td class="num">{{ cell(st.expenses.prev) }}</td><td class="num">{{ cell(st.expenses.ly) }}</td><td class="num">{{ delta(st.expenses.now, st.expenses.prev) }}</td></tr>
+
+        <tr class="mst-tot {{ 'neg' if st.net < 0 }}"><th>Income less expenses</th><td class="num">{{ st.net|money }}</td><td class="num">{{ cell((st.income.prev - st.expenses.prev) if st.income.prev is not none and st.expenses.prev is not none else none) }}</td><td class="num">{{ cell((st.income.ly - st.expenses.ly) if st.income.ly is not none and st.expenses.ly is not none else none) }}</td><td class="num"></td></tr>
+        {% if st.tax %}<tr><td>Tax paid</td><td class="num">{{ st.tax|money }}</td><td></td><td></td><td></td></tr>{% endif %}
+        {% if st.saved %}<tr><td>Saved or invested</td><td class="num">{{ st.saved|money }}</td><td></td><td></td><td></td></tr>{% endif %}
+        <tr class="mst-tot {{ 'neg' if st.left < 0 }}"><th>{{ 'Over by' if st.left < 0 else 'Left over' }}</th><td class="num">{{ st.left|abs|money }}</td><td></td><td></td><td></td></tr>
+      </tbody>
+    </table>
+    <p class="muted small">Spending as in the Ledger: transfers, card payments, investing and tax are not counted in expenses, a refund comes off, a card charge counts once. ▲ costs more than {{ st.names.prev }}, ▼ less. Groups are by category name. <a href="{{ furl('ledger') }}">Open the Ledger</a>.</p>
+  </div>
+
+  <div class="card tablewrap">
+    <h2 class="row-h">Budget and what moved</h2>
+    {% if st.variance %}
+    <table class="mst-t mst-v nocards">
+      <thead><tr><th>Category</th><th class="num">Budget</th><th class="num">Actual</th><th class="num">Over / under</th><th class="num">{{ st.names.prev[:3] }}</th></tr></thead>
+      <tbody>{% for r in st.variance %}
+        <tr><td>{{ r.category|capitalize }}{% if r.reason %}<br><small class="muted">{{ r.reason }}</small>{% endif %}</td>
+          <td class="num">{{ cell(r.limit) }}</td><td class="num">{{ r.now|money }}</td>
+          <td class="num">{% if r.over is none %}<span class="muted">-</span>{% else %}<span class="{{ 'up' if r.over > 0 else 'down' }}">{{ '+' if r.over > 0 else '-' }}{{ r.over|abs|money }}</span>{% endif %}</td>
+          <td class="num">{{ cell(r.prev) }}</td></tr>{% endfor %}
+      </tbody>
+      {% if st.budget_total %}<tfoot><tr><th>Budgeted</th><td class="num">{{ st.budget_total|money }}</td><td colspan="3"></td></tr></tfoot>{% endif %}
+    </table>
+    <p class="muted small">Listed: every category with a budget line, and any that moved by 25% and $50 or more against {{ st.names.prev }}. Budget lines are set under Money &gt; Keep &gt; Budget and loans.</p>
+    {% else %}<p class="muted">No budget lines yet, and nothing moved much against {{ st.names.prev }}. Add budget lines under Money &gt; Keep &gt; Budget and loans.</p>{% endif %}
+  </div>
+  </div>
+</section>
+{% endif %}

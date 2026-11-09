@@ -1,0 +1,104 @@
+{
+  "key": "uk",
+  "title": "United Kingdom",
+  "kind": "base",
+  "description": "Boiler, radiators, gutters, clock-change safety checks. Annual MOT and car tax are tracked under Vehicles.",
+  "tasks": [
+    {
+      "name": "Boiler annual service",
+      "category": "Home",
+      "start": "09-01",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": "Book before the heating season; gas-safe engineer."
+    },
+    {
+      "name": "Bleed radiators and check pressure",
+      "category": "Home",
+      "start": "10-01",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Flu jab (if eligible) and COVID booster if offered",
+      "category": "Health",
+      "start": "09-15",
+      "end": "11-30",
+      "lead_days": 21,
+      "notes": "NHS invitations arrive in autumn."
+    },
+    {
+      "name": "Clear gutters and check roof after leaf fall",
+      "category": "Home",
+      "start": "10-15",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Lag exposed pipes and know where the stopcock is",
+      "category": "Home",
+      "start": "10-15",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Check loft insulation and draught-proof",
+      "category": "Home",
+      "start": "09-01",
+      "end": "10-31",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Car winter prep: battery, antifreeze, wipers, tyres",
+      "category": "Car",
+      "start": "10-15",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Smoke + CO alarm test (clocks go back)",
+      "category": "Safety",
+      "start": "10-20",
+      "end": "10-31",
+      "lead_days": 7,
+      "notes": ""
+    },
+    {
+      "name": "Smoke + CO alarm test (clocks go forward)",
+      "category": "Safety",
+      "start": "03-20",
+      "end": "03-31",
+      "lead_days": 7,
+      "notes": ""
+    },
+    {
+      "name": "Lawn: spring feed and first cut",
+      "category": "Lawn",
+      "start": "03-15",
+      "end": "05-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Lawn: autumn feed and scarify",
+      "category": "Lawn",
+      "start": "09-15",
+      "end": "10-31",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Service garden tools and mower",
+      "category": "Lawn",
+      "start": "02-15",
+      "end": "03-31",
+      "lead_days": 14,
+      "notes": ""
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{# Money > Overview, Standard (simple) view: this month in one card, the three outlook pages (wall_money.py) in one line
+   each, Needs a look, and every other money page folded under "All money pages" (view_mode never hides a page). #}
+{% set m = o.month %}
+{% if o.as_of %}<p class="muted asof"{% if o.as_of.behind %} data-behind="{{ o.as_of.behind }}"{% endif %}>Data as of: {{ o.as_of.text }}{% if o.as_of.behind %} · <a href="/money?part=accounts">see accounts</a>{% endif %}</p>{% endif %}
+{% if m %}
+<section class="fhero g-over" aria-label="{{ m.long }}">
+  <p class="kick">{{ m.long }}{% if m.partial %} · so far{% endif %}</p>
+  <p class="gbig">{{ m.left|money }} <small>left</small></p>
+  <div class="gtiles">
+    <div class="gtile"><small>In</small><b>{{ m.income|money }}</b></div>
+    <div class="gtile"><small>Spent</small><b>{{ m.spent|money }}</b></div>
+    <div class="gtile"><small>Saved</small><b>{{ m.saved|money }}</b></div>
+    {% if m.tax %}<div class="gtile"><small>Tax</small><b>{{ m.tax|money }}</b></div>{% endif %}
+  </div>
+</section>
+{% else %}
+<div class="card"><h2>No statements yet</h2><p class="muted">Drop a bank or card statement in the <a href="/add">Inbox</a> and this page fills in.</p></div>
+{% endif %}
+{% if mo %}
+<div class="mo-sum">
+  <a class="card mo-link" href="{{ furl('spending') }}"><span class="muted">Spending</span>
+    <b>{{ mo.spending.totals.now|money if mo.spending.totals.now is not none else '—' }}</b>
+    <small class="muted">{{ mo.spending.names.now }} so far{% if mo.spending.totals.prev is not none %} · {{ mo.spending.names.prev }} {{ mo.spending.totals.prev|money }}{% endif %}</small></a>
+  <a class="card mo-link" href="{{ furl('paid') }}"><span class="muted">Bills paid</span>
+    <b>{{ mo.bills.now_total }}</b>
+    <small class="{{ 'warn' if mo.bills.wait_n else 'muted' }}">{% if mo.bills.wait_n %}{{ mo.bills.wait_n }} still to come · {{ mo.bills.wait_total }}{% else %}Everything from last month is paid again{% endif %}</small></a>
+  <a class="card mo-link" href="{{ furl('regular') }}"><span class="muted">Regular, every month</span>
+    <b>{{ mo.regular.month }}</b>
+    <small class="muted">about {{ mo.regular.year }} a year · {{ mo.regular.n }} payee{{ 's' if mo.regular.n != 1 }}</small></a>
+</div>
+{% endif %}
+{% include "_fneeds.html" %}
+<details class="card fold mo-all">
+  <summary><h2>All money pages</h2></summary>
+  <p class="muted small">Bill list, accounts, budget, the Ledger, trends, tax papers and more. The Simple / Advanced switch at the top of Settings switches to Advanced, which puts them in the chips above.</p>
+  {% for l in o.lanes %}
+  <div class="fparts-g"><h3>{{ l.group }}</h3>
+    <nav class="fchips wrap" aria-label="{{ l.group }} parts">{% for k, lbl in l.parts %}<a href="{{ furl(k) }}">{{ lbl }}</a>{% endfor %}</nav></div>
+  {% endfor %}
+</details>

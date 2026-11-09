@@ -1,0 +1,74 @@
+{
+  "permissions": {
+    "allow": [
+      "Read",
+      "Glob",
+      "Grep",
+      "Edit(archive/**)",
+      "Write(archive/**)",
+      "Write(reports/**)",
+      "Write(brief/**)",
+      "Write(inbox/**)",
+      "Edit(config/category_rules.json)",
+      "Write(config/category_rules.json)",
+      "Bash(python data/*)",
+      "Bash(python data\\*)",
+      "Bash(python scripts/verify_clean.py*)",
+      "Bash(mkdir archive*)",
+      "Bash(mkdir inbox*)",
+      "Bash(mv inbox/*)",
+      "Bash(move inbox\\*)",
+      "Bash(cp inbox/*)",
+      "Bash(copy inbox\\*)"
+    ],
+    "deny": [
+      "Write(.claude/**)",
+      "Edit(.claude/**)",
+      "Write(CLAUDE.md)",
+      "Edit(CLAUDE.md)",
+      "Write(data/**)",
+      "Edit(data/**)",
+      "Write(tasks/**)",
+      "Edit(tasks/**)",
+      "Write(scripts/**)",
+      "Edit(scripts/**)",
+      "Write(onboard.py)",
+      "Edit(onboard.py)",
+      "Write(config/secrets*)",
+      "Edit(config/secrets*)",
+      "Read(config/secrets*)",
+      "Read(.env*)",
+      "Bash(python -c*)",
+      "Bash(python3 -c*)",
+      "Bash(py -c*)",
+      "Bash(python -m*)",
+      "Bash(rm *)",
+      "Bash(del *)",
+      "Bash(erase *)",
+      "Bash(rmdir *)",
+      "Bash(Remove-Item*)",
+      "Bash(curl *)",
+      "Bash(wget *)",
+      "Bash(Invoke-WebRequest*)",
+      "Bash(powershell*)",
+      "Bash(git *)",
+      "Bash(pip *)",
+      "WebFetch",
+      "WebSearch"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit|MultiEdit|NotebookEdit|Bash|Read|Glob|Grep",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python scripts/guard_tool.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

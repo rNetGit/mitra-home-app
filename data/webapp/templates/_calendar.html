@@ -1,0 +1,98 @@
+{% import "_ui.html" as ui %}
+{%- macro go(v, r, label, cls="") -%}
+<a href="/calendar?view={{ v }}&amp;ref={{ r.isoformat() }}" hx-get="/calendar/body?view={{ v }}&amp;ref={{ r.isoformat() }}"
+   hx-target="#calendar" hx-swap="innerHTML" hx-push-url="/calendar?view={{ v }}&amp;ref={{ r.isoformat() }}"
+   {% if cls %}class="{{ cls }}"{% endif %}>{{ label }}</a>
+{%- endmacro -%}
+{%- macro chip(kind, text, ref="") -%}
+{%- if ref -%}<a class="kchip {{ kclass(kind) }}" href="{{ link(ref) }}"><span class="vh">{{ kind }}: </span>{{ text }}</a>
+{%- else -%}<span class="kchip {{ kclass(kind) }}"><span class="vh">{{ kind }}: </span>{{ text }}</span>{%- endif -%}
+{%- endmacro -%}
+<div class="calbar">
+  <div class="calnav">
+    {{ go(view, prev, "‹ Prev", "btn alt") }}
+    {{ go(view, today, "Today", "btn alt") }}
+    {{ go(view, next, "Next ›", "btn alt") }}
+    <h2>{{ title }}</h2>
+  </div>
+  <div class="seg" role="group" aria-label="View">
+    {% for v in views %}{{ go(v, ref, v|capitalize, "on" if v == view else "") }}{% endfor %}
+  </div>
+</div>
+{% set g = glance %}
+{% if g and g.total %}
+{% call ui.story(title ~ ' at a glance', 'deck calc') %}
+  {% call ui.slide('g-cat', 'What is on', title) %}
+    <h3 class="gbig">{{ g.total }}<small> thing{{ 's' if g.total != 1 }}{% if g.upcoming != g.total %} · {{ g.upcoming }} still ahead{% endif %}</small></h3>
+    <ul class="kbars">
+      {% for k in g.kinds %}<li class="{{ k.cls }}"><i class="kdot" aria-hidden="true"></i><span>{{ k.kind }}</span><b>{{ k.n }}</b>
+        <svg class="mbar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="track" width="100" height="8"/><rect class="kbar" width="{{ [k.n / g.kind_max * 100, 2]|max|round(1) }}" height="8"/></svg></li>{% endfor %}
+      {% if g.kinds_more %}<li class="dim"><span>{{ g.kinds_more }} more kind{{ 's' if g.kinds_more != 1 }}</span></li>{% endif %}
+    </ul>
+    {% if g.busiest and g.busiest.n > 1 %}<p class="dim sm">Busiest: {{ g.busiest.date.strftime('%a %b') }} {{ g.busiest.date.day }}, {{ g.busiest.n }} things</p>{% endif %}
+  {% endcall %}
+  {% call ui.slide('g-over', 'Who', 'Who') %}
+    <ul class="kbars">
+      {% for p in g.people %}<li><span class="av sm {{ p.av[1] if p.av[1] != 'avn' else 'avall' }}" aria-hidden="true">{% if p.av[0] %}{{ p.av[0] }}{% else %}<i class="ic ic-family"></i>{% endif %}</span><span>{{ p.name }}</span><b>{{ p.n }}</b>
+        <svg class="mbar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="track" width="100" height="8"/><rect class="pbar" width="{{ [p.n / g.person_max * 100, 2]|max|round(1) }}" height="8"/></svg></li>{% endfor %}
+    </ul>
+  {% endcall %}
+  {% call ui.slide('g-high', 'Do not miss', "Don't miss") %}
+    <ul class="dline">
+      {% for d, k, t in g.big %}<li class="{{ 'dim' if d < today }}"><b>{{ d.strftime('%a') }} {{ d.day }}</b><span>{{ t }} <small>{{ k }}</small></span></li>
+      {% else %}<li class="dim"><span>No birthdays, holidays or renewals in this {{ view }}.</span></li>{% endfor %}
+      {% if g.big_more %}<li class="dim"><span>{{ g.big_more }} more in the grid below</span></li>{% endif %}
+    </ul>
+  {% endcall %}
+{% endcall %}
+{% endif %}
+{% if view == 'week' %}
+<div class="cal week">
+  {% for c in weeks[0] %}
+  <div class="day{{ ' today' if c.today }}{{ ' th-' ~ c.theme if c.theme }}">
+    <div class="dnum">{{ c.date.strftime('%a %b') }} {{ c.date.day }}</div>
+    {% for k, t in c.things %}{{ chip(k, t, refs.get((c.date, k, t), '')) }}{% else %}<span class="muted small none">Nothing</span>{% endfor %}
+  </div>
+  {% endfor %}
+</div>
+{% elif view == 'month' %}
+<div class="cal month">
+  {% for h in dow %}<div class="dow">{{ h }}</div>{% endfor %}
+  {% for w in weeks %}{% for c in w %}
+  <div class="day{{ ' today' if c.today }}{{ ' other' if c.other }}{{ ' th-' ~ c.theme if c.theme }}">
+    {{ go('week', c.date, c.date.day, "dnum") }}
+    {% for k, t in c.things %}{{ chip(k, t, refs.get((c.date, k, t), '')) }}{% endfor %}
+  </div>
+  {% endfor %}{% endfor %}
+</div>
+{% else %}
+<div class="years">
+  {% for m in months %}
+  <div class="card mini">
+    <b>{{ m.name }}</b>
+    <div class="mgrid">
+      {% for h in dow %}<span class="dow">{{ h[0] }}</span>{% endfor %}
+      {% for w in m.weeks %}{% for c in w %}
+        {% if c.other %}<span></span>
+        {% elif c.things %}<a class="mday has {{ kclass(c.things[0][0]) }}{{ ' today' if c.today }}"
+            title="{{ c.things|map('last')|join('; ') }}"
+            href="/calendar?view=week&amp;ref={{ c.date.isoformat() }}" hx-get="/calendar/body?view=week&amp;ref={{ c.date.isoformat() }}"
+            hx-target="#calendar" hx-swap="innerHTML" hx-push-url="/calendar?view=week&amp;ref={{ c.date.isoformat() }}">{{ c.date.day }}</a>
+        {% else %}<span class="mday{{ ' today' if c.today }}">{{ c.date.day }}</span>{% endif %}
+      {% endfor %}{% endfor %}
+    </div>
+  </div>
+  {% endfor %}
+</div>
+<p class="hint">Tap a coloured day to open its week.</p>
+{% if upcoming %}
+<h2 class="sec">Upcoming this year</h2>
+<div class="card rows">
+  {% for d, k, t in upcoming %}
+  <div class="brow"><div class="bmain"><b>{{ d.strftime('%a %b %d') }}</b> · {{ t }}<small class="muted">{{ k }}</small></div></div>
+  {% endfor %}
+</div>
+{% endif %}
+{% endif %}
+{% if kinds %}<details class="legendf"><summary>What the colours mean</summary>
+<div class="legend">{% for k in kinds %}{{ chip(k, k) }}{% endfor %}</div></details>{% endif %}

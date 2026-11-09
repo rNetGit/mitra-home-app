@@ -1,0 +1,54 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, star, moneyhead with context %}
+{% block title %}Money · {{ family }}{% endblock %}
+{% block main %}
+{{ moneyhead('Money') }}
+
+<div class="mtop">
+  <section class="card">
+    {% if v.spent is not none %}
+    <div><span class="figure">{{ v.spent|money }}</span> <span class="muted">spent this month</span></div>
+    {% if v.plan %}
+    <div class="pace" role="img" aria-label="Budgeted spending {{ v.plan_spent|money }} of {{ v.plan|money }}">
+      <i class="w-{{ [v.plan_pct, 100]|min }}{{ ' over' if v.plan_over }}"></i>{% if v.even_pct is not none %}<b class="x-{{ v.even_pct }}"></b>{% endif %}
+    </div>
+    <p class="note">Budgeted lines: {{ v.plan_spent|money }} of {{ v.plan|money }}{% if v.plan_over %}, over{% endif %}. The black mark is where an even month would be today.</p>
+    {% else %}<p class="note">No budget lines yet: set them on the PC (Money › Keep › Budget).</p>{% endif %}
+    {% else %}<p class="empty">No statements for this month yet.</p>{% endif %}
+  </section>
+  <section class="card"><span class="muted">Came in</span><div class="figure">{{ v.income|money if v.income is not none else '—' }}</div></section>
+  <section class="card"><span class="muted">Left this month</span><div class="figure">{{ v.left|money if v.left is not none else '—' }}</div></section>
+</div>
+
+<section class="card" aria-label="Bills, the next two weeks">
+  <h2>Bills, the next two weeks <span class="n">{% if v.due_n %}· {{ v.due_total }} in {{ v.due_n }} bill{{ 's' if v.due_n != 1 }}{% endif %}</span></h2>
+  <div class="strip">
+    {% for d in v.strip %}
+    <div class="d{{ ' today' if d.today }}"><small>{{ d.dow }}</small><b>{{ d.num }}</b>
+      {% for it in d['items'] %}<span class="{{ it.kind }}">{{ it.text }}{% if it.kind == 'late' %} · late{% endif %}</span>{% endfor %}</div>
+    {% endfor %}
+  </div>
+</section>
+
+<div class="tiles3m">
+  <section class="card" aria-label="Where it went">
+    <h2>Budget lines</h2>
+    {% for l in v.lines %}
+    <div class="mrow"><div class="top"><b>{{ l.label }}</b><span class="{{ 'over' if l.over }}">{{ l.spent }} of {{ l.limit }}{% if l.over %}, over{% endif %}</span></div>
+      <div class="mbar"><i class="w-{{ l.pct }}{{ ' over' if l.over }}"></i></div></div>
+    {% else %}<p class="empty">No budget lines yet.</p>{% endfor %}
+  </section>
+  <section class="card" aria-label="Allowance from stars">
+    <h2>Allowance from stars</h2>
+    {% for a in v.allowance %}
+    <div class="rows"><div class="row"><span class="av fill {{ a.cls }}">{{ a.initial }}</span>
+      <div class="t"><b>{{ a.name }}</b><small>{{ a.stars }} star{{ 's' if a.stars != 1 }} this week</small></div><span class="big">{{ a.amount }}</span></div></div>
+    {% else %}<p class="empty">No routines yet.</p>{% endfor %}
+    <p class="note">{{ v.star_cents }}¢ a star, Monday to Sunday.</p>
+  </section>
+  <section class="card" aria-label="Looking ahead">
+    <h2>Good to know</h2>
+    <p class="note">Everything here comes from the statements and bills filed on the PC. It closes itself after a minute, so a visitor sees the calendar, not the bank.</p>
+  </section>
+</div>
+{% endblock %}

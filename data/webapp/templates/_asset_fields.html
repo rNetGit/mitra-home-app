@@ -1,0 +1,11 @@
+  <label>Name<input name="name" maxlength="80" required value="{{ v.name }}"></label>
+  <label>Category<select name="category"><option value="">(none)</option>{% for c in ch.asset_categories %}<option value="{{ c }}" {{ 'selected' if v.category == c }}>{{ c }}</option>{% endfor %}</select></label>
+  <label>Brand and model<input name="brand_model" maxlength="80" value="{{ v.brand_model }}"></label>
+  <label>Where it is<input name="location" maxlength="80" value="{{ v.location }}"></label>
+  <label>Bought on<input name="purchase_date" type="date" min="1950-01-01" max="2100-12-31" value="{{ v.purchase_date }}"></label>
+  <label>Price<input name="price" type="number" min="0" max="100000000" step="0.01" value="{{ v.price }}"></label>
+  <label>Store<input name="store" maxlength="80" value="{{ v.store }}"></label>
+  <label>Warranty ends<input name="warranty_end" type="date" min="1950-01-01" max="2100-12-31" value="{{ v.warranty_end }}"></label>
+  <label>Or warranty years<input name="warranty_years" type="number" min="0" max="50" step="0.5" value="{{ v.warranty_years }}"></label>
+  <label>Serial, last 4<input name="serial_last4" maxlength="4" pattern="[A-Za-z0-9]{1,4}" value="{{ v.serial_last4 }}"></label>
+  <label>Notes<input name="notes" maxlength="300" value="{{ v.notes }}"></label>

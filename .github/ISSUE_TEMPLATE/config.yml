@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security problem
+    url: https://github.com/rNetGit/mitra-home-app/security/advisories/new
+    about: Please report security problems privately (see SECURITY.md), never in a public issue.
+  - name: Phone app (Android / iPhone)
+    url: https://github.com/rNetGit/mitra-home-companion/issues
+    about: Problems with the phone app or the Mitra Wall app go to the companion repository.
+  - name: Help with setup
+    url: https://rnetgit.github.io/mitra-home/faq.html
+    about: Plain answers to common questions. Never post bank details, account numbers or your own papers.

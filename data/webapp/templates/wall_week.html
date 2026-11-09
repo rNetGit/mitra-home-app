@@ -1,0 +1,39 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, pop, daypop, weekmonth with context %}
+{% block title %}Week · {{ family }}{% endblock %}
+{% block main %}
+<div class="whead">
+  <h1>{{ family }}</h1>
+  <span class="clock" data-clock="12">{{ clock_now }}</span>
+  <span class="date">{{ v.title }}</span>
+  <span class="grow"></span>
+  {{ weekmonth('week') }}
+  {% if back %}<a class="btn" href="{{ back }}">This week</a>{% endif %}
+  <a class="btn sq" href="{{ prev }}" aria-label="Earlier week">{{ icon('left') }}</a>
+  <a class="btn sq" href="{{ next }}" aria-label="Later week">{{ icon('right') }}</a>
+</div>
+
+<div class="chiprow">
+  {% for c in v.countdowns %}<span class="chip cd">{{ icon('clock') }} {{ c.title }} <span class="n">{{ c.when }}</span></span>{% endfor %}
+  <a class="chip all{{ ' on' if not v.who }}" href="{{ everyone }}" aria-pressed="{{ 'false' if v.who else 'true' }}">Everyone</a>
+  {% for c in v.chips %}
+  <a class="chip {{ c.cls }}{{ ' on' if c.on }}" href="{{ c.href }}" aria-pressed="{{ 'true' if c.on else 'false' }}">
+    <span class="av">{{ c.initial }}</span>{{ c.name }} <span class="n">{{ c.n }}</span></a>
+  {% endfor %}
+</div>
+
+<section class="heat" aria-label="The family week: the busier the day, the bigger and darker its tile">
+  {% for d in v.days %}
+  {% set f = wx.days.get(d.date.isoformat()) if wx else none %}
+  <div class="hday h-{{ d.heat }}{{ ' today' if d.today }}{{ ' th-' ~ d.theme if d.theme }}" role="button" tabindex="0" data-pop>
+    <div class="hd-top"><b>{{ d.dow }}</b><span class="num">{{ d.num }}</span>
+      {% if f %}<i class="wxd">{{ icon('wx_' ~ f.look, 'i l-' ~ f.look) }}{% if f.hi is not none %}{{ f.hi }}°{% endif %}{% if f.hi is not none and f.lo is not none %}/{% endif %}{% if f.lo is not none %}{{ 'low ' if f.hi is none }}{{ f.lo }}°{% endif %}<span class="vh"> {{ f.label }}</span></i>{% endif %}
+      {% if d.things %}<span class="hd-n">{{ d.things|length }}</span>{% endif %}</div>
+    {% if d.late_n %}<div class="hd-l hd-late"><span class="x">{{ d.late_n }} late · tap to see</span></div>{% endif %}
+    {% for i in d.lines %}<div class="hd-l {{ i.cls }}{{ ' dim' if i.dim }}">{% if i.time %}<span class="t">{{ i.time }}</span>{% endif %}<span class="x">{{ i.title }}</span></div>{% endfor %}
+    {% if not d.things %}<p class="hd-free">Free</p>{% endif %}
+    {{ daypop(d.label, d.things, note=(f.label ~ (', high ' ~ f.hi ~ '°' if f.hi is not none else '') ~ (', low ' ~ f.lo ~ '°' if f.lo is not none else '')) if f else '') }}
+  </div>
+  {% endfor %}
+</section>
+{% endblock %}

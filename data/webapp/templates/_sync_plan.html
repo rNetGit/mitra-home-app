@@ -1,0 +1,10 @@
+<p>{{ summary }}</p>
+{% if rows %}
+<div class="tablewrap"><table>
+  <thead><tr><th>What</th><th>Date</th><th>Title</th></tr></thead>
+  <tbody>{% for r in rows %}<tr><td>{{ r.what }}</td><td>{{ r.date }}</td><td>{{ r.title }}</td></tr>{% endfor %}</tbody>
+</table></div>
+<form class="nform" hx-post="/settings/google" hx-vals='{"op": "sync_apply"}' hx-disabled-elt="find button">
+  <button class="btn" type="submit">Apply these changes</button>
+</form>
+{% endif %}

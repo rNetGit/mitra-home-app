@@ -1,0 +1,35 @@
+{% if state == 'off' %}
+<p class="hint gcal-off">Not connected to Google Calendar. <a href="{{ settings_url }}">Show it here</a> (read-only, no AI){% if not others %}, or add an iCloud or Outlook calendar under Other calendars{% endif %}.</p>
+{% else %}
+<h2 class="sec">Google Calendar</h2>
+<div class="card">
+<div class="seg" role="group" aria-label="Look ahead">
+  {% for d in choices %}
+  <button type="button" hx-get="/calendar/google?days={{ d }}" hx-target="#gcal" hx-swap="innerHTML"
+          class="{{ 'on' if d == days }}">{{ d }} days</button>
+  {% endfor %}
+</div>
+{% if state == 'error' %}<p class="alert" role="status">{{ data }}</p>
+{% elif not data %}<p class="muted">Nothing on your Google Calendar in the next {{ days }} days.</p>
+{% else %}
+<div class="tablewrap"><table>
+  <thead><tr><th>Date</th><th>Time</th><th>Event</th></tr></thead>
+  <tbody>{% for e in data %}<tr><td>{{ e.date }}</td><td>{{ 'all day' if e.all_day else e.time ~ '–' ~ e.end }}</td><td>{{ e.title }}</td></tr>{% endfor %}</tbody>
+</table></div>
+<p class="hint">Read-only copy from Google, refreshed every 5 minutes. Change events in Google Calendar itself.</p>
+{% endif %}
+</div>
+{% endif %}
+{% for f in others %}
+<h2 class="sec">{{ f.name }} <span class="muted small">· {{ f.host }}</span></h2>
+<div class="card">
+{% if f.error %}<p class="alert" role="status">Could not be read just now: {{ f.error }}{% if f.events %} (showing the last copy){% endif %}.</p>{% endif %}
+{% if f.events %}
+<div class="tablewrap"><table>
+  <thead><tr><th>Date</th><th>Time</th><th>Event</th></tr></thead>
+  <tbody>{% for e in f.events %}<tr><td>{{ e.date|day }}{% if e.all_day and e.end %} to {{ e.end|day }}{% endif %}</td><td>{{ 'all day' if e.all_day else e.time ~ ('–' ~ e.end if e.end else '') }}</td><td>{{ e.title }}</td></tr>{% endfor %}</tbody>
+</table></div>
+{% elif not f.error %}<p class="muted">Nothing on {{ f.name }} in the next {{ days }} days.</p>{% endif %}
+<p class="hint">Read-only copy, read about once an hour. Change it in that calendar; <a href="{{ settings_url }}#conn-feeds">Other calendars</a> in Settings.</p>
+</div>
+{% endfor %}

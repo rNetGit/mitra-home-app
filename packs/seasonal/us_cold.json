@@ -1,0 +1,176 @@
+{
+  "key": "us_cold",
+  "title": "United States, cold winters (Northeast / Midwest)",
+  "kind": "base",
+  "description": "Snow, freezing pipes, winter tires. The original default set.",
+  "tasks": [
+    {
+      "name": "Flu shots",
+      "category": "Health",
+      "start": "09-08",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": "Usually Sept-Oct. Book ahead; pharmacies carry vaccine from late Aug."
+    },
+    {
+      "name": "Lawn: Step 1 (crabgrass preventer + feed)",
+      "category": "Lawn",
+      "start": "04-15",
+      "end": "05-15",
+      "lead_days": 14,
+      "notes": "Early spring, when soil is ~55F / forsythia in bloom (late April in the Northeast). Apply before crabgrass germinates."
+    },
+    {
+      "name": "Lawn: Step 2 (weed control + feed)",
+      "category": "Lawn",
+      "start": "06-01",
+      "end": "06-30",
+      "lead_days": 14,
+      "notes": "About 6-8 weeks after Step 1. Do not apply in heat above ~85F or drought."
+    },
+    {
+      "name": "Lawn: Step 3 (summer feed, grub/insect protection)",
+      "category": "Lawn",
+      "start": "07-15",
+      "end": "08-15",
+      "lead_days": 14,
+      "notes": "About 6-8 weeks after Step 2. Water in; avoid hot, dry days."
+    },
+    {
+      "name": "Lawn: overseed bare spots",
+      "category": "Lawn",
+      "start": "08-20",
+      "end": "09-30",
+      "lead_days": 14,
+      "notes": "Best time to seed cool-season grass in the Northeast: late Aug through September."
+    },
+    {
+      "name": "Lawn: Step 4 (fall winterizer)",
+      "category": "Lawn",
+      "start": "10-01",
+      "end": "11-10",
+      "lead_days": 14,
+      "notes": "Most important feeding of the year. Apply Oct to early Nov, before the ground freezes."
+    },
+    {
+      "name": "Furnace/boiler service + new filter",
+      "category": "Winter",
+      "start": "09-15",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": "Have the heating system serviced before the first cold snap; replace filters."
+    },
+    {
+      "name": "Chimney / fireplace inspection",
+      "category": "Winter",
+      "start": "09-15",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": "Only if you use a fireplace or wood stove."
+    },
+    {
+      "name": "Drain outdoor hoses, shut off exterior spigots, winterize sprinklers",
+      "category": "Winter",
+      "start": "10-01",
+      "end": "10-31",
+      "lead_days": 14,
+      "notes": "Before the first hard freeze (usually mid-late Oct)."
+    },
+    {
+      "name": "Snow blower tune-up + fuel stabilizer",
+      "category": "Winter",
+      "start": "10-01",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": "Start it, check shear pins/belts/spark plug, fresh fuel. Service shops get busy after the first storm."
+    },
+    {
+      "name": "Car winter prep: battery test, wipers, washer fluid, antifreeze",
+      "category": "Car",
+      "start": "10-15",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": "Battery, wipers, washer fluid, coolant, tire tread."
+    },
+    {
+      "name": "Switch to winter tires",
+      "category": "Car",
+      "start": "11-01",
+      "end": "11-25",
+      "lead_days": 14,
+      "notes": "Rule of thumb: when daily highs stay below ~45F. Book tire shop slots early."
+    },
+    {
+      "name": "Smoke + CO detector batteries/test",
+      "category": "Safety",
+      "start": "10-25",
+      "end": "11-07",
+      "lead_days": 7,
+      "notes": "Change batteries when the clocks go back."
+    },
+    {
+      "name": "Clean gutters after leaf fall",
+      "category": "Winter",
+      "start": "11-01",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": "Prevents ice dams on the roof edge."
+    },
+    {
+      "name": "Stock ice melt, shovels, roof rake",
+      "category": "Winter",
+      "start": "11-01",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": "Stores run low after the first storm."
+    },
+    {
+      "name": "Generator test / emergency kit (flashlights, power banks, water)",
+      "category": "Winter",
+      "start": "11-01",
+      "end": "12-15",
+      "lead_days": 14,
+      "notes": "Winter storms can cause multi-day outages."
+    },
+    {
+      "name": "Check pipes / insulation / heat tape on exposed lines",
+      "category": "Winter",
+      "start": "11-01",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Car winter emergency kit (blanket, scraper, jumper cables, shovel)",
+      "category": "Car",
+      "start": "11-01",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Switch back from winter tires",
+      "category": "Car",
+      "start": "04-01",
+      "end": "04-30",
+      "lead_days": 14,
+      "notes": "When highs stay above ~45-50F."
+    },
+    {
+      "name": "A/C service before summer",
+      "category": "Home",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Smoke + CO detector test (spring)",
+      "category": "Safety",
+      "start": "03-05",
+      "end": "03-20",
+      "lead_days": 7,
+      "notes": "Test when the clocks go forward."
+    }
+  ]
+}

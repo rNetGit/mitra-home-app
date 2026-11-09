@@ -1,0 +1,15 @@
+{% extends "wall_base.html" %}
+{% block title %}Pair this wall · {{ brand }}{% endblock %}
+{% block idle %}0{% endblock %}
+{% block refresh %}0{% endblock %}
+{% block page %}
+<form class="pair" method="post" action="/wall/pair">
+  <h1>Make this screen the Mitra Wall</h1>
+  <p class="note">On the PC, open Settings › Phones › Mitra Wall and tap Show the wall code. Scan it with this tablet's camera, or type the eight letters and digits it shows.</p>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  <label class="vh" for="code">Code from the PC</label>
+  <input id="code" name="code" value="{{ code }}" maxlength="9" autocomplete="off" autocapitalize="characters" spellcheck="false" placeholder="ABCD-2345" required>
+  <button class="btn go" type="submit">Pair this wall</button>
+  <p class="note">The wall shows the family's calendar, chores, lists and meals. Money opens only with an adult's PIN.</p>
+</form>
+{% endblock %}

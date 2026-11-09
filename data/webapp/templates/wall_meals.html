@@ -1,0 +1,32 @@
+{% extends "wall_base.html" %}
+{% block title %}Meals · {{ family }}{% endblock %}
+{% block main %}
+<div class="whead">
+  <h1>Meals</h1>
+  <span class="date">This week</span>
+</div>
+<div class="meals">
+  <div class="mgrid" role="table" aria-label="Meals this week">
+    <div></div>
+    {% for d in v.days %}<div class="dh{{ ' today' if d.today }}" role="columnheader"><b>{{ d.dow }}</b><span>{{ d.num }}</span></div>{% endfor %}
+    {% for row in v.grid %}
+    <div class="slot" role="rowheader">{{ row.label }}</div>
+    {% for c in row.cells %}
+    {% if c.meal %}<div class="mcell s-{{ row.slot }}{{ ' tonight' if c.today and row.slot == 'dinner' }}" role="cell"><b>{{ c.meal }}</b>{% if c.note %}<small>{{ c.note }}</small>{% endif %}</div>
+    {% else %}<div class="mcell empty" role="cell"></div>{% endif %}
+    {% endfor %}
+    {% endfor %}
+  </div>
+  <aside class="card recipe" aria-label="Tonight">
+    <span class="kind">Dinner tonight</span>
+    <h2 class="serif">{{ v.tonight or 'Not planned yet' }}</h2>
+    {% if v.recipe %}
+      {% if v.recipe.servings %}<span class="muted">Serves {{ v.recipe.servings }}</span>{% endif %}
+      <h3>Ingredients</h3>
+      {% for i in v.recipe.ingredients %}<div class="ing{{ ' pantry' if i.pantry }}"><i></i><span>{{ i.text }}</span><small>{{ 'in the pantry' if i.pantry else 'to have' }}</small></div>{% endfor %}
+      {% if v.recipe.notes %}<h3>How</h3><p class="note">{{ v.recipe.notes }}</p>{% endif %}
+    {% elif v.tonight %}<p class="note">No recipe saved for this one.</p>
+    {% else %}<p class="note">Plan meals on the PC (Family › Home › Meals) or ask Chat; they show here.</p>{% endif %}
+  </aside>
+</div>
+{% endblock %}

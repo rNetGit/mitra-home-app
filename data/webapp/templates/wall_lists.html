@@ -1,0 +1,39 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon with context %}
+{% block title %}Lists · {{ family }}{% endblock %}
+{% block main %}
+<div class="whead">
+  <h1>Lists</h1>
+  <span class="date">Tap to tick. Anyone can add.</span>
+</div>
+{% if lists %}
+<div class="lists">
+  {% for l in lists %}
+  <section class="lcol c{{ loop.index0 % 6 }}" aria-label="{{ l.name }}">
+    <h2>{{ l.name }} <span class="cnt">{{ l.open_n }}</span></h2>
+    <div class="items">
+      {% for i in l['items'] %}
+      <form class="item{{ ' done' if i.done }}" method="post" action="/wall/lists/tick" data-wall>
+        <input type="hidden" name="item" value="{{ i.id }}">
+        <input type="hidden" name="done" value="{{ '0' if i.done else '1' }}">
+        <button type="submit" aria-pressed="{{ 'true' if i.done else 'false' }}">
+          <span class="box">{% if i.done %}{{ icon('check') }}{% endif %}</span>
+          <span class="t">{{ i.text }}</span>{% if i.qty %}<span class="q">{{ i.qty }}</span>{% endif %}
+          {% if i.by %}<span class="av sm fill {{ i.by_cls }}" title="Added by {{ i.by }}" aria-label="added by {{ i.by }}">{{ i.by[:1]|upper }}</span>{% endif %}
+        </button>
+      </form>
+      {% else %}<p class="empty">Empty. Add the first item below.</p>{% endfor %}
+    </div>
+    <form class="addrow" method="post" action="/wall/lists/add" data-wall>
+      <input type="hidden" name="list" value="{{ l.id }}">
+      <label class="vh" for="add-{{ l.id }}">Add to {{ l.name }}</label>
+      <input id="add-{{ l.id }}" name="text" maxlength="120" autocomplete="off" placeholder="Add to {{ l.name }}">
+      <button class="btn sq" type="submit" aria-label="Add to {{ l.name }}">{{ icon('plus') }}</button>
+    </form>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<section class="card"><p class="empty">No family lists yet. Make one on the PC: Family › Home › Lists.</p></section>
+{% endif %}
+{% endblock %}

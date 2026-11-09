@@ -1,0 +1,68 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, star with context %}
+{% block title %}Chores · {{ family }}{% endblock %}
+{% block main %}
+<div class="whead">
+  <div>
+    <div class="date">{{ date_now }} · <span data-clock="12">{{ clock_now }}</span></div>
+    <h1>Chores</h1>
+  </div>
+  <span class="grow"></span>
+  <nav class="seg" aria-label="Part of the day">
+    {% for key, label in parts %}<a href="/wall/chores?part={{ key }}" class="{{ 'on' if part == key }}"{% if part == key %} aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}
+  </nav>
+</div>
+
+{% if kids %}
+<div class="kids">
+  {% for k in kids %}
+  {% set jobs = k.parts[part] %}
+  <section class="kcol {{ k.cls }}" aria-label="{{ k.name }}">
+    <div class="khead">
+      <span class="av lg">{{ k.name[:1] }}</span>
+      <div class="t"><b>{{ k.name }}</b>
+        <small>{% if not jobs %}Nothing for this part of the day{% elif k.done == k.total %}All done. Well done!{% else %}{{ k.done }} of {{ k.total }} done{% endif %}</small></div>
+      <span class="stars" title="Stars this week">{{ star() }}{{ k.stars_week }}</span>
+    </div>
+    {% if jobs %}<div class="bar"><i class="w-{{ ((k.done * 100 // k.total) // 5) * 5 if k.total else 0 }}"></i></div>{% endif %}
+    <div class="jobs">
+      {% for j in jobs %}
+      <form class="job{{ ' done' if j.done }}" method="post" action="/wall/chores/tick" data-wall>
+        <input type="hidden" name="id" value="{{ j.id }}">
+        <input type="hidden" name="done" value="{{ '0' if j.done else '1' }}">
+        <input type="hidden" name="part" value="{{ part }}">
+        <button type="submit" aria-pressed="{{ 'true' if j.done else 'false' }}">
+          <span class="worth">+{{ j.stars }}{{ star() }}</span>
+          <span class="tick">{{ icon('check') }}</span>
+          <svg class="i" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ j.path }}"></path></svg>
+          <b>{{ j.title }}</b>
+        </button>
+      </form>
+      {% endfor %}
+    </div>
+    {% if k.goal %}
+    <div class="kgoal" role="img" aria-label="{{ k.goal.title }}: {{ k.goal.earned }} of {{ k.goal.stars }} stars">
+      <div class="top"><b>{{ star() }} {{ k.goal.title }}</b><span>{% if k.goal.reached %}Reached!{% else %}{{ k.goal.earned }} of {{ k.goal.stars }}{% endif %}</span></div>
+      <div class="bar"><i class="w-{{ k.goal.pct }}"></i></div>
+    </div>
+    {% endif %}
+    {% if k.rewards.rewards %}
+    <div class="krew">
+      <div class="top"><b>Rewards</b><span>{{ star() }} {{ k.rewards.balance }} to spend</span></div>
+      {% for r in k.rewards.rewards %}
+      <form class="rew{{ ' can' if r.can }}" method="post" action="/wall/reward" data-wall>
+        <input type="hidden" name="reward" value="{{ r.id }}"><input type="hidden" name="member" value="{{ k.name }}">
+        <span>{{ r.title }} · {{ r.stars }}{{ star() }}</span>
+        {% if r.asked %}<small>Asked</small>{% elif r.can %}<button type="submit">Ask</button>{% else %}<small>{{ r.stars - k.rewards.balance }} more</small>{% endif %}
+      </form>
+      {% endfor %}
+    </div>
+    {% endif %}
+    <p class="kfoot">{{ k.stars_week }} star{{ 's' if k.stars_week != 1 }} this week{% if rate %} · {{ (k.cents_week / 100)|money2 }} allowance on Sunday{% endif %}</p>
+  </section>
+  {% endfor %}
+</div>
+{% else %}
+<section class="card"><p class="empty">No routines yet. A parent adds them on the PC: Family › Routines.</p></section>
+{% endif %}
+{% endblock %}

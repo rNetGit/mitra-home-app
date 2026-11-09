@@ -1,0 +1,57 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, pop, daypop, weekmonth with context %}
+{% block title %}Day · {{ family }}{% endblock %}
+{% block main %}
+{% set f = wx.days.get(v.date.isoformat()) if wx else none %}
+<div class="whead">
+  <h1>{{ 'Today' if v.today else v.dow }} <span class="dnum">{{ v.label.split(', ', 1)[1] }}</span></h1>
+  <span class="clock" data-clock="12">{{ clock_now }}</span>
+  {% if f %}<span class="date dwx">{{ icon('wx_' ~ f.look, 'i l-' ~ f.look) }}{% if f.hi is not none %}high {{ f.hi }}°{% endif %}{% if f.hi is not none and f.lo is not none %}, {% endif %}{% if f.lo is not none %}low {{ f.lo }}°{% endif %}{% if v.today and wx.rain %} · {{ wx.rain }}{% endif %}<span class="vh"> {{ f.label }}</span></span>{% endif %}
+  <span class="grow"></span>
+  {{ weekmonth('day') }}
+  {% if back %}<a class="btn" href="{{ back }}">Today</a>{% endif %}
+  <a class="btn sq" href="{{ prev }}" aria-label="Day before">{{ icon('left') }}</a>
+  <a class="btn sq" href="{{ next }}" aria-label="Day after">{{ icon('right') }}</a>
+</div>
+
+{# a lane per person on the hour grid; a small screen gets the list below instead (wall.css) #}
+<section class="week dayv dcols-{{ v.cols }}" aria-label="{{ v.label }}, one lane per person">
+  <div class="whd">
+    <div></div>
+    {% for ln in v.lanes %}
+    <div class="day dlane {{ ln.cls }}">
+      <div class="dn"><span class="av fill {{ ln.cls }}">{{ ln.initial }}</span><b>{{ ln.name }}</b></div>
+      <div class="bands">
+        {% if ln.late %}<span class="band late" role="button" tabindex="0" data-pop>{{ ln.late|length }} late{{ daypop(ln.name ~ ' · ' ~ v.label, ln.late, kind='Late', cls=ln.cls) }}</span>{% endif %}
+        {% for a in ln.bands %}<span class="band {{ a.cls }}{{ ' late' if a.late }}" role="button" tabindex="0" data-pop>{% if a.late %}<span class="vh">Late: </span>{% endif %}{{ a.title }}{{ pop(a.kind ~ (' · late' if a.late else ''), a.title, a.day ~ (' · overdue' if a.late else ' · all day'), a.who) }}</span>{% endfor %}
+        {% if ln.more %}<span class="band bmore" role="button" tabindex="0" data-pop>+{{ ln.more|length }} more{{ daypop(ln.name ~ ' · ' ~ v.label, ln.bands + ln.more, kind='All day', cls=ln.cls) }}</span>{% endif %}
+      </div>
+    </div>
+    {% else %}<div class="day"><p class="empty">Nothing on the calendar.</p></div>
+    {% endfor %}
+  </div>
+  <div class="wgrid">
+    <div class="hours slots-{{ v.slots }}">{% for h in v.hours %}<span class="gs-{{ h.row }}">{{ h.label }}</span>{% endfor %}</div>
+    {% for ln in v.lanes or [{'events': [], 'lanes': 1}] %}
+    <div class="col slots-{{ v.slots }} lanes-{{ ln.lanes }}{{ ' today' if v.today }}">
+      {% for e in ln.events %}
+      <div class="ev {{ e.cls }} gs-{{ e.r0 }} ge-{{ e.r1 }} col-{{ e.col }}{{ ' short' if e.short }}" role="button" tabindex="0" data-pop>
+        {{ pop(e.kind, e.title, e.day ~ ' · ' ~ e.time, e.who) }}
+        <b>{{ e.title }}</b><small>{{ e.time }}</small>
+      </div>
+      {% endfor %}
+      {% if v.today and v.now_row %}<div class="nowline gs-{{ v.now_row }}" aria-hidden="true"></div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+</section>
+
+<section class="dlist" aria-label="{{ v.label }}">
+  {% if v.late_n %}<div class="maline mlate" role="button" tabindex="0" data-pop><span class="x">{{ v.late_n }} late · tap to see</span>{{ daypop(v.label, v.things|selectattr('late')|list, kind='Late') }}</div>{% endif %}
+  {% for i in v.line %}
+  <div class="maline {{ i.cls }}" role="button" tabindex="0" data-pop>{% if i.time %}<span class="t">{{ i.time }}</span>{% endif %}<span class="x">{{ i.title }}</span>
+    {% if i.who %}<span class="who">{% for p in i.who %}<span class="av sm fill {{ p.cls }}">{{ p.initial }}</span>{% endfor %}</span>{% endif %}
+    {{ pop(i.kind, i.title, v.label, i.who) }}</div>
+  {% else %}{% if not v.late_n %}<p class="empty">Nothing on the calendar.</p>{% endif %}{% endfor %}
+</section>
+{% endblock %}

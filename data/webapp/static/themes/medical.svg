@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 110" preserveAspectRatio="xMidYMax meet">
+<g fill="none" stroke-width="1.2">
+<polygon points="14,82 20,72 32,72 38,82 32,92 20,92" stroke="#7FD6B8"/>
+<polygon points="48,72 54,62 66,62 72,72 66,82 54,82" stroke="#B5DB6E"/>
+<polygon points="82,86 88,76 100,76 106,86 100,96 88,96" stroke="#F4C44E"/>
+<polygon points="116,70 122,60 134,60 140,70 134,80 122,80" stroke="#F09A6B"/>
+<polygon points="146,90 152,80 164,80 170,90 164,100 152,100" stroke="#E8704A"/>
+<path d="M38 82L48 72M72 72L82 86M106 86L116 70M140 70L146 90" stroke="#B9E0D6"/></g>
+<g fill="#fff" stroke="#9CCFC4" stroke-width="1"><circle cx="38" cy="82" r="2"/><circle cx="48" cy="72" r="2"/><circle cx="72" cy="72" r="2"/><circle cx="82" cy="86" r="2"/><circle cx="106" cy="86" r="2"/><circle cx="116" cy="70" r="2"/><circle cx="140" cy="70" r="2"/></g>
+<g stroke="#37B28A" stroke-width="2" stroke-linecap="round" transform="translate(26 82)"><path d="M-5 0h10M0-5v10"/></g>
+<g transform="translate(60 72)" fill="none" stroke="#9BBF2F" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M-8 1h4l2-6 4 10 2-4h4"/></g>
+<g transform="translate(94 86)" fill="#F4B63A"><rect x="-6" y="-4" width="12" height="10" rx="2"/><rect x="-3" y="-8" width="6" height="4" rx="1.5"/><path d="M0-1v5M-2 1.5h4" stroke="#fff" stroke-width="1.2"/></g>
+<g transform="translate(128 70)" fill="#F09A6B"><circle cy="-2" r="4"/><path d="M-7 8c0-6 14-6 14 0z"/></g>
+<g transform="translate(158 90)" fill="#E8704A"><rect x="-5" y="-7" width="10" height="4" rx="1.5"/><rect x="-6" y="-3" width="12" height="11" rx="3"/><path d="M0 0v5M-2 2.5h4" stroke="#fff" stroke-width="1.2"/></g>
+</svg>

@@ -1,0 +1,72 @@
+{
+  "key": "generic",
+  "title": "Generic (any climate)",
+  "kind": "base",
+  "description": "A small set that applies almost everywhere.",
+  "tasks": [
+    {
+      "name": "Flu shots",
+      "category": "Health",
+      "start": "09-08",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": "Adjust to your hemisphere and local program."
+    },
+    {
+      "name": "Smoke + CO alarm test (autumn)",
+      "category": "Safety",
+      "start": "10-25",
+      "end": "11-07",
+      "lead_days": 7,
+      "notes": ""
+    },
+    {
+      "name": "Smoke + CO alarm test (spring)",
+      "category": "Safety",
+      "start": "03-05",
+      "end": "03-20",
+      "lead_days": 7,
+      "notes": ""
+    },
+    {
+      "name": "Heating or cooling system service",
+      "category": "Home",
+      "start": "09-01",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": "Pick the season you rely on most."
+    },
+    {
+      "name": "Clean gutters",
+      "category": "Home",
+      "start": "10-15",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Car check: battery, tyres, coolant, wipers",
+      "category": "Car",
+      "start": "10-15",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Emergency kit check (torch, water, power banks, first aid)",
+      "category": "Safety",
+      "start": "05-01",
+      "end": "06-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Review home and car insurance coverage",
+      "category": "Safety",
+      "start": "01-01",
+      "end": "02-15",
+      "lead_days": 21,
+      "notes": ""
+    }
+  ]
+}

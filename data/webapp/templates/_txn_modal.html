@@ -1,0 +1,42 @@
+{% if not t %}
+<div class="txm"><p class="muted">{{ flash[1] if flash else 'That line is no longer there.' }}</p><p><button type="button" class="btn alt" data-txn-close>Close</button></p></div>
+{% else %}
+<div class="txm" data-txn="{{ t.id }}">
+  <header class="txm-head">
+    {% if nav is not defined or nav %}<div class="txm-nav">
+      <button type="button" class="btn alt" data-txn-prev aria-label="Previous transaction (left arrow)" {% if prev %}hx-get="/money/txn/{{ prev }}?{{ qs }}" hx-target="#txn-body" hx-swap="innerHTML"{% else %}disabled{% endif %}>‹ Previous</button>
+      <span class="muted txm-pos" aria-live="polite">{% if pos %}{{ pos }} of {{ total }}{% endif %}</span>
+      <button type="button" class="btn alt" data-txn-next aria-label="Next transaction (right arrow)" {% if nxt %}hx-get="/money/txn/{{ nxt }}?{{ qs }}" hx-target="#txn-body" hx-swap="innerHTML"{% else %}disabled{% endif %}>Next ›</button>
+    </div>{% else %}<span></span>{% endif %}
+    <button type="button" class="btn alt" data-txn-close>Close</button>
+  </header>
+  <h2 id="txn-title">{{ t.description }}</h2>
+  <p class="txm-amt{{ ' neg' if t.amount < 0 }}">{{ t.amount_text }}</p>
+  {% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+  <dl class="rfields">
+    <div><dt>Date</dt><dd>{{ t.date_text }}</dd></div>
+    <div><dt>Account</dt><dd>{{ t.account }}</dd></div>
+    {% if t.member %}<div><dt>Card member</dt><dd>{{ t.member }}</dd></div>{% endif %}
+    <div><dt>Category</dt><dd>{{ t.category }}</dd></div>
+    <div><dt>Type</dt><dd>{{ t.type }}</dd></div>
+    {% if t.payee %}<div><dt>Payee</dt><dd>{{ t.payee }}</dd></div>{% endif %}
+    {% if t.ref %}<div><dt>Bank reference</dt><dd>{{ t.ref }}</dd></div>{% endif %}
+    {% if t.manual %}<div><dt>Set by hand</dt><dd>Yes: the category rules leave this line alone.</dd></div>{% endif %}
+  </dl>
+  {% if paper %}
+  <div class="rpaper"><span class="rl-main"><span class="rl-t">{{ paper.label }}</span><span class="rl-m">Filed paper</span></span>
+    {% if paper.here %}<span class="optrow"><a class="btn alt" href="/records/paper/{{ paper.id }}">Download</a></span>{% endif %}</div>
+  {% endif %}
+  <form class="lded-form txm-edit" hx-post="/money/txn/{{ t.id }}" hx-target="#txn-body" hx-swap="innerHTML" hx-disabled-elt="find button">
+    {% for k, val in filters.items() %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
+    <datalist id="txm-cats">{% for c in cats %}<option value="{{ c }}">{% endfor %}</datalist>
+    <label>Category <input name="category" maxlength="40" list="txm-cats" value="{{ t.cat_raw }}" placeholder="Uncategorized"></label>
+    <label>Type <select name="txn_type">{% for k, lbl in types %}<option value="{{ k }}" {% if k == t.type_key %}selected{% endif %}>{{ lbl }}</option>{% endfor %}{% if t.type_key not in types|map(attribute=0)|list %}<option value="" selected>{{ t.type }}</option>{% endif %}</select></label>
+    <label class="chk"><input type="checkbox" name="similar" value="1"> Do the same for every line like this one, now and later</label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+  {% if history %}<details class="txm-hist"><summary>Changes <span class="muted">{{ history|length }}</span></summary>
+    <ul class="calmlist">{% for h in history %}<li><span>{{ h.what }} · {{ h.who }} · {{ h.when }}</span></li>{% endfor %}</ul></details>{% endif %}
+  <p class="muted small"><a href="{{ link('transactions:' ~ t.id) }}">Open the full record</a> · Left and right arrow keys move between lines, Esc closes.</p>
+</div>
+{% endif %}

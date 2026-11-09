@@ -1,0 +1,375 @@
+{% set v = edit.v %}{% set t = edit.table %}{% set base = {"table": t, "id": edit.id|string} %}
+{% if err %}<p class="alert" role="alert">{{ err }}</p>{% endif %}
+{% if t == 'life_items' %}
+<h3>Change it</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>What<input name="title" maxlength="120" required value="{{ v.title }}"></label>
+  <label>For<select name="who"><option value="household">household</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Where / who<input name="provider" maxlength="80" value="{{ v.provider }}"></label>
+  <label>Due date (blank = none)<input name="due" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.due }}"></label>
+  <label>Repeats every N months (0 = once)<input name="every" type="number" min="0" max="600" step="1" value="{{ v.every or 0 }}"></label>
+  <label>Cost (0 = none)<input name="amount" type="number" min="0" max="10000000" step="0.01" value="{{ v.amount or 0 }}"></label>
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<div class="optrow">
+  <button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="done")|tojson }}'>Mark done</button>
+  <details class="more-form"><summary class="btn alt">Remove</summary>
+    <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="drop")|tojson }}'>
+      <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove this item</label>
+      <button class="btn" type="submit">Remove</button>
+    </form>
+  </details>
+</div>
+<p class="muted small">Mark done: a repeating item moves to its next date; a one-off is closed. Remove takes it off the lists but never erases its history.</p>
+{% elif t == 'activity_schedules' %}
+<h3>Change it</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>What<input name="title" maxlength="80" required value="{{ v.title }}"></label>
+  <label>For<select name="who"><option value="household">household</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <fieldset class="days"><legend>Every</legend>{% for k, lbl in ch.weekdays %}<label class="check"><input type="checkbox" name="d_{{ k }}" value="1" {{ 'checked' if k|upper in v.days }}> {{ lbl }}</label>{% endfor %}</fieldset>
+  <label>Starts<input name="start_time" type="time" value="{{ v.start_time }}"></label>
+  <label>Ends<input name="end_time" type="time" value="{{ v.end_time }}"></label>
+  <label>Where<input name="provider" maxlength="80" value="{{ v.provider }}"></label>
+  <label>First day<input name="term_start" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.term_start }}"></label>
+  <label>Last day<input name="term_end" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.term_end }}"></label>
+  <label class="check"><input type="checkbox" name="school_days" value="1" {{ 'checked' if v.school_days }}> Not on days off school</label>
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="skip")|tojson }}'>
+  <label>No class on<input name="skip" type="date" min="2000-01-01" max="2100-12-31" required value="{{ v.skip }}"></label>
+  <button class="btn alt" type="submit">Skip that day</button>
+</form>
+<details class="more-form"><summary class="btn alt">Season is over</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="end")|tojson }}'>
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, the season is over</label>
+    <button class="btn" type="submit">End it</button>
+  </form>
+</details>
+<p class="muted small">Ended classes stay in the records under Ended.</p>
+{% elif t == 'events' %}
+<h3>Change it</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>What<input name="name" maxlength="80" required value="{{ v.name }}"></label>
+  <label>Date<input name="date" type="date" min="1990-01-01" max="2100-12-31" required value="{{ v.date }}"></label>
+  <label>Starts (blank = all day)<input name="start_time" type="time" value="{{ v.start_time }}"></label>
+  <label>Ends<input name="end_time" type="time" value="{{ v.end_time }}"></label>
+  <label>Repeats<select name="repeats"><option value="once" {{ 'selected' if v.repeats == 'once' }}>once</option><option value="yearly" {{ 'selected' if v.repeats == 'yearly' }}>every year</option></select></label>
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<details class="more-form"><summary class="btn alt">Remove</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="drop")|tojson }}'>
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove this event</label>
+    <button class="btn" type="submit">Remove</button>
+  </form>
+</details>
+<p class="muted small">Remove erases the event from the calendar. Use Change to correct a wrong date or time.</p>
+{% elif t == 'appointments' %}
+<h3>Change it</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>For<select name="who">{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Date<input name="date" type="date" min="1990-01-01" max="2100-12-31" required value="{{ v.date }}"></label>
+  <label>Time<input name="time" type="time" required value="{{ v.time }}"></label>
+  <label>With<input name="provider" maxlength="80" value="{{ v.provider }}"></label>
+  <label>What for<input name="purpose" maxlength="80" value="{{ v.purpose }}"></label>
+  <label>Follow-up by (blank = none)<input name="followup" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.followup }}"></label>
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<details class="more-form"><summary class="btn alt">Remove</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="drop")|tojson }}'>
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove this appointment</label>
+    <button class="btn" type="submit">Remove</button>
+  </form>
+</details>
+<p class="muted small">Remove erases the appointment. Use Change to correct a wrong date or time.</p>
+{% elif t == 'calendar_days' %}
+<h3>Change it</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>Name<input name="name" maxlength="80" required value="{{ v.name }}"></label>
+  <label>Kind<select name="kind">{% for k, lbl in ch.day_kinds %}<option value="{{ k }}" {{ 'selected' if (v.kind or 'holiday') == k }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>Day<input name="day" type="date" min="2000-01-01" max="2100-12-31" required value="{{ v.day }}"></label>
+  <label>Last day, for a break (blank = one day)<input name="end" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.end }}"></label>
+  <label>For<select name="who"><option value="household">household</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<details class="more-form"><summary class="btn alt">Remove</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="drop")|tojson }}'>
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove this day</label>
+    <button class="btn" type="submit">Remove</button>
+  </form>
+</details>
+{% elif t == 'vaccinations' %}
+<h3>{{ v.vaccine }} ({{ v.who }})</h3>
+<p class="muted small">Given {{ v.given }}{% if v.next_due %}; next one due {{ v.next_due }}{% endif %}.</p>
+<details class="more-form"><summary class="btn alt">Remove</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="drop")|tojson }}'>
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove this</label>
+    <button class="btn" type="submit">Remove</button>
+  </form>
+</details>
+{% elif t == 'member_info' %}
+<h3>{{ v.label }} ({{ v.who }})</h3>
+<p class="muted small">Last confirmed: {{ v.verified or 'never' }}.</p>
+<div class="optrow">
+  <button type="button" class="btn" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="verify")|tojson }}'>Still correct</button>
+</div>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>Kind<select name="category">{% for k, lbl in ch.info_categories %}<option value="{{ k }}" {{ 'selected' if v.category == k }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>What<input name="label" maxlength="60" required value="{{ v.label }}"></label>
+  <label>Fact<input name="value" maxlength="200" required value="{{ v.value }}"></label>
+  <button class="btn alt" type="submit">Save changes</button>
+</form>
+<details class="more-form"><summary class="btn alt">Remove</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="drop")|tojson }}'>
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove this</label>
+    <button class="btn" type="submit">Remove</button>
+  </form>
+</details>
+<p class="muted small">Saving a change also confirms it today. Changes are logged by number, never the text.</p>
+{% elif t == 'members' %}
+<h3>Edit {{ v.name }}</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>Name (fix a typo; it changes everywhere)<input name="name" maxlength="40" required value="{{ v.name }}"></label>
+  <label>How related (optional)<input name="relation" maxlength="40" placeholder="mother, son, cousin" value="{{ v.relation }}"></label>
+  {% if v.role != 'pet' %}<label>School, college or employer (optional)<input name="school" maxlength="80" value="{{ v.school }}"></label>
+  <label>Grade, year or program (optional)<input name="grade" maxlength="40" placeholder="Grade 6, Sophomore, B.Sc. Nursing" value="{{ v.grade }}"></label>
+  <label>Expected graduation year (blank to clear)<input name="grad_year" type="number" min="1950" max="2100" step="1" value="{{ v.grad_year }}"></label>
+  {% else %}<input type="hidden" name="school" value=""><input type="hidden" name="grade" value=""><input type="hidden" name="grad_year" value="">{% endif %}
+  <label>Role<select name="role">{% for r in ch.roles %}<option value="{{ r }}" {{ 'selected' if v.role == r }}>{{ r }}</option>{% endfor %}</select></label>
+  <label>Birthday (MM-DD, blank to clear)<input name="birthday" maxlength="5" pattern="[0-9]{2}-[0-9]{2}" placeholder="04-23" value="{{ v.birthday }}"></label>
+  <label>Birth year (blank to clear)<input name="year" type="number" min="1900" max="2100" step="1" value="{{ v.year }}"></label>
+  <button class="btn" type="submit">Save</button>
+</form>
+<p class="muted small">Changes are kept on this PC; an update never undoes them. A new name is used on every record from now on; papers already filed keep the old spelling, and {{ v.name }} signs in with the new name.</p>
+{% if v.role != 'pet' %}<div id="org-block" class="orgblock" hx-get="/family/org?member={{ edit.id }}" hx-trigger="load" hx-swap="innerHTML"><p class="muted small">Loading school and calendar...</p></div>{% endif %}
+<h3>IDs and expiries</h3>
+{% if v.ids %}<ul class="plain">{% for typ, exp in v.ids %}<li>{{ typ }}: expires {{ exp }}</li>{% endfor %}</ul>
+{% else %}<p class="muted small">No IDs on file.</p>{% endif %}
+<p class="small"><a href="/records?domain=papers&section=ids">Renew or add a passport or driver's licence</a> · <a href="/records?domain=people&section=profiles">Critical info (contacts, medical, school)</a></p>
+{% elif t == 'recurring_items' %}
+<h3>Record it as done</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="done")|tojson }}'>
+  <label>Done on<input name="when" type="date" min="2000-01-01" max="{{ v.when }}" required value="{{ v.when }}"></label>
+  <label>Where / who (optional)<input name="provider" maxlength="80" list="contact-names" value="{{ v.provider }}"></label>
+  <datalist id="contact-names">{% for n in ch.contact_names %}<option value="{{ n }}">{% endfor %}</datalist>
+  <button class="btn" type="submit">Save</button>
+</form>
+{% elif t == 'bills' %}
+{% if v.open %}
+<h3>Mark it paid</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="paid")|tojson }}'>
+  <label>Paid on<input name="when" type="date" min="2000-01-01" max="{{ ch.today }}" required value="{{ v.when }}"></label>
+  <button class="btn" type="submit">Mark paid</button>
+</form>
+{% else %}
+<h3>Paid{% if v.paid_date %} on {{ v.paid_date }}{% endif %}</h3>
+<button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="unpaid")|tojson }}'>Mark as not paid</button>
+<p class="muted small">Not paid after all? The bill goes back to due (overdue when its date has passed).</p>
+{% endif %}
+{% elif t == 'subscriptions' %}
+<h3>Decide</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="decide")|tojson }}'>
+  <label>Decision<select name="decision">{% for d, lbl in ch.decisions %}<option value="{{ d }}" {{ 'selected' if v.decision == d }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>Note (optional)<input name="note" maxlength="200" value="{{ v.note }}"></label>
+  <button class="btn" type="submit">Save decision</button>
+</form>
+<div class="optrow">
+  <button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="active")|tojson }}'>{{ 'Stop tracking it' if v.active else 'Track it again' }}</button>
+</div>
+<p class="muted small">Cancelled: a charge after today is flagged. Nothing is cancelled for you; do that with the company.</p>
+{% elif t == 'home_contacts' %}
+<h3>{{ v.name }}</h3>
+<p class="muted small">Last job: {{ v.last_job or 'not recorded' }}.{% if v.phone %} Phone: <a href="tel:{{ v.phone|replace(' ', '') }}">{{ v.phone }}</a>.{% endif %}{% if v.website %} <a href="{{ v.website }}" target="_blank" rel="noopener noreferrer">Website</a>.{% endif %}</p>
+<div class="optrow">
+  <button type="button" class="btn" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="used")|tojson }}'>Used them today</button>
+</div>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  {% include "_contact_fields.html" %}
+  <button class="btn alt" type="submit">Save changes</button>
+</form>
+<details class="more-form"><summary class="btn alt">Remove</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="drop")|tojson }}'>
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove this contact</label>
+    <button class="btn" type="submit">Remove</button>
+  </form>
+</details>
+<p class="muted small">Marking an upkeep job done with this name also counts as a job. Rather not use them again? Set it to no: they stay listed, last in their kind of work.</p>
+{% elif t == 'home_assets' %}
+<h3>Change it</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  {% include "_asset_fields.html" %}
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<div class="optrow">
+  <details class="more-form"><summary class="btn alt">Sold, thrown out or lost</summary>
+    <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="dispose")|tojson }}'>
+      <label>What happened<select name="how">{% for h in ch.asset_ends %}<option value="{{ h }}" {{ 'selected' if v.how == h }}>{{ h }}</option>{% endfor %}</select></label>
+      <label>When<input name="when" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.when }}"></label>
+      <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, it is gone</label>
+      <button class="btn" type="submit">Take it off the inventory</button>
+    </form>
+  </details>
+</div>
+<details class="more-form"><summary class="btn alt">Receipt and manual</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="papers")|tojson }}'>
+    <label>Receipt (a filed paper)<select name="receipt"><option value="">(none)</option>{% for i, lbl in v.receipt_docs %}<option value="{{ i }}" {{ 'selected' if v.receipt == i }}>{{ lbl }}</option>{% endfor %}</select></label>
+    <label>Manual (a filed paper)<select name="manual"><option value="">(none)</option>{% for i, lbl in v.manual_docs %}<option value="{{ i }}" {{ 'selected' if v.manual == i }}>{{ lbl }}</option>{% endfor %}</select></label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+  <p class="muted small">Receipts and manuals are filed papers: drop them in the Inbox first, then link them here.</p>
+</details>
+<p class="muted small">Blank clears a field. A thing that is gone leaves the reminders; its history stays.</p>
+{% elif t == 'seasonal_tasks' %}
+<h3>Log it as done{% if v.last_done %} <span class="muted small">last {{ v.last_done }}</span>{% endif %}</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="done")|tojson }}'>
+  <label>Done on<input name="when" type="date" min="2000-01-01" max="{{ ch.today }}" required value="{{ v.when }}"></label>
+  <label>Where (optional)<input name="place" maxlength="80" value="{{ v.place }}"></label>
+  <button class="btn" type="submit">Save</button>
+</form>
+{% elif t == 'lists' %}
+<div class="print-list">
+<h3>{{ v.name }}{% if v.adults %} <span class="muted small">adults only</span>{% endif %}</h3>
+{% if v['items'] %}
+<ul class="checklist">
+{% for it in v['items'] %}
+  <li class="{{ 'done' if it.done }}">
+    <button type="button" class="btn alt sm" aria-label="{{ ('Untick ' if it.done else 'Tick ') ~ it.text }}" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op=("untick" if it.done else "tick"), item=it.id|string)|tojson }}'>{{ '↺' if it.done else '✓' }}</button>
+    <span class="ctext">{% if it.done %}<s>{{ it.text }}</s>{% else %}{{ it.text }}{% endif %}{% if it.qty %} <span class="muted">· {{ it.qty }}</span>{% endif %}{% if it.who %} <span class="muted">· {{ it.who }}</span>{% endif %}</span>
+    <button type="button" class="btn alt sm" aria-label="Remove {{ it.text }}" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="drop", item=it.id|string)|tojson }}'>Remove</button>
+  </li>
+{% endfor %}
+</ul>
+{% else %}<p class="muted">Nothing on this list yet.</p>{% endif %}
+</div>
+{% set open_items = v['items']|rejectattr('done')|list %}
+{% set ns = namespace(text=v.name) %}{% for it in open_items %}{% set ns.text = ns.text ~ '\n- ' ~ it.text ~ (' · ' ~ it.qty if it.qty else '') %}{% endfor %}{% set share_text = ns.text %}
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="item_add")|tojson }}'>
+  <label>Add<input name="text" maxlength="120" required value="{{ v.text }}"></label>
+  <label>How many (optional)<input name="qty" maxlength="20" value="{{ v.qty }}"></label>
+  <label>For (optional)<select name="who"><option value="">anyone</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <button class="btn" type="submit">Add to the list</button>
+</form>
+<div class="optrow">
+  {% if open_items %}<button type="button" class="btn alt" data-share="{{ share_text }}" data-share-title="{{ v.name }}">Share the list</button>{% endif %}
+  <button type="button" class="btn alt" data-print-list>Print the list</button>
+  <button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="clear")|tojson }}'>Clear ticked items</button>
+  <details class="more-form"><summary class="btn alt">Archive the list</summary>
+    <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="archive")|tojson }}'>
+      <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, archive this list</label>
+      <button class="btn" type="submit">Archive</button>
+    </form>
+  </details>
+</div>
+<p class="muted small">Ticked items stay visible for a few days, or until cleared. Nothing is erased; archived lists keep their items.</p>
+{% elif t == 'meal_plan' %}
+<h3>{{ v.meal }} <span class="muted small">{{ v.slot }}, {{ v.day }}</span></h3>
+<button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="clear")|tojson }}'>Take it off the plan</button>
+<p class="muted small">To plan something else here, use Plan a meal on the Meals list; it replaces what was there.</p>
+{% elif t == 'recipes' %}
+<details class="more-form"><summary class="btn alt">Archive this recipe</summary>
+  <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="archive")|tojson }}'>
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, archive this recipe</label>
+    <button class="btn" type="submit">Archive</button>
+  </form>
+</details>
+<p class="muted small">To change it, save a recipe with the same name on the Meals list; it replaces the details and ingredients.</p>
+{% elif t == 'id_documents' %}
+<h3>Renewed? New expiry</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>Expires<input name="expires" type="date" min="1990-01-01" max="2100-12-31" required value="{{ v.expires }}"></label>
+  <label>Number, last 4 (blank = unchanged)<input name="last4" maxlength="4" pattern="[A-Za-z0-9]{1,4}" value="{{ v.last4 }}"></label>
+  <button class="btn" type="submit">Save</button>
+</form>
+<p class="muted small">Only the last four characters of the number, never the whole number.</p>
+{% elif t == 'vehicles' %}
+<h3>Edit details</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>Year<input name="year" type="number" min="1950" max="2100" step="1" value="{{ v.year }}"></label>
+  <label>Make<input name="make" maxlength="40" required value="{{ v.make }}"></label>
+  <label>Model<input name="model" maxlength="60" required value="{{ v.model }}"></label>
+  <label>Car number (plate, as printed)<input name="plate" maxlength="10" autocomplete="off" value="{{ v.plate }}"{% if v.plate_last4 and not v.plate %} placeholder="last four on file: {{ v.plate_last4 }}"{% endif %}></label>
+  <label>Plate state or region<input name="plate_region" maxlength="20" placeholder="NJ" value="{{ v.plate_region }}"></label>
+  <label>VIN, last 4<input name="vin_last4" maxlength="4" pattern="[A-Za-z0-9]{1,4}" value="{{ v.vin_last4 }}"></label>
+  <label>Owner<input name="owner" maxlength="80" value="{{ v.owner }}"></label>
+  <label>Primary driver<input name="primary_driver" maxlength="80" value="{{ v.primary_driver }}"></label>
+  <label>Registration runs out<input name="registration_expires" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.registration_expires }}"></label>
+  <label>Inspection runs out<input name="inspection_expires" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.inspection_expires }}"></label>
+  <label>Status<select name="status">{% for s in ('active', 'sold', 'totaled') %}<option value="{{ s }}" {{ 'selected' if v.status == s }}>{{ s }}</option>{% endfor %}</select></label>
+  <label>Notes<textarea name="notes" maxlength="500" rows="3">{{ v.notes }}</textarea></label>
+  <button class="btn" type="submit">Save details</button>
+</form>
+<p class="muted small">The whole plate stays on this PC (it is on the street for anyone to read) and shows on the Wallet card; the VIN keeps only its last four. Blank clears a field.</p>
+<h3>Log a service</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="service")|tojson }}'>
+  <label>Service<select name="kind">{% for k, lbl in ch.services %}<option value="{{ k }}" {{ 'selected' if v.kind == k }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>Done on<input name="when" type="date" min="1990-01-01" max="{{ ch.today }}" required value="{{ v.when }}"></label>
+  <label>Odometer (optional){% if v.last_odometer %} <span class="muted small">last {{ v.last_odometer }}</span>{% endif %}<input name="odometer" type="number" min="0" max="2000000" step="1" value="{{ v.odometer }}"></label>
+  <label>Cost (optional)<input name="cost" type="number" min="0" max="100000" step="0.01" value="{{ v.cost }}"></label>
+  <label>Shop (optional)<input name="vendor" maxlength="80" value="{{ v.vendor }}"></label>
+  <button class="btn" type="submit">Save</button>
+</form>
+<p class="muted small">The next due date for this service follows from it.</p>
+{% elif t == 'loans' %}
+<h3>Update it</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>Balance today (blank = unchanged){% if v.balance_date %} <span class="muted small">last set {{ v.balance_date }}</span>{% endif %}<input name="balance" type="number" min="0" max="1000000000" step="0.01" value="{{ v.balance }}"></label>
+  <label>Rate % (blank = unchanged)<input name="rate" type="number" min="0" max="100" step="0.001" value="{{ v.rate }}"></label>
+  <label>Monthly payment (blank = unchanged)<input name="payment" type="number" min="0" max="10000000" step="0.01" value="{{ v.payment }}"></label>
+  <label>Payoff date (blank to clear)<input name="payoff" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.payoff }}"></label>
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<div class="optrow">
+{% if v.active %}
+  <details class="more-form"><summary class="btn alt">Paid off</summary>
+    <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="status")|tojson }}'>
+      <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, it is paid off</label>
+      <button class="btn" type="submit">Mark paid off</button>
+    </form>
+  </details>
+{% else %}
+  <button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="status")|tojson }}'>Still paying it: make it active again</button>
+{% endif %}
+</div>
+<p class="muted small">A new balance records today as its date. A paid-off loan leaves the list; its history stays.</p>
+{% elif t == 'savings_goals' %}
+<h3>Update it</h3>
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
+  <label>Saved so far<input name="saved" type="number" min="0" max="1000000000" step="0.01" value="{{ v.saved }}"></label>
+  <label>Amount to save<input name="target" type="number" min="0.01" max="1000000000" step="0.01" value="{{ v.target }}"></label>
+  <label>By when (blank = no date)<input name="due" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.due }}"></label>
+  <label>Follow an account<select name="account"><option value="">(none: I type what is saved)</option>{% for i, lbl in v.accounts %}<option value="{{ i }}" {{ 'selected' if v.account == i }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <button class="btn" type="submit">Save changes</button>
+</form>
+<div class="optrow">
+{% if v.active %}
+  <details class="more-form"><summary class="btn alt">Reached or given up</summary>
+    <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="status")|tojson }}'>
+      <label class="check"><input type="radio" name="how" value="done" checked> We reached it</label>
+      <label class="check"><input type="radio" name="how" value="dropped"> We gave it up</label>
+      <button class="btn" type="submit">Close the goal</button>
+    </form>
+  </details>
+{% else %}
+  <button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="status")|tojson }}'>Open the goal again</button>
+{% endif %}
+</div>
+<p class="muted small">A closed goal leaves the list; its history stays.</p>
+{% elif t == 'receipts' %}
+{% if v.status == 'open' %}
+<h3>Which charge is it?</h3>
+{% if v.candidates %}
+<form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="link")|tojson }}'>
+  <fieldset><legend class="vh">Charge</legend>
+  {% for tid, txt in v.candidates %}<label class="check"><input type="radio" name="txn" value="{{ tid }}" required {{ 'checked' if v.txn == tid|string }}> {{ txt }}</label>{% endfor %}
+  </fieldset>
+  <button class="btn" type="submit">Link</button>
+</form>
+{% else %}<p class="muted">No charge with this amount yet. It is matched again after the next statement is filed.</p>{% endif %}
+<div class="optrow">
+  <button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="ignore")|tojson }}'>No charge expected</button>
+</div>
+<p class="muted small">No charge expected: paid in cash, by gift card, or refunded.</p>
+{% else %}
+<h3>{{ 'Matched to a charge' if v.status == 'matched' else 'No charge expected' }}</h3>
+<button type="button" class="btn alt" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="unlink")|tojson }}'>{{ 'Wrong charge? Unlink' if v.status == 'matched' else 'Wait for a charge again' }}</button>
+{% endif %}
+{% endif %}

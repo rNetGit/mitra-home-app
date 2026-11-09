@@ -1,0 +1,6 @@
+# Maintainers and contributors: python -m pip install -r requirements.txt -r requirements-dev.txt
+pytest>=8
+pytest-xdist>=3.5  # parallel test runs (scripts/smoke_test.py)
+httpx>=0.28.1      # FastAPI TestClient (tests/test_webapp.py)
+ruff>=0.6
+pre-commit>=3

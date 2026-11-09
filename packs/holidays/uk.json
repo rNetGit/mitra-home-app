@@ -1,0 +1,28 @@
+{
+  "country": "UK",
+  "title": "Bank holidays (England and Wales)",
+  "observed": "uk",
+  "holidays": [
+    {"name": "New Year's Day", "date": "01-01"},
+    {"name": "Good Friday", "easter": -2},
+    {"name": "Easter Monday", "easter": 1},
+    {"name": "Early May bank holiday", "month": 5, "weekday": "MO", "nth": 1},
+    {"name": "Spring bank holiday", "month": 5, "weekday": "MO", "nth": -1},
+    {"name": "Summer bank holiday", "month": 8, "weekday": "MO", "nth": -1},
+    {"name": "Christmas Day", "date": "12-25"},
+    {"name": "Boxing Day", "date": "12-26"}
+  ],
+  "observances": [
+    {"name": "British Summer Time starts: clocks go forward 1 hour", "month": 3, "weekday": "SU", "nth": -1},
+    {"name": "British Summer Time ends: clocks go back 1 hour", "month": 10, "weekday": "SU", "nth": -1}
+  ],
+  "regions": {
+    "SCT": {"name": "Scotland", "drop": ["Easter Monday", "Summer bank holiday"], "holidays": [
+      {"name": "2nd January", "date": "01-02"},
+      {"name": "Summer bank holiday", "month": 8, "weekday": "MO", "nth": 1},
+      {"name": "St Andrew's Day", "date": "11-30"}]},
+    "NIR": {"name": "Northern Ireland", "holidays": [
+      {"name": "St Patrick's Day", "date": "03-17"},
+      {"name": "Battle of the Boyne (Orangemen's Day)", "date": "07-12"}]}
+  }
+}

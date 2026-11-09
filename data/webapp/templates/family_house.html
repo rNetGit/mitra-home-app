@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% block title %}House · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>House</h1><p class="sub">Where the home is, for state holidays and schools near home.</p></div></header>
+{{ ui.ftabs(family_tabs, 'house') }}
+<p><a href="/family?who=House">‹ Back to Family</a></p>
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+<section class="card">
+  <h2>Home area</h2>
+  <form class="nform" hx-post="/family/house" hx-disabled-elt="find button">
+    <label>City or town<input name="place" maxlength="80" value="{{ v.place }}" placeholder="Springfield"></label>
+    {% if v.us %}
+    <label>State<select name="state"><option value="">Choose</option>{% for s in v.states %}<option value="{{ s }}" {{ 'selected' if v.state == s }}>{{ s }}</option>{% endfor %}</select></label>
+    <label>ZIP code<input name="zip" inputmode="numeric" pattern="[0-9]{5}" maxlength="5" value="{{ v.zip }}" placeholder="12345"></label>
+    {% else %}
+    <label>State or region<input name="state" maxlength="60" value="{{ v.state }}"></label>
+    <label>Postal code<input name="zip" maxlength="12" value="{{ v.zip }}"></label>
+    {% endif %}
+    <button class="btn" type="submit">Save</button>
+  </form>
+  <p class="muted small">No street address is kept: the city, state and ZIP code are enough. They stay on this PC.
+    {% if v.holidays %}Public holidays on the calendar: {{ v.holidays }}.{% endif %}</p>
+</section>
+<section class="card">
+  <div class="job-head">
+    <h2>Look things up online</h2>
+    <form hx-post="/family/house" hx-trigger="change" hx-vals='{"op": "online"}' hx-disabled-elt="find input">
+      <label class="switch"><input type="checkbox" role="switch" name="on" value="1" {{ 'checked' if v.online }}
+        aria-label="Look things up online"><span aria-hidden="true"></span></label>
+    </form>
+  </div>
+  <p class="muted">When on, the app can list schools near home, check a college's name and find a school's, college's or
+    employer's calendar for the year (edit a person on the Family page), and show the local weather on Today and the
+    Mitra Wall (needs the ZIP code).</p>
+  <p class="muted small">What goes out: the ZIP code, the state, the public name of a school, college or employer and the
+    school year. Never anyone's name, the family name, a street address, a phone number or any account or ID number.
+    The weather sends only the ZIP code and the ZIP area's rough position (National Weather Service in the US, else
+    Open-Meteo). School lists come from the US Department of Education's public directory; finding a calendar asks your AI to search
+    the web (Anthropic, OpenAI, Gemini or OpenRouter key). Days read from a calendar wait in the Inbox until you add them.
+    Other calendars you add in Settings › Connections (iCloud, Outlook) are fetched separately, whether this is on or off.</p>
+</section>
+{% endblock %}

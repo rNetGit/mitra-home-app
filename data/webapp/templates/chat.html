@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}Chat · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>{{ hello }}</h1><p class="sub">{{ today.strftime('%A, %B %d') }}</p></div>
+  {% if inbox_n %}<a class="btn alt" href="/add">{{ inbox_n }} thing{{ '' if inbox_n == 1 else 's' }} need{{ 's' if inbox_n == 1 }} you in the Inbox</a>{% endif %}
+</header>
+<section id="chat">{{ body|safe }}</section>
+{% endblock %}

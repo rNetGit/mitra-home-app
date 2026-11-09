@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Add · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Add</h1><p class="sub">Scan or drop a paper and {{ agent }} files it, asking only when unsure. Or type it in below.</p></div></header>
+<section class="card dropzone" id="upload" data-autofile="{{ '1' if autofile }}">
+  <input type="file" id="inbox-files" class="vh" multiple accept="{{ accept }}" aria-label="Choose files to add">
+  <label for="inbox-files" class="dz-target">
+    <svg class="dz-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 18a4.6 4.4 0 0 1 0-8.8A5 4.5 0 0 1 17 8h1a3.5 3.5 0 0 1 0 7h-1"/><path d="M9 15l3-3 3 3"/><path d="M12 12v9"/></svg>
+    <span class="dz-h">Drop files here, paste, or <u>choose files</u></span>
+    <span class="muted">Bills, statements, receipts, photos, school calendars. Up to {{ max_mb }} MB each.</span>
+  </label>
+  <label class="btn" for="inbox-files">Choose files or take a photo</label>
+  <ul id="upload-result" class="uploads" role="status" aria-live="polite"></ul>
+</section>
+<h2 class="sec">Or type it in</h2>
+<nav class="addtiles" aria-label="Type it in">
+  {% for label, href, icon in tiles %}<a class="addtile" href="{{ href }}"><i class="ic ic-{{ icon }}" aria-hidden="true"></i><span>{{ label }}</span></a>{% endfor %}
+</nav>
+<h2 class="sec" id="inbox-h">Inbox{% if inbox_n %} <span class="cnt">{{ inbox_n }}</span>{% endif %}</h2>
+<section id="inbox" aria-labelledby="inbox-h">{{ body|safe }}</section>
+<div class="dropveil" aria-hidden="true"><span>Drop to add to the Inbox</span></div>
+{% endblock %}

@@ -1,0 +1,8 @@
+{# Money > Overview: what needs a look (finance_data.overview attention rows). #}
+{% if o.attention %}
+<section class="card fneeds"><h2>Needs a look</h2>
+  <ul class="rlist">{% for tone, text, url in o.attention %}
+    <li><a href="{{ url }}"><span class="dotm t-{{ tone }}" aria-hidden="true"></span><span class="rl-t">{{ text }}</span><span class="rl-go" aria-hidden="true">›</span></a></li>
+  {% endfor %}</ul>
+</section>
+{% endif %}

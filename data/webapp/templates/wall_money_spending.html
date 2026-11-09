@@ -1,0 +1,39 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, moneyhead with context %}
+{% block title %}Spending · {{ family }}{% endblock %}
+{% block main %}
+{{ moneyhead('Spending') }}
+
+<div class="mtop">
+  <section class="card">
+    <span class="muted">{{ v.names.now }} so far</span>
+    <div class="figure">{{ v.totals.now|money if v.totals.now is not none else '—' }}</div>
+    <p class="note">{% if v.through %}Statements up to {{ v.through }} · day {{ v.day }} of {{ v.days }}{% else %}No statements for this month yet.{% endif %}</p>
+  </section>
+  <section class="card">
+    <span class="muted">{{ v.names.prev }}</span>
+    <div class="figure">{{ v.totals.prev|money if v.totals.prev is not none else '—' }}</div>
+    <p class="note">The whole month.</p>
+  </section>
+  <section class="card">
+    <span class="muted">{{ v.names.ly }}</span>
+    <div class="figure">{{ v.totals.ly|money if v.totals.ly is not none else '—' }}</div>
+    <p class="note">{% if v.have.ly %}The same month a year ago.{% else %}No statements that far back yet.{% endif %}</p>
+  </section>
+</div>
+
+<section class="card mlist" aria-label="Spending by category">
+  <div class="sgrid mhead"><span>Category</span><span class="k now">{{ v.names.now }}</span><span class="k prev">{{ v.names.prev }}</span><span class="k ly">{{ v.names.ly }}</span></div>
+  <div class="mscroll">
+    {% for r in v.rows %}
+    <div class="sgrid">
+      <div class="cat"><b>{{ r.label }}</b>
+        <div class="bars" role="img" aria-label="{{ r.label }}: {{ r.now_text }} this month, {{ r.prev_text }} last month">
+          <i class="now w-{{ r.now_w }}"></i><i class="prev w-{{ r.prev_w }}"></i>{% if v.have.ly %}<i class="ly w-{{ r.ly_w }}"></i>{% endif %}</div></div>
+      <span class="num now">{{ r.now_text }}</span><span class="num">{{ r.prev_text }}</span><span class="num">{{ r.ly_text }}</span>
+    </div>
+    {% else %}<p class="empty">No spending in the statements for these months yet.</p>{% endfor %}
+  </div>
+  <p class="note">Spending as on the PC's Ledger: transfers, card payments, investing and tax are not counted, and a card charge counts once.</p>
+</section>
+{% endblock %}

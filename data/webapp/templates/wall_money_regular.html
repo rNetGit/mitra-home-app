@@ -1,0 +1,41 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, moneyhead with context %}
+{% block title %}Regular bills · {{ family }}{% endblock %}
+{% block main %}
+{{ moneyhead('Regular') }}
+
+<div class="mtop">
+  <section class="card">
+    <span class="muted">Every month</span>
+    <div class="figure">{{ v.month }}</div>
+    <p class="note">{{ v.n }} regular bill{{ 's' if v.n != 1 }} and subscription{{ 's' if v.n != 1 }} · about {{ v.year }} a year.</p>
+  </section>
+  <section class="card">
+    <span class="muted">Subscriptions</span>
+    <div class="figure">{{ v.subs_month }}</div>
+    <p class="note">{{ v.subs_n }} running, a month.</p>
+  </section>
+  <section class="card">
+    <span class="muted">Next 7 days</span>
+    {% if v.soon %}<div class="soon">{% for s in v.soon %}<span class="tag"><b>{{ s.on }}</b> {{ s.name }}</span>{% endfor %}</div>
+    {% else %}<p class="note">Nothing regular due this week.</p>{% endif %}
+  </section>
+</div>
+
+<div class="tiles3m reg">
+  {% for g in v.groups %}
+  <section class="card mlist g-{{ g.key }}" aria-label="{{ g.title }}">
+    <h2>{{ g.title }}</h2><p class="gsum">{{ g.total }} a month</p>
+    <div class="mscroll rows">
+      {% for r in g.rows %}
+      <div class="row"><div class="t"><b>{{ r.name }}</b>
+        <small>{% if r.next %}<span class="{{ 'late' if r.next_late }}">{{ 'Expected' if r.next_late else 'Next' }} {{ r.next }}</span>{% endif %}{% if r.freq %} · {{ r.freq }}{% endif %}
+          {%- for f in r.flags %} · <span class="flag">{{ f }}</span>{% endfor %}</small></div>
+        <span class="big">{{ r.amount }}</span></div>
+      {% else %}<p class="empty">None found yet.</p>{% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+<p class="note">Found in the statements (paid in two of the last four months), the PC's subscriptions and the bill list. Cancel or change them on the PC.</p>
+{% endblock %}

@@ -1,0 +1,104 @@
+{
+  "key": "us_mild",
+  "title": "United States, mild winters (Mid-Atlantic south, Pacific coast, Southeast inland)",
+  "kind": "base",
+  "description": "No snow gear; warm-season lawns; heat prep before summer.",
+  "tasks": [
+    {
+      "name": "Flu shots",
+      "category": "Health",
+      "start": "09-08",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": "Usually Sept-Oct. Pharmacies carry vaccine from late Aug."
+    },
+    {
+      "name": "Heating system check + new filter",
+      "category": "Home",
+      "start": "10-01",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": "Service before the first cold nights."
+    },
+    {
+      "name": "A/C service before summer",
+      "category": "Home",
+      "start": "03-15",
+      "end": "04-30",
+      "lead_days": 14,
+      "notes": "Service and replace the filter before the first hot weeks."
+    },
+    {
+      "name": "Lawn: spring pre-emergent + feed (warm-season grass)",
+      "category": "Lawn",
+      "start": "03-01",
+      "end": "04-15",
+      "lead_days": 14,
+      "notes": "When soil reaches about 60F. Check the product label."
+    },
+    {
+      "name": "Lawn: summer feed + insect control",
+      "category": "Lawn",
+      "start": "06-01",
+      "end": "07-31",
+      "lead_days": 14,
+      "notes": "Water in; avoid the hottest days."
+    },
+    {
+      "name": "Lawn: fall feed / overseed (cool-season grass only)",
+      "category": "Lawn",
+      "start": "09-15",
+      "end": "10-31",
+      "lead_days": 14,
+      "notes": "Skip if your lawn is warm-season grass."
+    },
+    {
+      "name": "Clean gutters after leaf fall",
+      "category": "Home",
+      "start": "11-01",
+      "end": "12-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Check outdoor faucets and insulate for rare freezes",
+      "category": "Home",
+      "start": "11-15",
+      "end": "12-15",
+      "lead_days": 14,
+      "notes": "Only for the occasional hard freeze."
+    },
+    {
+      "name": "Car heat prep: battery test, coolant, tire pressure and tread",
+      "category": "Car",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 14,
+      "notes": "Heat is hard on batteries and tires."
+    },
+    {
+      "name": "Smoke + CO detector batteries/test",
+      "category": "Safety",
+      "start": "10-25",
+      "end": "11-07",
+      "lead_days": 7,
+      "notes": "Change batteries when the clocks go back."
+    },
+    {
+      "name": "Smoke + CO detector test (spring)",
+      "category": "Safety",
+      "start": "03-05",
+      "end": "03-20",
+      "lead_days": 7,
+      "notes": "Test when the clocks go forward."
+    },
+    {
+      "name": "Emergency kit check (flashlights, power banks, water)",
+      "category": "Safety",
+      "start": "05-15",
+      "end": "06-30",
+      "lead_days": 14,
+      "notes": "Storm and outage season starts."
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, pop, daypop, weekmonth with context %}
+{% block title %}Month · {{ family }}{% endblock %}
+{% block main %}
+<div class="whead">
+  <h1>{{ family }}</h1>
+  <span class="clock" data-clock="12">{{ clock_now }}</span>
+  <span class="date">{{ v.title }}</span>
+  <span class="grow"></span>
+  {{ weekmonth('month') }}
+  {% if back %}<a class="btn" href="{{ back }}">This month</a>{% endif %}
+  <a class="btn sq" href="{{ prev }}" aria-label="Earlier month">{{ icon('left') }}</a>
+  <a class="btn sq" href="{{ next }}" aria-label="Later month">{{ icon('right') }}</a>
+</div>
+{% if v.countdowns %}<div class="chiprow mcd">
+  {% for c in v.countdowns %}<span class="chip cd">{{ icon('clock') }} {{ c.title }} <span class="n">{{ c.when }}</span></span>{% endfor %}
+</div>{% endif %}
+
+{# the grid; a phone-sized screen gets the list below instead (wall.css), a short one only the first line + a count #}
+<section class="month mrows-{{ v.rows }}" aria-label="{{ v.title }}">
+  {% for name in v.dows %}<div class="mdow"><span class="dl">{{ name }}</span><span class="ds" aria-hidden="true">{{ name[:1] }}</span></div>{% endfor %}
+  {% for week in v.weeks %}{% for d in week %}
+  <div class="mday{{ ' out' if d.out }}{{ ' today' if d.today }}{{ ' empty' if not d.things }}{{ ' th-' ~ d.theme if d.theme }}"{% if d.things %} role="button" tabindex="0" data-pop{% endif %}>
+    <div class="mtop"><span class="mnum">{{ d.num }}</span>{% if d.things %}<span class="mcount{{ ' late' if d.late_n }}">{{ d.things|length }}</span>{% endif %}</div>
+    {% if d.late_n %}<span class="mline mlate">{{ d.late_n }} late</span>{% endif %}
+    {% for i in d.shown %}<span class="mline {{ i.cls }}{{ ' money ' ~ i.money if i.money }}">{{ i.title }}</span>{% endfor %}
+    {% if d.more %}<span class="mmore">+{{ d.more }} more</span>{% endif %}
+    {% if d.things %}{{ daypop(d.label, d.things) }}{% endif %}
+  </div>
+  {% endfor %}{% endfor %}
+</section>
+
+<section class="magenda" aria-label="{{ v.title }}, day by day">
+  {# this month from today on (another month: all of it) #}
+  {% for week in v.weeks %}{% for d in week if d.things and not d.out and (back or d.date >= now.date()) %}
+  <div class="maday{{ ' today' if d.today }}{{ ' th-' ~ d.theme if d.theme }}" role="button" tabindex="0" data-pop>
+    <div class="mahd"><b>{{ d.date.strftime('%a') }}</b><span class="mnum">{{ d.num }}</span>{% if d.late_n %}<span class="mline mlate">{{ d.late_n }} late</span>{% endif %}</div>
+    {% for i in d.things if not i.late %}<div class="maline {{ i.cls }}{{ ' money ' ~ i.money if i.money }}">{% if i.time %}<span class="t">{{ i.time }}</span>{% endif %}<span class="x">{{ i.title }}</span></div>{% endfor %}
+    {{ daypop(d.label, d.things) }}
+  </div>
+  {% endfor %}{% endfor %}
+</section>
+{% endblock %}

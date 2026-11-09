@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Notes · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Notes</h1><p class="sub">Links, notes, places and deals to find again.</p></div></header>
+<form id="notes-filter" class="nfilter card" action="/notes" method="get" hx-get="/notes/body" hx-target="#notes" hx-swap="innerHTML"
+      hx-trigger="input changed delay:300ms, change, submit" role="search">
+  <label class="vh" for="nq">Search notes</label>
+  <input id="nq" type="search" name="q" value="{{ f.q }}" maxlength="200" placeholder="Search: pizza near the station, voice cloning, goa...">
+  <div class="fchips nkinds" role="radiogroup" aria-label="Kind">
+    <label class="nchip"><input type="radio" name="kind" value="" {{ 'checked' if not f.kind }}><span>All</span></label>
+    {% for k, lbl, n in chips %}<label class="nchip"><input type="radio" name="kind" value="{{ k }}" {{ 'checked' if f.kind == k }}><span>{{ lbl }} <small>{{ n }}</small></span></label>{% endfor %}
+    {% if f.kind and f.kind not in chips|map(attribute=0)|list %}<label class="nchip"><input type="radio" name="kind" value="{{ f.kind }}" checked><span>{{ f.kind|capitalize }}</span></label>{% endif %}
+  </div>
+  <details class="nmore" {{ 'open' if f.tag or f.who or f.all }}>
+    <summary class="muted small">More filters{% if f.tag or f.who or f.all %} (on){% endif %}</summary>
+    <div class="nmore-g">
+      <label>Tag<select name="tag"><option value="">(any)</option>{% for t in tags %}<option value="{{ t }}" {{ 'selected' if f.tag == t }}>{{ t }}</option>{% endfor %}</select></label>
+      <label>Added by<select name="who"><option value="">(anyone)</option>{% for p in people %}<option value="{{ p }}" {{ 'selected' if f.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+      <label class="check"><input type="checkbox" name="all" value="1" {{ 'checked' if f.all }}> Show archived and ended deals</label>
+    </div>
+  </details>
+</form>
+<details class="card addnote" id="nadd" {{ 'open' if open_add }}>
+  <summary><h2>Save a link, note, place or deal</h2></summary>
+  <form class="nform" hx-post="/notes/add" hx-target="#notes" hx-swap="innerHTML" hx-include="#notes-filter" data-reset-on-save>
+    <label>Title (you type it; links are never opened)<input name="title" maxlength="200" required></label>
+    <label>Link (optional)<input name="url" type="url" maxlength="2000" placeholder="https://..."></label>
+    <label>Kind<select name="new_kind"><option value="">(guess from the link)</option>{% for k in kinds %}<option value="{{ k }}">{{ k|capitalize }}</option>{% endfor %}</select></label>
+    <label class="wide">Note: why it was saved (optional)<textarea name="note" maxlength="5000" rows="3"></textarea></label>
+    <label>Tags (comma separated)<input name="new_tags" maxlength="500" placeholder="restaurants, goa"></label>
+    <label>Address (places)<input name="where" maxlength="200"></label>
+    <label>Deal end date<input name="until" type="date" min="2000-01-01" max="2100-12-31"></label>
+    <label>Who sees it<select name="audience">{% for a, lbl in audiences.items() %}<option value="{{ a }}">{{ 'everyone (kids too)' if a == 'family' else lbl }}</option>{% endfor %}</select></label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+  <p class="muted small">Nothing is fetched from the internet: titles are typed, links open in a new tab only when clicked. Tracking
+    parts of a link (utm_..., fbclid) are removed; links carrying a login token are refused. "Only me" hides an item from
+    everyone else here, but anyone with access to this PC's files can still read the database.</p>
+</details>
+<section id="notes">{{ body|safe }}</section>
+{% endblock %}

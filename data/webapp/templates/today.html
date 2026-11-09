@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% block title %}Today · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head today-head"><div><h1>Today</h1>
+  <p class="sub">{{ v.greeting }}{% if user.name %}, {{ user.name }}{% endif %} · {{ today.strftime('%A, %B') }} {{ today.day }}{% if wx_line %} · {{ wx_line }}{% endif %}</p></div>
+  <div class="actions"><a class="btn" href="/add">Add or scan</a></div>
+</header>
+{{ ui.chips(v.chips, '/?') }}
+<section class="brief" aria-label="Mitra's brief">
+  <div class="bsay">
+    <p class="bwho"><span class="bav" aria-hidden="true">M</span>Mitra · {{ v.greeting|lower }}{% if v.who %} · {{ v.who }}{% endif %}</p>
+    {% macro said(lines) %}{% for line in lines %}{% for t, strong in line %}{% if strong %}<b>{{ t }}</b>{% else %}{{ t }}{% endif %}{% endfor %} {% endfor %}{% endmacro %}
+    <p class="btext">{% if words %}<span class="bitems" data-ai="1">{{ words }}</span>
+    {% else %}<span class="bitems"{% if words_later %} hx-post="/today/brief" hx-trigger="load" hx-swap="innerHTML" hx-vals='{{ {"who": v.who}|tojson }}'{% endif %}>{{ said(brief) }}</span>{% endif %}
+    {% if brief_more %}<span class="bmore">{{ said(brief_more) }}</span>{% endif %}</p>
+    <div class="bacts">
+      {% if v.late %}<a class="bact" href="#h-late">See what is late</a>{% endif %}
+      {% if inbox_n %}<a class="bact" href="/add">Answer {{ inbox_n }} Inbox card{{ 's' if inbox_n != 1 }}</a>{% endif %}
+      {% if v.spend %}<a class="bact o" href="/money?part=month">This month</a>{% endif %}
+      <button type="button" class="bact o" data-ask-focus>Ask something else</button>
+    </div>
+  </div>
+  {% set notes = (keep if keep and not v.who else []) %}
+  <div class="bside">
+    <h2 class="kick" id="{{ 'h-keep' if notes else 'h-noticed' }}">Mitra noticed{% if notes %} <a href="/settings?group=data">Settings</a>{% endif %}</h2>
+    {% if notes %}<ul class="keepup">
+      {% for r in notes %}<li class="kl {{ r.tone }}"><i class="kdot" aria-hidden="true"></i>
+        <span class="ktext">{{ r.text }}</span>
+        <span class="kact">{% if r.href and r.action %}<a class="btn alt sm" href="{{ r.href }}">{{ r.action }}</a>{% endif %}
+        {% if r.op == 'syncall' %}<button type="button" class="btn sm" hx-post="/today/act" hx-swap="none" hx-disabled-elt="this"
+          hx-vals='{{ {"op": "syncall", "who": v.who}|tojson }}'>Sync now</button>{% endif %}</span></li>
+      {% endfor %}
+    </ul>{% endif %}
+    {% if rew_line %}<p class="bnote">{{ rew_line.text }}. <a href="/family/routines#rewards">Answer on Family &gt; Routines</a>.</p>{% endif %}
+    {% if wall_line %}<p class="bnote">{{ wall_line.text }}. It updates while {{ brand }} runs on this PC on the home Wi-Fi.
+      <a href="/settings?group=phones#wall-screen">Settings &gt; Phones &gt; Mitra Wall</a>.</p>{% endif %}
+    {% if upd_line %}<p class="bnote">{{ upd_line.text }} {% if upd_line.href %}<a href="{{ upd_line.href }}" target="_blank" rel="noopener noreferrer">Download it from the {{ brand }} site</a> or {% endif %}<a href="/add">See it in the Inbox</a> or <a href="/settings?group=data#data-update">Settings &gt; Data &gt; Updates</a>.</p>{% endif %}
+    {% if not notes and not rew_line and not wall_line and not upd_line %}<p class="muted bnote">Nothing else needs a look right now.</p>{% endif %}
+  </div>
+</section>
+
+
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}
+  {% if undo %}<button type="button" class="linkbtn" hx-post="/today/undo" hx-swap="none"
+    hx-vals='{{ {"bill": undo[0]|string, "due": undo[1], "who": v.who}|tojson }}'>Undo</button>{% endif %}</p>{% endif %}
+<div class="today">
+  <section class="col" aria-labelledby="h-late">
+    {% set A = '/today/act' %}
+    {% if v.late %}<h2 class="sec" id="h-late">Late <span class="cnt">{{ v.late|length }}</span></h2>
+    {{ ui.block(v.late, '', act=A, who=v.who, menu=True) }}{% endif %}
+    <h2 class="sec"{% if not v.late %} id="h-late"{% endif %}>Today{% if v.due %} <span class="cnt">{{ v.due|length }}</span>{% endif %}</h2>
+    {{ ui.block(v.due, 'Nothing else needs you today.' if v.late else 'Nothing needs you today.', act=A, who=v.who, menu=True) }}
+    <h2 class="sec">This week{% if v.week_total %} <span class="cnt">{{ v.week_total }}</span>{% endif %}</h2>
+    {{ ui.block(v.week, 'Nothing else this week.', act=A, who=v.who, menu=True) }}
+    {% if v.later %}<details class="tfold"><summary><h2 class="sec">Later this month <span class="cnt">{{ v.later|length }}</span></h2></summary>
+    {{ ui.block(v.later, '', act=A, who=v.who, menu=True) }}</details>{% endif %}
+    <details class="tfold"><summary><h2 class="sec">Documents</h2></summary>
+      <p class="muted small">A page to read here or download: this week, the weekly digest, a family meeting agenda, the emergency sheet.</p>
+      <div class="docs">{% for kind, label in briefings %}<button type="button" class="btn alt" hx-post="/today/doc" hx-target="#tdoc" hx-swap="innerHTML"
+        hx-vals='{{ {"kind": kind}|tojson }}'>{{ label }}</button> {% endfor %}</div>
+      <div id="tdoc"></div>
+    </details>
+  </section>
+  <section class="col" aria-labelledby="h-today">
+    <h2 class="sec" id="h-today">On today{% if v.today %} <span class="cnt">{{ v.today|length }}</span>{% endif %}</h2>
+    {{ ui.block(v.today, 'Nothing on the calendar today.') }}
+    <h2 class="sec">Next 7 days</h2>
+    <div class="strip" role="list">
+      {% for d in v.strip %}
+      <a role="listitem" class="sday{{ ' now' if d.today }}" href="/calendar?view=week"
+         aria-label="{{ d.date.strftime('%A') }} {{ d.day }}: {{ d.n }} item{{ 's' if d.n != 1 }}">
+        <small>{{ d.dow }}</small><b>{{ d.day }}</b>
+        <span class="dots">{% for c in d.dots %}<i class="dot {{ c }}"></i>{% endfor %}</span>
+      </a>
+      {% endfor %}
+    </div>
+  </section>
+  <aside class="col" aria-label="Money, house and renewals">
+    {% if not v.who %}
+    <h2 class="sec row-h">Money <a href="/money?part=month">This month</a></h2>
+    <div class="card money">
+      {% if v.money.count %}
+      {% if v.money.overdue %}<b class="bad">{{ v.money.overdue }} bill{{ 's' if v.money.overdue != 1 }} overdue{% if v.money.overdue_amt %} · {{ v.money.overdue_amt|money }}{% endif %}</b>{% endif %}
+      <span class="muted">Bills in the next 30 days</span>
+      <b class="big">{{ v.money.due|money }}</b>
+      <span class="muted">{{ v.money.count }} bill{{ 's' if v.money.count != 1 }}</span>
+      {% if v.money.next %}<p>Next: <b>{{ v.money.next.title }}</b> {{ v.money.next.amount|money2 if v.money.next.amount }} <span class="pill {{ v.money.next.tone }}">{{ v.money.next.pill }}</span></p>{% endif %}
+      {% else %}<p class="muted quiet">No bills due in the next 30 days.</p>{% endif %}
+    </div>
+    {% endif %}
+    {% if v.house %}<h2 class="sec row-h">House and car <a href="/family?who=House">All</a></h2>{{ ui.block(v.house, '') }}{% endif %}
+    {% if v.renewals %}<h2 class="sec">Renewals and papers</h2>{{ ui.block(v.renewals, '') }}{% endif %}
+  </aside>
+</div>
+{% endblock %}

@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}My page · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Hi{% if user.name %} {{ user.name }}{% endif %}</h1><p class="sub">{{ today.strftime('%A, %B %d') }}</p></div></header>
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+
+{% if k.jobs %}
+<section class="card rbox" aria-label="My jobs today">
+  <h2>My jobs today <span class="muted small">· {% if k.jobs.done == k.jobs.total %}all done, well done!{% else %}{{ k.jobs.done }} of {{ k.jobs.total }} done{% endif %} · ★ {{ k.jobs.stars_week }} star{{ 's' if k.jobs.stars_week != 1 }} this week</span></h2>
+  {% for p, label, js in k.jobs.parts %}
+  <h3>{{ label }}</h3>
+  <ul class="checklist">
+  {% for j in js %}
+    <li class="{{ 'done' if j.done }}">
+      <button type="button" class="btn alt sm" aria-label="{{ ('Untick ' if j.done else 'Tick ') ~ j.title }}" aria-pressed="{{ 'true' if j.done else 'false' }}" hx-post="/me" hx-vals='{{ {"op": "job", "job": j.id|string, "done": ("0" if j.done else "1")}|tojson }}'>{{ '↺' if j.done else '✓' }}</button>
+      <svg class="rico" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ j.path }}"/></svg>
+      <span class="ctext">{% if j.done %}<s>{{ j.title }}</s>{% else %}{{ j.title }}{% endif %} <span class="muted">· +{{ j.stars }} ★</span></span>
+    </li>
+  {% endfor %}
+  </ul>
+  {% endfor %}
+  {% if k.jobs.rewards.rewards %}
+  <h3>My rewards <span class="muted small">· ★ {{ k.jobs.rewards.balance }} to spend</span></h3>
+  <ul class="checklist">
+  {% for r in k.jobs.rewards.rewards %}
+    <li><span class="ctext">{{ r.title }} <span class="muted">· {{ r.stars }} ★</span></span>
+      {% if r.asked %}<span class="muted small">asked, waiting for a grown-up</span>
+      {% elif r.can %}<button type="button" class="btn alt sm" hx-post="/me" hx-vals='{{ {"op": "reward", "reward": r.id|string}|tojson }}'>Ask for it</button>
+      {% else %}<span class="muted small">{{ r.stars - k.jobs.rewards.balance }} more ★</span>{% endif %}</li>
+  {% endfor %}
+  </ul>
+  {% endif %}
+</section>
+{% endif %}
+
+<section class="card rbox">
+  <h2>My things</h2>
+  {% if k.mine %}
+  <ul class="checklist">
+  {% for r in k.mine %}
+    <li>
+      <span class="ctext">{{ r.title }} <span class="muted">· {{ r.domain }} · {{ r.due_date|day if r.due_date else 'ask a parent for the date' }}{% if r.provider %} · {{ r.provider }}{% endif %}</span></span>
+      <button type="button" class="btn alt sm" aria-label="I finished {{ r.title }}" hx-post="/me" hx-vals='{{ {"op": "done", "item": r.id|string}|tojson }}'>Done</button>
+    </li>
+  {% endfor %}
+  </ul>
+  {% else %}<p class="muted">Nothing on your list right now.</p>{% endif %}
+</section>
+
+<section class="card rbox">
+  <h2>Our lists</h2>
+  {% if not k.lists %}<p class="muted">No lists yet. Ask a grown-up to make one.</p>{% endif %}
+  {% for l in k.lists %}
+  <h3>{{ l.name }} <span class="muted small">{{ l.open_n }} to do</span></h3>
+  {% if l['items'] %}
+  <ul class="checklist">
+  {% for it in l['items'] %}
+    <li class="{{ 'done' if it.done }}">
+      <button type="button" class="btn alt sm" aria-label="{{ ('Untick ' if it.done else 'Tick ') ~ it.text }}" hx-post="/me" hx-vals='{{ {"op": ("untick" if it.done else "tick"), "item": it.id|string}|tojson }}'>{{ '↺' if it.done else '✓' }}</button>
+      <span class="ctext">{% if it.done %}<s>{{ it.text }}</s>{% if it.by %} <span class="muted">· ticked by {{ it.by }}</span>{% endif %}{% else %}{{ it.text }}{% endif %}{% if it.qty %} <span class="muted">· {{ it.qty }}</span>{% endif %}</span>
+    </li>
+  {% endfor %}
+  </ul>
+  {% else %}<p class="muted">Empty. Add the first item below.</p>{% endif %}
+  <form class="nform" hx-post="/me" hx-vals='{{ {"op": "add", "list": l.id|string}|tojson }}'>
+    <label>Add to {{ l.name }}<input name="text" maxlength="120" required placeholder="milk, sun cream..."></label>
+    <button class="btn" type="submit">Add</button>
+  </form>
+  {% if l['items']|selectattr('done')|list %}
+  <div class="optrow"><button type="button" class="btn alt" hx-post="/me" hx-vals='{{ {"op": "clear", "list": l.id|string}|tojson }}'>Clear ticked items</button></div>
+  {% endif %}
+  {% endfor %}
+</section>
+
+<section class="card rbox">
+  <h2>Our saved links</h2>
+  <form class="rsearch" method="get" action="/" role="search">
+    <input name="q" maxlength="80" value="{{ k.words }}" placeholder="pizza, science project, game..." aria-label="Search our saved links">
+    <button class="btn alt" type="submit">Search</button>
+  </form>
+  {% if k.saved %}
+  <ul class="hits">
+  {% for s in k.saved %}
+    <li>{% if s.url %}<a href="{{ s.url }}" target="_blank" rel="noopener noreferrer nofollow">{{ s.title }}</a>{% else %}{{ s.title }}{% endif %}
+      {% if s.note %}<span class="muted"> · {{ s.note }}</span>{% endif %}{% if s.by %}<span class="muted small"> · added by {{ s.by }}</span>{% endif %}</li>
+  {% endfor %}
+  </ul>
+  {% elif k.words %}<p class="muted">Nothing matches.</p>{% else %}<p class="muted">Nothing saved yet.</p>{% endif %}
+  <details class="more-form"><summary class="btn alt">Save a link or note</summary>
+    <form class="nform" hx-post="/me" hx-vals='{"op": "save"}'>
+      <label>Title<input name="title" maxlength="200" required placeholder="What is it?"></label>
+      <label>Link (optional)<input name="url" type="url" maxlength="2000" placeholder="https://..."></label>
+      <label>Note (optional)<input name="note" maxlength="300"></label>
+      <button class="btn" type="submit">Save</button>
+    </form>
+  </details>
+</section>
+
+<section class="card rbox">
+  <h2>Coming up in the next two weeks</h2>
+  {% if k.week %}
+  <ul class="hits">{% for r in k.week %}<li>{{ r.due_date|day }}: {{ r.title }}{% if r.member %} ({{ r.member }}){% endif %}</li>{% endfor %}</ul>
+  {% else %}<p class="muted">Nothing yet.</p>{% endif %}
+  {% if k.classes %}
+  <h3>My classes this week</h3>
+  <ul class="hits">{% for c in k.classes %}<li>{{ c.date|day }}: {{ c.title }}{% if c.provider %} at {{ c.provider }}{% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+  {% if k.days_off %}
+  <h3>Holidays and days off</h3>
+  <ul class="hits">{% for d in k.days_off %}<li>{{ d.span }}: {{ d.title }}{% if d.kind != 'Holiday' and d.kind != 'Festival' %} ({{ d.kind|lower }}){% endif %}</li>{% endfor %}</ul>
+  {% endif %}
+  <h3>Birthdays</h3>
+  {% if k.birthdays %}
+  <ul class="hits">{% for b in k.birthdays %}<li>{{ b.date|day }}: {{ b.title }}</li>{% endfor %}</ul>
+  {% else %}<p class="muted">None coming up.</p>{% endif %}
+</section>
+{% endblock %}

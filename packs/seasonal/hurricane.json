@@ -1,0 +1,48 @@
+{
+  "key": "hurricane",
+  "title": "Add-on: hurricane / tropical storm",
+  "kind": "addon",
+  "description": "Atlantic season is June-November; adjust for your basin.",
+  "tasks": [
+    {
+      "name": "Review wind, flood and storm-surge insurance coverage",
+      "category": "Safety",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 21,
+      "notes": "Flood is usually a separate policy with a waiting period."
+    },
+    {
+      "name": "Photo or video inventory of home contents",
+      "category": "Safety",
+      "start": "05-01",
+      "end": "06-15",
+      "lead_days": 14,
+      "notes": "Store a copy off-site."
+    },
+    {
+      "name": "Hurricane kit and evacuation plan",
+      "category": "Safety",
+      "start": "05-15",
+      "end": "06-15",
+      "lead_days": 14,
+      "notes": "Water, food, medicines, documents, fuel, route and pet plan."
+    },
+    {
+      "name": "Trim trees, check roof, shutters and tie-downs",
+      "category": "Home",
+      "start": "05-15",
+      "end": "06-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Top up fuel, cash and prescriptions",
+      "category": "Safety",
+      "start": "06-01",
+      "end": "06-30",
+      "lead_days": 14,
+      "notes": ""
+    }
+  ]
+}

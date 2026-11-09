@@ -1,0 +1,104 @@
+{
+  "key": "canada_cold",
+  "title": "Canada, cold winters",
+  "kind": "base",
+  "description": "Snow, ice, winter tires and furnace prep. Check your province for tire rules (for example Quebec).",
+  "tasks": [
+    {
+      "name": "Flu shots",
+      "category": "Health",
+      "start": "10-15",
+      "end": "11-30",
+      "lead_days": 21,
+      "notes": "Provincial programs usually open in Oct."
+    },
+    {
+      "name": "Furnace service + new filter",
+      "category": "Winter",
+      "start": "09-15",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": ""
+    },
+    {
+      "name": "Drain outdoor hoses, shut off exterior taps",
+      "category": "Winter",
+      "start": "10-01",
+      "end": "10-31",
+      "lead_days": 14,
+      "notes": "Before the first hard freeze."
+    },
+    {
+      "name": "Winter tires on",
+      "category": "Car",
+      "start": "10-15",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": "Quebec requires them from Dec 1 to Mar 15; check your province."
+    },
+    {
+      "name": "Car winter prep: battery, wipers, washer fluid, antifreeze",
+      "category": "Car",
+      "start": "10-15",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Clean gutters after leaf fall",
+      "category": "Winter",
+      "start": "10-15",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Stock salt, shovels, roof rake; service snow blower",
+      "category": "Winter",
+      "start": "10-15",
+      "end": "11-20",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Smoke + CO detector batteries/test",
+      "category": "Safety",
+      "start": "10-25",
+      "end": "11-07",
+      "lead_days": 7,
+      "notes": "When the clocks go back."
+    },
+    {
+      "name": "Winter tires off",
+      "category": "Car",
+      "start": "04-01",
+      "end": "05-15",
+      "lead_days": 14,
+      "notes": "When temperatures stay above about 7C."
+    },
+    {
+      "name": "Lawn: spring clean-up and feed",
+      "category": "Lawn",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Sump pump test before spring melt",
+      "category": "Home",
+      "start": "03-01",
+      "end": "04-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "A/C service before summer",
+      "category": "Home",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 14,
+      "notes": ""
+    }
+  ]
+}

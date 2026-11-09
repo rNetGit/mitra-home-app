@@ -1,0 +1,104 @@
+{
+  "key": "us_hot",
+  "title": "United States, hot climate (Southwest, Gulf coast, Florida)",
+  "kind": "base",
+  "description": "Heat, sun and monsoon/storm prep; year-round lawn care; termites.",
+  "tasks": [
+    {
+      "name": "Flu shots",
+      "category": "Health",
+      "start": "09-08",
+      "end": "10-31",
+      "lead_days": 21,
+      "notes": "Usually Sept-Oct."
+    },
+    {
+      "name": "A/C service + filter",
+      "category": "Home",
+      "start": "02-15",
+      "end": "04-15",
+      "lead_days": 21,
+      "notes": "Book early; service shops fill up by May."
+    },
+    {
+      "name": "Replace A/C filter (monthly in peak season)",
+      "category": "Home",
+      "start": "05-15",
+      "end": "09-15",
+      "lead_days": 7,
+      "notes": "Check monthly while running daily."
+    },
+    {
+      "name": "Irrigation system check + adjust schedule",
+      "category": "Lawn",
+      "start": "03-01",
+      "end": "04-15",
+      "lead_days": 14,
+      "notes": "Look for broken heads and leaks."
+    },
+    {
+      "name": "Termite / pest inspection",
+      "category": "Home",
+      "start": "03-01",
+      "end": "04-30",
+      "lead_days": 14,
+      "notes": "Annual in many Southern states."
+    },
+    {
+      "name": "Car heat prep: battery, coolant, tires, sun shade",
+      "category": "Car",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 14,
+      "notes": "Heat shortens battery life."
+    },
+    {
+      "name": "Water heater flush and check",
+      "category": "Home",
+      "start": "09-01",
+      "end": "10-31",
+      "lead_days": 14,
+      "notes": "Hard water builds sediment."
+    },
+    {
+      "name": "Heating check (short winter use)",
+      "category": "Home",
+      "start": "10-15",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Roof and window seal check before storm season",
+      "category": "Home",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Smoke + CO detector batteries/test",
+      "category": "Safety",
+      "start": "10-25",
+      "end": "11-07",
+      "lead_days": 7,
+      "notes": "Change batteries when the clocks go back."
+    },
+    {
+      "name": "Smoke + CO detector test (spring)",
+      "category": "Safety",
+      "start": "03-05",
+      "end": "03-20",
+      "lead_days": 7,
+      "notes": "Test when the clocks go forward."
+    },
+    {
+      "name": "Heat safety: sunscreen, water, check on older relatives",
+      "category": "Health",
+      "start": "05-01",
+      "end": "06-15",
+      "lead_days": 14,
+      "notes": ""
+    }
+  ]
+}

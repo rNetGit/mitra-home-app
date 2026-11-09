@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% import "_ui.html" as ui %}
+{% block title %}Family · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Family</h1><p class="sub">Everyone's next 30 days, their papers, IDs and cards.</p></div></header>
+{{ ui.ftabs(family_tabs, '') }}
+<form class="rsearch card" action="/records" method="get" role="search">
+  <label class="vh" for="rq">Search the family's records</label>
+  <input id="rq" type="search" name="q" value="" maxlength="200" placeholder="Search everything: water bill, passport, furnace...">
+  <button class="btn" type="submit">Search</button>
+</form>
+<div class="tiles">
+  {% for t in v.tiles %}
+  <div class="tilewrap">
+  <a class="tile ptile g{{ t.av[1] }}{{ ' on' if v.who == t.name }}" href="/family?who={{ t.name|urlencode }}"{% if v.who == t.name %} aria-current="true"{% endif %}>
+    <span class="ptop"><span class="av lg {{ t.av[1] }}" aria-hidden="true">{{ t.av[0] }}</span><b>{{ t.name }}</b></span>
+    <span class="pcount"><b>{{ t.count }}</b><small> item{{ 's' if t.count != 1 }} in 30 days</small></span>
+    <small class="pnext">{% if t.next %}Next: {{ t.next }}{% if t.next_pill %} · {{ t.next_pill }}{% endif %}{% else %}Nothing coming up{% endif %}</small>
+    {% if t.overdue %}<span class="dpill pover">{{ t.overdue }} overdue</span>{% endif %}
+  </a>
+  {% if t.edit_id %}<a class="tile-edit" href="/records?ref=members%3A{{ t.edit_id }}" title="Edit {{ t.name }}: name, birthday, school, IDs" aria-label="Edit {{ t.name }}"><i class="ic ic-edit" aria-hidden="true"></i></a>
+  {% elif t.name == 'House' %}<a class="tile-edit" href="/family/house" title="Edit the house: city, state, ZIP code, online look-ups" aria-label="Edit the house"><i class="ic ic-edit" aria-hidden="true"></i></a>{% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% if o and o.attention and not v.who %}
+<section class="card fneeds"><h2>Needs a look</h2>
+  <ul class="rlist">{% for tone, text, url in o.attention %}
+    <li><a href="{{ url }}"><span class="dotm t-{{ tone }}" aria-hidden="true"></span><span class="rl-t">{{ text }}</span><span class="rl-go" aria-hidden="true">›</span></a></li>
+  {% endfor %}</ul>
+</section>
+{% endif %}
+{% if v.who %}
+<h2 class="sec row-h">{{ 'House and car' if v.who == 'House' else v.who }} <a href="/family">Close</a></h2>
+{{ ui.block(v.rows, 'Nothing in the next 30 days.') }}
+<p><a href="/?who={{ v.who|urlencode }}">Today for {{ v.who }}</a></p>
+{% endif %}
+{% endblock %}

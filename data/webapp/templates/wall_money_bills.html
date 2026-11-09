@@ -1,0 +1,49 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, moneyhead with context %}
+{% block title %}Bills paid · {{ family }}{% endblock %}
+{% block main %}
+{{ moneyhead('Bills') }}
+
+<div class="mtop">
+  <section class="card">
+    <span class="muted">Paid in {{ v.names.now }}</span>
+    <div class="figure">{{ v.now_total }}</div>
+    <p class="note">{{ v.now_n }} bill{{ 's' if v.now_n != 1 }} so far.</p>
+  </section>
+  <section class="card">
+    <span class="muted">Paid in {{ v.names.prev }}</span>
+    <div class="figure">{{ v.prev_total }}</div>
+    <p class="note">{{ v.prev_n }} bill{{ 's' if v.prev_n != 1 }}.</p>
+  </section>
+  <section class="card{{ ' warn' if v.wait_n }}">
+    <span class="muted">Still to come</span>
+    <div class="figure">{{ v.wait_total if v.wait_n else '—' }}</div>
+    <p class="note">{% if v.wait_n %}{{ v.wait_n }} paid in {{ v.names.prev }}, not seen yet this month.{% else %}Everything paid last month is paid again.{% endif %}</p>
+  </section>
+</div>
+
+<div class="mpair">
+  <section class="card mlist" aria-label="Bills, this month and last month">
+    <div class="bgrid mhead"><span>Bill</span><span>{{ v.names.prev }}</span><span>{{ v.names.now }}</span></div>
+    <div class="mscroll">
+      {% for r in v.rows %}
+      <div class="bgrid {{ r.state }}">
+        <div class="t"><b>{{ r.name }}</b>{% if r.note %}<small>{{ r.note }}</small>{% endif %}</div>
+        <span class="paid">{% if r.prev_text %}<b>{{ r.prev_text }}</b><small>{{ r.prev_on }}</small>{% else %}<small>—</small>{% endif %}</span>
+        <span class="paid">{% if r.now_text %}<b>{{ r.now_text }}</b><small>{{ r.now_on }}</small>{% else %}<span class="pill wait">Not yet</span>{% endif %}</span>
+      </div>
+      {% else %}<p class="empty">No bills in the statements for these two months yet.</p>{% endfor %}
+    </div>
+  </section>
+  <section class="card mlist" aria-label="Still open on the bill list">
+    <h2>Open on the bill list</h2>
+    <div class="mscroll rows">
+      {% for b in v.listed %}
+      <div class="row"><div class="t"><b>{{ b.name }}</b><small class="{{ 'late' if b.late }}">{{ 'Was due' if b.late else 'Due' }} {{ b.due }}</small></div>
+        <span class="big">{{ b.amount }}</span></div>
+      {% else %}<p class="empty">Nothing open on the bill list this month.</p>{% endfor %}
+    </div>
+    <p class="note">Bills are utilities, phone, internet, insurance, rent or mortgage and loan payments, as in the Ledger's Bills paid.</p>
+  </section>
+</div>
+{% endblock %}

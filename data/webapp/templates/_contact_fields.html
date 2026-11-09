@@ -1,0 +1,9 @@
+  <label>Name<input name="name" maxlength="80" required placeholder="Acme Plumbing" value="{{ v.name }}"></label>
+  <label>Kind of work<select name="trade">{% for k, lbl in ch.trades %}<option value="{{ k }}" {{ 'selected' if v.trade == k }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>Phone<input name="phone" type="tel" maxlength="30" autocomplete="off" value="{{ v.phone }}"></label>
+  <label>Email<input name="email" type="email" maxlength="120" autocomplete="off" value="{{ v.email }}"></label>
+  <label>Website<input name="website" maxlength="200" placeholder="https://" value="{{ v.website }}"></label>
+  <label>Last job<input name="last_used" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.last_used }}"></label>
+  <label>Rating<select name="rating"><option value="">(none)</option>{% for n in range(5, 0, -1) %}<option value="{{ n }}" {{ 'selected' if v.rating == n|string }}>{{ n }} of 5</option>{% endfor %}</select></label>
+  <label>Use them again?<select name="again"><option value="">not said</option><option value="1" {{ 'selected' if v.again == '1' }}>yes</option><option value="0" {{ 'selected' if v.again == '0' }}>no</option></select></label>
+  <label>Notes<input name="notes" maxlength="300" placeholder="Fixed the furnace igniter, $180; ask for Dave" value="{{ v.notes }}"></label>

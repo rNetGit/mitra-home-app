@@ -1,0 +1,206 @@
+<p class="muted small">Your documents go only to the AI you choose, under your own account, with account numbers and names masked
+  first. Keys and tokens stay on this PC, are never shown again, and can be typed only on this PC.</p>
+{% for title, level, word, line in conns %}{% if loop.index == 1 %}
+<section class="card" id="conn-ai">
+  <h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2>
+  <p class="muted">{{ line }}</p>
+  {% if not (ai.provider in ai.keyed and ai.key_hint) %}{% set guide_open, guide_flat = false, true %}{% include "_ai_guide.html" %}{% endif %}
+  {% include "_conn_ai.html" %}
+</section>
+{% elif loop.index == 2 %}
+<section class="card" id="conn-tg">
+  <h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2>
+  {% if tg.bot %}<p>Bot <b>{{ tg.bot }}</b> · {{ 'running' if tg.running else 'stopped' }}</p>
+  {% elif tg.token %}<p class="alert">A token is saved but Telegram did not accept it: {{ tg.problem or 'unknown' }}</p>
+  {% else %}<p class="muted">Family members can ask what is due, search documents and send papers from their phones. In Telegram,
+    message @BotFather, send /newbot, pick a name, and paste the token it gives you here.</p>{% endif %}
+  {% if local %}
+  <form class="nform" hx-post="/settings/telegram" hx-vals='{"op": "token"}' hx-disabled-elt="find button">
+    <label>Bot token{% if tg.hint %} (saved, ends {{ tg.hint }}){% endif %}<input name="token" type="password" maxlength="200" required autocomplete="off" spellcheck="false"></label>
+    <button class="btn" type="submit">Save token</button>
+  </form>
+  {% endif %}
+  {% if tg.token %}
+  <div class="optrow">
+    {% if tg.running %}<button type="button" class="btn alt" hx-post="/settings/telegram" hx-vals='{"op": "stop"}'>Stop the bot</button>
+    {% else %}<button type="button" class="btn" hx-post="/settings/telegram" hx-vals='{"op": "start"}'>Start the bot</button>{% endif %}
+    {% if tg.can_autostart %}<button type="button" class="btn alt" hx-post="/settings/telegram" hx-vals='{{ {"op": "autostart", "on": ("0" if tg.autostart else "1")}|tojson }}'>{{ 'Do not start with this PC' if tg.autostart else 'Start with this PC' }}</button>{% endif %}
+  </div>
+  <p class="muted small">The bot answers only while this PC is on and the bot is running.{% if tg.autostart %} It starts by itself when you sign in to this PC.{% endif %}</p>
+  {% if tg.people %}
+  <form class="nform" hx-post="/settings/telegram" hx-vals='{"op": "code"}'>
+    <label>Link a phone for<select name="who">{% for n in tg.people %}<option value="{{ n }}">{{ n }}</option>{% endfor %}</select></label>
+    <button class="btn alt" type="submit">Make a one-time code</button>
+  </form>
+  {% endif %}
+  {% endif %}
+</section>
+{% elif loop.index == 3 %}
+<section class="card" id="conn-google">
+  <h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2>
+  <p class="muted">Shows your Google Calendar on Calendar (your own events are only read, never changed). Full steps, with
+    every click: docs/GOOGLE_CALENDAR.md and docs/GOOGLE_GMAIL.md in the app folder.</p>
+  {% if not g.client %}
+    {% if local %}
+    <p>Step 1: the OAuth client file (.json) downloaded from your Google Cloud project (Desktop app).</p>
+    <div class="optrow"><input type="file" accept=".json,application/json" id="gclient" aria-label="Google client file">
+      <button type="button" class="btn" data-upload="#gclient" data-upload-to="/settings/google/client">Save the client file</button></div>
+    <p class="muted small" id="gclient-said" role="status"></p>
+    {% else %}<p class="muted">{{ local_only }}</p>{% endif %}
+  {% elif not g.signed_in %}
+    <p>Client file saved. Next: sign in. A browser tab opens on this PC; choose the account and allow the read-only permissions.</p>
+    {% if local %}<button type="button" class="btn" hx-post="/settings/google" hx-vals='{"op": "sign_in"}' hx-disabled-elt="this" hx-indicator="#g-wait">Sign in to Google</button>
+    <span id="g-wait" class="setting-up muted" role="status">Waiting for you to finish in the browser tab (up to 4 minutes)...</span>
+    {% else %}<p class="muted">{{ local_only }}</p>{% endif %}
+  {% else %}
+    {% if g.problem %}<p class="alert">{{ g.problem }}</p>{% endif %}
+    {% if g.calendars %}
+    <form class="nform" hx-post="/settings/google" hx-vals='{"op": "pick"}'>
+      <fieldset class="wide"><legend>Calendars to show</legend>
+      {% for cid, cname, on in g.calendars %}<label class="check"><input type="checkbox" name="cal" value="{{ cid }}" {{ 'checked' if on }}> {{ cname }}</label>{% endfor %}
+      </fieldset>
+      <button class="btn alt" type="submit">Save the choice</button>
+    </form>
+    {% endif %}
+    <h3>Put {{ brand }} due dates on Google Calendar</h3>
+    {% if not g.sync.can_write %}
+    <p class="muted">{{ brand }} can make its own calendar named “{{ g.sync.name }}” and keep bills, statement due dates, expiries,
+      checkups, birthdays and festivals on it, each with a reminder. It can only touch that calendar, never your own events.
+      This needs one extra permission from Google.</p>
+    {% if local %}<button type="button" class="btn alt" hx-post="/settings/google" hx-vals='{"op": "allow_write"}' hx-disabled-elt="this" hx-indicator="#gw-wait">Allow it (opens Google)</button>
+    <span id="gw-wait" class="setting-up muted" role="status">Waiting for you to finish in the browser tab (up to 4 minutes)...</span>{% endif %}
+    {% else %}
+    <form class="nform" hx-post="/settings/google" hx-vals='{"op": "sync_settings"}'>
+      <label>How far ahead (days)<select name="horizon">{% for h in g.sync.horizons %}<option value="{{ h }}" {{ 'selected' if h == g.sync.horizon }}>{{ h }}</option>{% endfor %}</select></label>
+      <label>Reminder (days before, 9:00)<select name="reminder_days">{% for r in g.sync.reminders %}<option value="{{ r }}" {{ 'selected' if r == g.sync.reminder_days }}>{{ r }}</option>{% endfor %}</select></label>
+      <label class="check wide"><input type="checkbox" name="amounts" value="1" {{ 'checked' if g.sync.amounts }}> Show amounts in event titles (they are then stored at Google)</label>
+      <label class="check wide"><input type="checkbox" name="auto" value="1" {{ 'checked' if g.sync.auto }}> Keep it up to date automatically every morning</label>
+      <button class="btn alt" type="submit">Save settings</button>
+    </form>
+    <div class="optrow">
+      <button type="button" class="btn alt" hx-get="/settings/google/preview" hx-target="#sync-plan" hx-swap="innerHTML">Preview what would change</button>
+    </div>
+    <div id="sync-plan"></div>
+    <p class="muted small">{{ g.sync.events }} event(s) on the {{ g.sync.name }} calendar{% if g.sync.last %} · last sync {{ g.sync.last }}{% endif %}</p>
+    {% if g.sync.calendar %}
+    <details class="more-form"><summary class="btn alt">Delete the {{ g.sync.name }} calendar</summary>
+      <form class="nform" hx-post="/settings/google" hx-vals='{"op": "sync_remove"}'>
+        <label class="check"><input type="checkbox" name="sure" value="1" required> I want to delete the {{ g.sync.name }} calendar from Google</label>
+        <button class="btn" type="submit">Delete it</button>
+      </form>
+    </details>
+    {% endif %}
+    {% endif %}
+    <h3>Gmail (read-only)</h3>
+    <p class="muted">Files bills and statements from mail you label yourself. Only that label is read; nothing in Gmail is changed, sent or deleted.</p>
+    {% if not g.gmail.permission %}
+    {% if local %}<button type="button" class="btn alt" hx-post="/settings/google" hx-vals='{"op": "allow_gmail"}' hx-disabled-elt="this" hx-indicator="#gm-wait">Allow Gmail (opens Google)</button>
+    <span id="gm-wait" class="setting-up muted" role="status">Waiting for you to finish in the browser tab (up to 4 minutes)...</span>{% endif %}
+    {% else %}
+    <form class="nform" hx-post="/settings/google" hx-vals='{"op": "gmail"}'>
+      <label class="check wide"><input type="checkbox" name="enabled" value="1" {{ 'checked' if g.gmail.enabled }}> File mail with this label into the inbox</label>
+      <label>Gmail label<input name="label" maxlength="60" value="{{ g.gmail.label }}"></label>
+      <button class="btn alt" type="submit">Save</button>
+    </form>
+    {% if g.gmail.enabled %}<button type="button" class="btn alt" hx-post="/settings/google" hx-vals='{"op": "gmail_now"}' hx-disabled-elt="this">Check mail now</button>{% endif %}
+    {% endif %}
+    <details class="more-form"><summary class="btn alt">Disconnect Google</summary>
+      <form class="nform" hx-post="/settings/google" hx-vals='{"op": "disconnect"}'>
+        <label class="check"><input type="checkbox" name="sure" value="1" required> Sign out here and cancel the access at Google</label>
+        <button class="btn" type="submit">Disconnect</button>
+      </form>
+    </details>
+  {% endif %}
+</section>
+{% else %}
+<section class="card" id="conn-bank">
+  <h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2>
+  <p class="muted">{{ line }}</p>
+  {% if not bank.configured %}
+  <p class="muted small">SimpleFIN Bridge (bridge.simplefin.org) is a paid service the family signs up for themselves (about $1.50 a month,
+    paid to them, not to {{ brand }}). You connect your banks there; {{ brand }} only asks it, read-only, for balances and new
+    transactions once a morning. Nothing else leaves this PC. Make a setup token there and paste it here. docs/BANK_SYNC.md has the steps.</p>
+  {% if local %}
+  <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "token"}' hx-disabled-elt="find button">
+    <label>Setup token<input name="token" type="password" maxlength="2000" required autocomplete="off" spellcheck="false"></label>
+    <button class="btn" type="submit">Connect</button>
+  </form>
+  {% else %}<p class="muted">{{ bank_local_only }}</p>{% endif %}
+  {% else %}
+  {% if bank.error %}<p class="alert">Last pull did not work: {{ bank.error }}</p>
+  {% elif bank.stale %}<p class="alert">The last good pull was {{ bank.stale_days }} days ago.</p>{% endif %}
+  {% if bank.accounts %}
+  <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "pick"}'>
+    <fieldset class="wide"><legend>Accounts to pull</legend>
+    {% if bank.accounts|length > 1 %}<div class="optrow"><button type="button" class="btn alt" data-check-all="1">Select all</button><button type="button" class="btn alt" data-check-all="0">Unselect all</button></div>{% endif %}
+    {% for a in bank.accounts %}<label class="check"><input type="checkbox" name="acct" value="{{ a.id }}" {{ 'checked' if a.chosen }}> {{ a.org }} {{ a.name }}{% if a.last4 %} x{{ a.last4 }}{% endif %}</label>{% endfor %}
+    </fieldset>
+    <button class="btn alt" type="submit">Save the choice</button>
+  </form>
+  {% else %}<p class="muted">SimpleFIN lists no accounts yet. Connect a bank at SimpleFIN Bridge, then Pull now.</p>{% endif %}
+  <div class="optrow"><button type="button" class="btn" hx-post="/settings/bank" hx-vals='{"op": "pull"}' hx-disabled-elt="this">Pull now</button></div>
+  <p class="muted small">{% if bank.last_ok %}Last good pull {{ bank.last_ok[:16]|replace('T', ' ') }}{% if bank.last %} · {{ bank.last.inserted }} new, {{ bank.last.skipped }} already there{% endif %}{% else %}No pull has worked yet{% endif %}. Runs every morning with the daily brief.</p>
+  <details class="more-form"><summary class="btn alt">Forget the bank connection</summary>
+    <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "forget"}'>
+      <label class="check"><input type="checkbox" name="sure" value="1" required> Remove the SimpleFIN access from this PC (transactions already pulled stay)</label>
+      <button class="btn" type="submit">Forget</button>
+    </form>
+  </details>
+  {% endif %}
+</section>
+{% endif %}{% endfor %}
+<section class="card" id="conn-mail">
+  <h2>Mail folder <span class="chip {{ 'ok' if mail.enabled and mail.password else 'muted' }}">{{ 'on' if mail.enabled and mail.password else 'off' }}</span></h2>
+  <p class="muted">Any mail provider, not just Gmail: make a new mailbox only for {{ brand }}, forward bills, statements, school
+    letters and receipts to it (or set a forwarding rule in your main mail), and {{ brand }} copies what arrives into the
+    inbox, read-only. Use an <b>app password</b> from that provider's security settings, never the account's own password.
+    docs/MAIL_FOLDER.md has the steps for Gmail, iCloud, Outlook.com and Yahoo.</p>
+  {% if mail.last_pull or mail.last_error %}<p class="muted small">{% if mail.last_pull %}Last read {{ mail.last_pull[:16]|replace('T', ' ') }}.{% endif %}
+    {% if mail.last_error %}<span class="alert small">Last problem: {{ mail.last_error }}</span>{% endif %}</p>{% endif %}
+  <form class="nform" hx-post="/settings/mail" hx-vals='{"op": "save"}' hx-disabled-elt="find button" autocomplete="off">
+    <label>Mailbox address<input name="address" type="email" maxlength="254" required value="{{ mail.address }}" placeholder="riveras.mitra@gmail.com"></label>
+    <label>Mail server (blank = guess from the address)<input name="host" maxlength="253" value="{{ mail.host }}" placeholder="imap.gmail.com" spellcheck="false"></label>
+    <label>Port<input name="port" inputmode="numeric" maxlength="5" value="{{ mail.port }}"></label>
+    <label>Folder<input name="folder" maxlength="100" value="{{ mail.folder }}"></label>
+    {% if local %}<label>App password {% if mail.password %}(saved; blank = keep it){% endif %}<input name="password" type="password" maxlength="200" autocomplete="new-password" spellcheck="false" {{ '' if mail.password else 'required' }}></label>
+    {% else %}<p class="muted small">The app password can be typed only on this PC.</p>{% endif %}
+    <label class="check"><input type="checkbox" name="enabled" value="1" {{ 'checked' if mail.enabled }}> Read it with every inbox check</label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+  {% if mail.password %}
+  <div class="optrow">
+    <button type="button" class="btn alt" hx-post="/settings/mail" hx-vals='{"op": "test"}'>Test the sign-in</button>
+    <button type="button" class="btn alt" hx-post="/settings/mail" hx-vals='{"op": "pull"}'>Read it now</button>
+    <details class="more-form"><summary class="btn alt">Forget it</summary>
+      <form class="nform" hx-post="/settings/mail" hx-vals='{"op": "forget"}'>
+        <label class="check"><input type="checkbox" name="sure" value="1" required> Forget the app password and what was read</label>
+        <button class="btn" type="submit">Forget the mail folder</button>
+      </form>
+    </details>
+  </div>
+  {% endif %}
+  <p class="muted small">Read-only: messages stay unread and nothing is moved or deleted. Attachments pass the same checks as
+    any upload; a message without one is kept as text. The app password stays on this PC.</p>
+</section>
+<section class="card" id="conn-feeds">
+  <h2>Other calendars <span class="chip {{ 'ok' if feeds else 'muted' }}">{{ feeds|length }} added</span></h2>
+  <p class="muted">An iCloud, Outlook, school or work calendar shown on the Calendar page next to everything else,
+    read-only. In that calendar, copy its subscribe or publish address (it ends in .ics or starts with webcal://).</p>
+  {% if feeds %}
+  <ul class="checklist">{% for f in feeds %}
+    <li><span class="ctext"><b>{{ f.name }}</b> <span class="muted">· {{ f.host }} · {% if f.fetched_at %}read {{ f.fetched_at[:16]|replace('T', ' ') }}, {{ f.n }} events coming{% else %}not read yet{% endif %}</span>
+      {% if f.error %}<br><span class="alert small">{{ f.error }}</span>{% endif %}</span>
+      <button type="button" class="btn alt sm" hx-post="/settings/feeds" hx-vals='{{ {"op": "refresh", "id": f.id}|tojson }}'>Read now</button>
+      <button type="button" class="btn alt sm" hx-post="/settings/feeds" hx-vals='{{ {"op": "remove", "id": f.id}|tojson }}'>Remove</button></li>
+  {% endfor %}</ul>
+  {% endif %}
+  {% if local %}
+  <form class="nform" hx-post="/settings/feeds" hx-vals='{"op": "add"}' hx-disabled-elt="find button" autocomplete="off">
+    <label>Name<input name="name" maxlength="40" required placeholder="Work"></label>
+    <label>Calendar address<input name="url" type="url" maxlength="2000" required spellcheck="false" placeholder="webcal://..."></label>
+    <button class="btn" type="submit">Add the calendar</button>
+  </form>
+  {% else %}<p class="muted small">Add a calendar on this PC: its address is a private link.</p>{% endif %}
+  <p class="muted small">The address stays on this PC and goes only to that calendar's own server, read about once an
+    hour. Titles and times are kept; descriptions and places are not. Nothing is written back.</p>
+</section>

@@ -1,0 +1,26 @@
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if doc %}<div class="card doc print-list"><h2>{{ doc.title }}</h2><p class="optrow"><a class="btn alt" href="/brief/doc/{{ doc.kind }}" download>Download (.md)</a>
+  <button type="button" class="btn alt" data-print-list>Print</button></p>{{ doc.html|safe }}</div>
+{% if doc.kind == 'emergency' %}
+<details class="card sfold" {{ 'open' if flash }}><summary><h2>Where things are</h2></summary>
+  <p class="muted">What someone you trust needs to find if you cannot tell them: places and names only. Never write a
+    password, a PIN or a full account number here.</p>
+  <form class="nform" hx-post="/today/emergency/where" hx-target="#tdoc" hx-swap="innerHTML" autocomplete="off">
+    {% for key, label in where_fields %}<label>{{ label }}<input name="{{ key }}" maxlength="{{ where_max }}" value="{{ where.get(key, '') }}"></label>
+    {% endfor %}<button class="btn" type="submit">Save where things are</button>
+  </form>
+</details>
+<details class="card sfold"><summary><h2>A sealed copy for someone you trust</h2></summary>
+  <p class="muted">One file that opens in any web browser, with no app, but only with the passphrase you choose. Give the
+    file to a grandparent, a friend or your lawyer (by email or on a USB stick), and tell them the passphrase separately,
+    for example on the phone. Make a new copy when things change.</p>
+  <form class="nform" data-download-post="/brief/doc/emergency/sealed" autocomplete="off">
+    <label>Passphrase (at least 10 characters; a few words is easiest)<input type="password" name="passphrase" minlength="10" required autocomplete="new-password"></label>
+    <label>The same passphrase again<input type="password" name="again" minlength="10" required autocomplete="new-password"></label>
+    <button class="btn" type="submit">Download the sealed copy</button> <span class="muted small" data-said role="status"></span>
+  </form>
+  <p class="muted small">{{ brand }} does not keep the passphrase. Without it nobody can open the file, you included: make
+    a new copy if it is lost.</p>
+</details>
+{% endif %}
+{% else %}<p class="alert" role="status">That document could not be made just now.</p>{% endif %}

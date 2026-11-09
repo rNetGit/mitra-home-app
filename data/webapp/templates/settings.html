@@ -1,0 +1,576 @@
+{% extends "base.html" %}
+{% block title %}Settings · {{ brand }}{% endblock %}
+{% block main %}
+{% macro icon(name) %}<svg viewBox="0 0 24 24" aria-hidden="true">{% if name == 'i-house' %}<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><circle cx="12" cy="14" r="2"/>
+{% elif name == 'i-agent' %}<rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9 12h.01M15 12h.01M9.5 15h5"/>
+{% elif name == 'i-plug' %}<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>
+{% elif name == 'i-phone' %}<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>
+{% else %}<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/>{% endif %}</svg>{% endmacro %}
+{% if group == 'home' %}
+<header class="head"><div><h1>Settings</h1><p class="sub">{% if simple %}Profile, home profile, phones and walls and data{% else %}Profile, home profile, phones and walls, connections and data{% endif %}</p></div></header>
+{% else %}
+<header class="head fhead"><div><a class="fback" href="/settings">Settings</a><h1>{{ titles.get(group, 'Settings') }}</h1></div></header>
+{% if group in ('household', 'agent') %}<nav class="fchips" aria-label="Settings group">{% for k, lbl in groups %}<a href="/settings?group={{ k }}" {% if k == group %}class="on" aria-current="true"{% endif %}>{{ lbl }}</a>{% endfor %}</nav>{% endif %}
+{% endif %}
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if group == 'home' %}
+<form class="nform viewsw" hx-post="/settings/view" aria-label="How much to show">
+  <fieldset class="seg"><legend class="vh">How much to show</legend>
+    <label class="check"><input type="radio" name="mode" value="advanced" {{ 'checked' if view == 'advanced' }}> <span><b>Advanced</b> everything</span></label>
+    <label class="check"><input type="radio" name="mode" value="simple" {{ 'checked' if view == 'simple' }}> <span><b>Simple</b> everyday tools</span></label>
+  </fieldset>
+  <button class="btn" type="submit">Save</button>
+  <p class="muted small nform-note">{% if simple %}Simple shows the everyday tools: Today, Family, Calendar, Inbox, the Brief, bills, lists and notes, phones and backups.{% else %}Advanced shows everything, including finance, insurance, taxes, work, connections and the optional packs.{% endif %} This only changes what is shown; nothing is deleted or switched off.</p>
+</form>
+{% endif %}
+
+{% if group == 'home' %}
+{% set pr = o.profile %}
+<a class="fhero g-over shero" href="/settings?group=household">
+  <p class="kick">Household profile</p>
+  <p class="gbig">{{ pr.pct }}% <small>filled in</small></p>
+  <svg class="fb-bar shero-bar" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><rect x="0" y="0" width="100" height="6" rx="3" fill="rgba(255,255,255,.25)"/><rect x="0" y="0" width="{{ [pr.pct, 1]|max }}" height="6" rx="3" fill="#fff"/></svg>
+  <p class="fhero-more">{% if pr.next %}Next: {{ pr.next }}{% else %}Everything is filled in{% endif %} <span aria-hidden="true">›</span></p>
+</a>
+{% if pr.next %}<p class="shero-act"><button type="button" class="btn" hx-post="/settings/next">Ask me the next question ({{ pr.next }})</button></p>{% endif %}
+<div class="flanes rlanes">
+{% for l in o.lanes if l.key != 'household' %}
+  <a class="flane" href="/settings?group={{ l.key }}">
+    <span class="flane-ico {{ l.g }}">{{ icon(l.icon) }}</span>
+    <span class="flane-t"><b>{{ l.name }}</b><span class="muted">{{ l.sub }}</span></span>
+    <span class="flane-n"><b class="{{ l.tone }}">{{ l.big }}</b>{% if l.big_label %}<small class="muted">{{ l.big_label }}</small>{% endif %}</span>
+    <span class="flane-go" aria-hidden="true">›</span>
+  </a>
+{% endfor %}
+</div>
+{% if o.attention %}
+<section class="card fneeds"><h2>Needs a look</h2>
+  <ul class="rlist">{% for tone, text, url in o.attention %}
+    <li><a href="{{ url }}"><span class="dotm t-{{ tone }}" aria-hidden="true"></span><span class="rl-t">{{ text }}</span><span class="rl-go" aria-hidden="true">›</span></a></li>
+  {% endfor %}</ul>
+  {% if o.more %}<p class="muted small"><a href="/settings?group=data">{{ o.more }} more in the health check</a></p>{% endif %}
+</section>
+{% endif %}
+<p class="muted small">Light or dark: open More from your picture, then Dark mode or Light mode. Version {{ version }} · stored on this PC.</p>
+
+{% elif group == 'household' %}
+<details class="card sfold" open><summary><h2>How complete is your profile</h2></summary>
+  <p><b>{{ h.pct }}%</b> filled in</p>
+  {% if h['rows'] %}
+  <ul class="fbars">{% for r in h['rows'] %}
+    <li class="t-{{ 'ok' if r.pct >= 100 else 'warn' if r.pct >= 50 else 'bad' }}"><div class="fb-top"><span class="fb-l">{{ r.label }}</span><span class="fb-v"><b>{{ r.done }}</b> of {{ r.total }}</span></div>
+      <svg class="fb-bar" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><rect class="fb-bg" x="0" y="0" width="100" height="6" rx="3"/><rect class="fb-fill" x="0" y="0" width="{{ [r.pct, 1]|max }}" height="6" rx="3"/></svg></li>
+  {% endfor %}</ul>
+  {% endif %}
+  <p class="muted small">The rest fills in over the coming weeks: a couple of questions a day arrive in the Inbox.</p>
+  {% if h.next %}
+  <button type="button" class="btn" hx-post="/settings/next">Ask me the next question ({{ h.next }})</button>
+  {% else %}<p class="muted">Everything is filled in.</p>{% endif %}
+</details>
+<details class="card sfold"><summary><h2>Names on your papers</h2><span class="muted">Full names hidden before anything goes to the AI</span></summary>
+  <p class="muted small">Bills, policies and statements often print full legal names, not the short names you use here. Write them
+    one per line, so they are hidden before anything is sent to the AI. They stay on this PC.</p>
+  <form class="nform" hx-post="/settings/papers">
+    <label class="wide">Full names as printed<textarea name="names" rows="4" maxlength="4000" placeholder="Alexander Q Patel&#10;Samantha Patel">{{ h.paper_names }}</textarea></label>
+    <button class="btn" type="submit">Save the names</button>
+  </form>
+</details>
+{% if not simple %}
+<details class="card sfold"><summary><h2>Optional features</h2><span class="muted">Packs you can switch on</span></summary>
+  <p class="muted small">Switch on only what you will use. Turning one on never removes anything.</p>
+  <form class="nform" hx-post="/settings/packs">
+    {% for k, title, note, on in packs %}<label class="check wide"><input type="checkbox" name="pack" value="{{ k }}" {{ 'checked' if on }}> <span><b>{{ title }}</b>: {{ note }}</span></label>{% endfor %}
+    <button class="btn" type="submit">Save</button>
+  </form>
+</details>
+{% endif %}
+<details class="card sfold"><summary><h2>Traditions and holidays</h2><span class="muted">Festivals and holidays on the calendar</span></summary>
+  <p class="muted small">{% if trad.holidays %}Public holidays: {{ trad.holidays }} (switch them off under {% if simple %}the Advanced view's {% endif %}Optional features).{% else %}No public holiday rules for your country yet: add your own days in Records &gt; People &gt; Holidays and dates.{% endif %}
+    Optional: the traditions your family keeps (religious, cultural or regional), one per line, so their festivals and holidays reach the calendar. The list itself stays on this PC. The festival and holiday days it adds go to your paired phones and walls on the home Wi-Fi, so they show there too; never to Drive or a chat bot.</p>
+  <form class="nform" hx-post="/settings/traditions">
+    <label class="wide">Our traditions<textarea name="names" rows="3" maxlength="600" placeholder="Hindu (Telugu)&#10;Christian (Catholic)&#10;Lunar New Year">{{ trad.text }}</textarea></label>
+    <label class="check wide"><input type="checkbox" name="lookup" value="1" {{ 'checked' if trad.lookup }}> <span>Once a year, look up their dates with our AI. It is sent only these names, the year and the country. The dates wait in the Inbox until you add them.</span></label>
+    {% if trad.ai %}<p class="muted small">The look-up needs an AI: {{ trad.ai }}.</p>{% endif %}
+    <button class="btn" type="submit">Save</button>
+  </form>
+  {% if trad.lookup and not trad.ai %}
+  <form class="nform" hx-post="/settings/traditions" hx-vals='{"op": "now"}'><button class="btn alt" type="submit">Look up the dates now</button></form>
+  {% endif %}
+</details>
+{% if not simple %}
+<details class="card sfold"><summary><h2>Tax papers</h2><span class="muted">Payers, state tax, tuition</span></summary>
+  <p class="muted small">Names only, separated by commas. No account numbers. All three are optional and stay on this PC.</p>
+  <form class="nform" hx-post="/settings/tax">
+    <label class="wide">Banks, brokers or credit unions that send you interest forms<input name="payers" maxlength="2000" value="{{ tax.payers }}"></label>
+    <label class="wide">Words on your state tax payments (for example the state tax agency's name)<input name="state" maxlength="2000" value="{{ tax.state }}"></label>
+    <label class="wide">Tuition payee as it appears on statements (% is a wildcard)<input name="tuition" maxlength="2000" value="{{ tax.tuition }}"></label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+</details>
+<details class="card sfold"><summary><h2>How early to remind</h2><span class="muted">Days before an expiry date</span></summary>
+  <p class="muted small">Days before an expiry date that its reminder starts.</p>
+  {% if leads %}
+  <div class="tablewrap"><table>
+    <thead><tr><th>Type</th><th>Days before</th><th>Default</th><th></th></tr></thead>
+    <tbody>{% for r in leads %}<tr><td>{{ r.label }}</td><td>{{ r.lead_days }}</td><td>{{ r.default }}</td><td>{{ 'changed' if r.custom }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <form class="nform" hx-post="/settings/lead">
+    <label>Type<select name="type">{% for r in leads %}<option value="{{ r.type }}">{{ r.label }}</option>{% endfor %}</select></label>
+    <label>Days before the date<input name="days" type="number" min="0" max="730" step="1"></label>
+    <label class="check"><input type="checkbox" name="reset" value="1"> Back to the default</label>
+    <button class="btn alt" type="submit">Save</button>
+  </form>
+  {% endif %}
+</details>
+{% endif %}
+<p><a class="btn alt" href="/setup">Run the setup interview again</a></p>
+
+{% elif group == 'agent' %}
+{% set p = a.p %}
+<details class="card sfold" open><summary><h2>Your agent</h2></summary>
+  <p class="muted small">How the agent talks, when the brief is made and what it keeps an eye on. You can also ask in Chat,
+    for example: send the brief at 6 instead.</p>
+  <form class="nform" hx-post="/settings/agent">
+    <label>Name<input name="name" maxlength="40" required value="{{ p.name }}"></label>
+    <label>Tone<select name="tone">{% for k, lbl in a.tones %}<option value="{{ k }}" {{ 'selected' if p.tone == k }}>{{ lbl }}</option>{% endfor %}</select></label>
+    <label>Daily brief at<select name="brief_time">{% for t in a.times %}<option {{ 'selected' if p.brief_time == t }}>{{ t }}</option>{% endfor %}</select></label>
+    <label>Weekly digest on<select name="weekly_day">{% for d, lbl in a.days %}<option value="{{ d }}" {{ 'selected' if p.weekly_day == d }}>{{ lbl }}</option>{% endfor %}</select></label>
+    <label>at<select name="weekly_time">{% for t in a.times %}<option {{ 'selected' if p.weekly_time == t }}>{{ t }}</option>{% endfor %}</select></label>
+    <fieldset class="wide"><legend>The Brief keeps an eye on</legend>
+      {% for k, lbl in a.watch %}<label class="check"><input type="checkbox" name="watch" value="{{ k }}" {{ 'checked' if k in p.watch }}> {{ lbl }}</label>{% endfor %}
+      <p class="muted small">What is left out stays quiet on Today. Backup and task warnings always show.</p>
+    </fieldset>
+    <fieldset class="wide"><legend>Who may approve Inbox items from a phone</legend>
+      {% for n in a.adults %}<label class="check"><input type="checkbox" name="approvers" value="{{ n }}" {{ 'checked' if n in p.approvers }}> {{ n }}</label>{% endfor %}
+      <p class="muted small">None ticked = every adult with a linked phone.</p>
+    </fieldset>
+    <button class="btn" type="submit">Save</button>
+  </form>
+  <p class="muted small">{{ a.schedule }}.</p>
+</details>
+<details class="card sfold"><summary><h2>Sign-in PINs</h2><span class="muted">Each person's PIN for this PC and phones</span></summary>
+  {% if not pins.people %}
+  <p class="muted">Add the people of the household first.</p>
+  {% else %}
+  <p class="muted small">A PIN lets each person sign in on this PC and on a phone. Phone access stays off until at least one PIN
+    exists. Children get a smaller screen with no money.</p>
+  <p class="small">Has a PIN: {{ pins.people|selectattr('has_pin')|map(attribute='name')|join(', ') or 'nobody yet' }}.</p>
+  <form class="nform" hx-post="/settings/pin" autocomplete="off">
+    <label>Person<select name="who">{% for x in pins.people %}<option value="{{ x.name }}" {{ 'selected' if x.name == me }}>{{ x.name }}</option>{% endfor %}</select></label>
+    <label>New PIN (4 or more)<input name="pin" type="password" minlength="4" maxlength="40" required autocomplete="new-password"></label>
+    <label>Type it again<input name="again" type="password" minlength="4" maxlength="40" required autocomplete="new-password"></label>
+    <button class="btn" type="submit">Save PIN</button>
+  </form>
+  <p class="muted small">Forgot a PIN? Pick the person and save a new one: the old PIN is not needed. A changed PIN signs that person out everywhere.</p>
+  {% endif %}
+</details>
+<details class="card sfold"><summary><h2>Hidden from Today</h2><span class="muted">Items you hid or snoozed</span></summary>
+  {% if hidden %}
+  <ul class="checklist">{% for r in hidden %}
+    <li><span class="ctext">{{ r.title or 'An item' }} <span class="muted">· {{ r.state }}{% if r.until %} until {{ r.until }}{% endif %}</span></span>
+      <button type="button" class="btn alt sm" hx-post="/settings/restore" hx-vals='{{ {"key": r.key}|tojson }}'>Restore</button></li>
+  {% endfor %}</ul>
+  {% else %}<p class="muted">Nothing is hidden. Hide in a Brief row's menu quiets one item.</p>{% endif %}
+</details>
+<p class="muted small">Light or dark: open More from your picture, then Dark mode or Light mode.</p>
+
+{% elif group == 'connections' %}
+{% include "_conn.html" %}
+
+{% elif group == 'phones' %}
+<dialog id="wprev" class="wprev" aria-label="Wall screen preview"><div class="wprev-head"><b>Preview</b> <span class="muted small">as the wall will show it (nothing is saved)</span><button type="button" class="btn alt sm" data-wprev-close>Close</button></div><iframe title="Wall screen preview" id="wprev-frame"></iframe></dialog>
+{% set lan = ph.lan %}
+{% set pill = {'ok': ('OK', 'ok'), 'quiet': ('Not seen for 14 days', 'warn'), 'new': ('Not used yet', 'info'), 'gone': ('Person left', 'bad')} %}
+<nav class="seg devtabs" aria-label="Devices">
+  {% for key, label, n in (('phones', 'Phones', ph.rows|length), ('walls', 'Walls', wl.rows|length), ('connection', 'Connection', None)) %}
+  <a href="/settings?group=phones&amp;tab={{ key }}" class="{{ 'on' if tab == key }}"{% if tab == key %} aria-current="page"{% endif %}>{{ label }}{% if n is not none %} <span class="devn">{{ n }}</span>{% endif %}</a>
+  {% endfor %}
+</nav>
+{% if not lan.on and tab != 'connection' %}
+<p class="alert">{% if pm.want and not pm.pins %}<b>Please set up a PIN before you connect a phone.</b> {% endif %}Phones and tablets cannot reach {{ brand }} right now: it was started for this PC only. <a href="/settings?group=phones&amp;tab=connection">{{ 'Restart it for phones' if pm.want and pm.pins else ('Finish phone setup' if pm.want else 'Open it to phones') }}</a></p>
+{% endif %}
+
+{% if tab == 'phones' %}
+{% if pair %}
+<dialog class="txndlg devdlg" id="dlg-pair" data-dlg-auto aria-labelledby="dlg-pair-t"><div class="txm">
+  <header class="txm-head"><h2 id="dlg-pair-t">Scan this with {{ pair.name }}</h2><button type="button" class="btn alt" data-dlg-close>Close</button></header>
+  <img class="qr" src="{{ pair.qr }}" alt="Pairing code for {{ pair.name }}" width="264" height="264">
+  <p>Open the {{ brand }} phone app on {{ pair.member }}'s phone and scan the code. It works once, until {{ pair.until }}.</p>
+  <p class="muted small">The phone checks that it talks to this PC: certificate fingerprint {{ pair.fp }}.
+    Nobody else should photograph this screen. If the time runs out, make a new code.</p>
+</div></dialog>
+{% endif %}
+<section class="card">
+  <div class="devhead"><h2>Phones</h2>
+  {% if not ph.people %}<span class="muted">Add the people of the household first.</span>
+  {% elif not local %}<span class="muted">Add a phone from this PC: the pairing code is shown only here.</span>
+  {% elif lan.on %}<button type="button" class="btn" data-dlg="dlg-phone-add">+ Add a phone</button>{% endif %}</div>
+  {% if ph.rows %}
+  <ul class="devlist">{% for d in ph.rows %}
+    <li><button type="button" class="devrow" data-dlg="dev-p{{ d.id }}">
+      <span class="devmain"><b>{{ d.name }}</b><span class="muted small">{{ d.member }}{{ ' (child or guest)' if d.role == 'limited' }}{% if d.last_seen %} · last seen {{ d.last_seen[:10]|day }}{% endif %}</span></span>
+      <span class="devpill p-{{ pill[d.state][1] }}">{{ pill[d.state][0] }}</span></button></li>
+  {% endfor %}</ul>
+  {% else %}<p class="muted">No phone is paired yet.</p>{% endif %}
+  {% if ph.removed %}<p class="muted small">{{ ph.removed }} removed phone(s) are kept in the list of past pairings only.</p>{% endif %}
+  <p class="muted small">Click a phone to choose what it may carry or to remove it. Each phone keeps a copy of only what its
+    person may see.</p>
+</section>
+{% if local and lan.on and ph.people %}
+<dialog class="txndlg devdlg" id="dlg-phone-add" aria-labelledby="dlg-phone-add-t"><div class="txm">
+  <header class="txm-head"><h2 id="dlg-phone-add-t">Add a phone</h2><button type="button" class="btn alt" data-dlg-close>Close</button></header>
+  <form class="nform" hx-post="/settings/phones/add" autocomplete="off">
+    <label>Whose phone<select name="who">{% for p in ph.people %}<option value="{{ p.name }}">{{ p.name }}{{ ' (child or guest)' if p.role == 'limited' }}</option>{% endfor %}</select></label>
+    <label>Phone name<input name="name" maxlength="40" required placeholder="Ann's phone"></label>
+    <button class="btn" type="submit">Show the pairing code</button>
+  </form>
+  <p class="muted small">The code works once, for {{ ph.minutes }} minutes. Adults' phones start with:
+    {{ ph.defaults.adult|join(', ') }}. Finance detail and ID documents stay off until you turn them on.
+    Children and guests get {{ ph.defaults.limited|join(', ')|lower }} only, never money.</p>
+</div></dialog>
+{% endif %}
+{% for d in ph.rows %}
+<dialog class="txndlg devdlg" id="dev-p{{ d.id }}" aria-labelledby="dev-p{{ d.id }}-t"><div class="txm">
+  <header class="txm-head"><h2 id="dev-p{{ d.id }}-t">{{ d.name }}</h2><button type="button" class="btn alt" data-dlg-close>Close</button></header>
+  <p class="muted small">{{ d.member }}{{ ' (child or guest)' if d.role == 'limited' }} · paired {{ d.created[:10]|day }}{% if d.last_seen %} · last seen {{ d.last_seen[:10]|day }}{% if d.last_seen|length > 15 %} {{ d.last_seen[11:16] }}{% endif %}{% endif %}</p>
+  {% if d.gone %}<p class="alert">{{ d.member }} is no longer in the household: this phone stops working at its next call.</p>{% endif %}
+  <form class="nform" hx-post="/settings/phones/scopes">
+    <input type="hidden" name="id" value="{{ d.id }}">
+    <fieldset class="wide"><legend>What this phone may carry</legend>
+      {% for k in d.allowed %}<label class="check"><input type="checkbox" name="scope" value="{{ k }}" {{ 'checked' if k in d.scopes }}> {{ ph.labels[k] }}</label>{% endfor %}
+    </fieldset>
+    <button class="btn" type="submit">Save</button>
+  </form>
+  <form class="nform devrm" hx-post="/settings/phones/revoke">
+    <input type="hidden" name="id" value="{{ d.id }}">
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Remove {{ d.name }}: it can no longer reach the household</label>
+    <button class="btn alt" type="submit">Remove</button>
+  </form>
+</div></dialog>
+{% endfor %}
+
+{% elif tab == 'walls' %}
+{% if wpair %}
+{% set viaapp = wpair.kind == 'app' and wpair.app_qr %}
+<dialog class="txndlg devdlg" id="wall-code" data-dlg-auto aria-labelledby="wall-code-t"><div class="txm">
+  <header class="txm-head"><h2 id="wall-code-t">{{ 'Scan this with the app on' if viaapp else 'Open this on' }} {{ wpair.name }}</h2><button type="button" class="btn alt" data-dlg-close>Close</button></header>
+  {% if viaapp %}
+  <img class="qr" src="{{ wpair.app_qr }}" alt="Pairing code for the app in wall mode" width="264" height="264">
+  <p>In the {{ brand }} app on the tablet, choose "This is the family wall" and scan this code. It works once, until {{ wpair.until }}.</p>
+  <p class="muted small">The app keeps its own copy of what the wall shows, so it keeps working while this PC is off and
+    catches up when it is on again.</p>
+  <details class="fold wcodetext">
+    <summary>Can't scan? (an Amazon Fire tablet has no scanner)</summary>
+    <p class="small">In the app on the tablet, tap "Can't scan? Type the code instead" and paste this text. Copy it here,
+      send it to the tablet (for example in an email to yourself), then paste it there.</p>
+    <textarea class="wcodebox" readonly rows="4" aria-label="The pairing code as text">{{ wpair.app_text }}</textarea>
+    <p><button type="button" class="btn" data-copy="{{ wpair.app_text }}">Copy the text</button></p>
+    <p class="small">Or type these three lines:</p>
+    <div class="wtype" aria-label="What to type on the tablet">{% for part in wpair.app_plain.split(' ') %}<span>{{ part }}</span>{% endfor %}</div>
+  </details>
+  <p class="optrow"><button type="button" class="btn alt" data-dlg="wall-code-full">Show full screen</button></p>
+  {% else %}
+  <img class="qr" src="{{ wpair.qr }}" alt="Code that opens the wall page with its pairing code" width="264" height="264">
+  <p>Point the tablet's camera at the code, or open <b>{{ wpair.url.split('?')[0] }}</b> in its browser and type this
+    code. It works once, until {{ wpair.until }}.</p>
+  <div class="wcode" aria-label="Pairing code {{ wpair.code|list|join(' ') }}">{{ wpair.code }}</div>
+  <p class="optrow"><button type="button" class="btn" data-copy="{{ wpair.code }}">Copy the code</button>
+    <button type="button" class="btn alt" data-dlg="wall-code-full">Show full screen</button></p>
+  <p class="muted small">Letters and digits that look alike (0 and O, 1, I and L) are never used, and capitals or small
+    letters both work.</p>
+  <p class="muted small">On an iPad or iPhone, Safari first says the connection is not private, because this PC makes
+    its own certificate. Tap Show Details, then visit this website{% if wpair.fp %}, once you have checked the
+    fingerprint below{% endif %}.</p>
+  {% if wpair.fp %}<p class="muted small">The tablet's browser warns about this PC's own certificate the first time:
+    continue only when it shows the fingerprint {{ wpair.fp }}.</p>{% endif %}
+  {% if not wpair.lan %}<p class="muted small">{{ brand }} runs for this PC only, so this code opens the wall in a browser
+    on this PC. For a tablet: Settings &gt; Phones &gt; Connection &gt; Restart for phones, then add the wall again.</p>{% endif %}
+  {% endif %}
+</div></dialog>
+<dialog class="txndlg devdlg wfull" id="wall-code-full" aria-labelledby="wall-code-full-t"><div class="txm">
+  <header class="txm-head"><h2 id="wall-code-full-t">{{ wpair.name }}: {{ 'scan with the app' if viaapp else 'scan or type' }}</h2><button type="button" class="btn alt" data-dlg-close>Close</button></header>
+  <img class="qr" src="{{ wpair.app_qr if viaapp else wpair.qr }}" alt="Pairing code" width="420" height="420">
+  {% if viaapp %}<div class="wtype big">{% for part in wpair.app_plain.split(' ') %}<span>{{ part }}</span>{% endfor %}</div>
+  {% else %}<p class="wurl">{{ wpair.url.split('?')[0] }}</p><div class="wcode big">{{ wpair.code }}</div>{% endif %}
+  <p class="muted">Works once, until {{ wpair.until }}.</p>
+</div></dialog>
+{% endif %}
+<section class="card">
+  <div class="devhead"><h2>Mitra Wall</h2>
+  {% if not local %}<span class="muted">Add a wall from this PC: the pairing code is shown only here.</span>
+  {% elif wl.rows|length >= wl.max %}<span class="muted">{{ wl.max }} walls are paired. Remove one to add another.</span>
+  {% else %}<button type="button" class="btn" data-dlg="dlg-wall-add">+ Add a wall</button>{% endif %}</div>
+  <p class="muted">An old tablet or iPad on the wall that shows the week, today's plan, the children's jobs, the lists
+    and the meals. It opens Money only when an adult types their own PIN, and closes it again after a minute.</p>
+  {% if wl.rows %}
+  <ul class="devlist">{% for d in wl.rows %}
+    <li><button type="button" class="devrow" data-dlg="dev-w{{ d.id }}">
+      <span class="devmain"><b>{{ d.name }}</b><span class="muted small">{{ 'app' if d.kind == 'app' else 'browser' }} · {{ d.face }} clock{{ ' (own)' if d.own }}{% if d.last_seen %} · last seen {{ d.last_seen[:10]|day }}{% endif %}</span></span>
+      <span class="devpill p-{{ pill[d.state][1] }}">{{ pill[d.state][0] }}</span></button></li>
+  {% endfor %}</ul>
+  {% else %}<p class="muted">No wall is paired yet.</p>{% endif %}
+</section>
+{% if local and wl.rows|length < wl.max %}
+<dialog class="txndlg devdlg" id="dlg-wall-add" aria-labelledby="dlg-wall-add-t"><div class="txm">
+  <header class="txm-head"><h2 id="dlg-wall-add-t">Add a wall</h2><button type="button" class="btn alt" data-dlg-close>Close</button></header>
+  <form class="nform" hx-post="/settings/wall/add" autocomplete="off">
+    <label>Wall name<input name="name" maxlength="40" required placeholder="Kitchen wall"></label>
+    <fieldset class="wide"><legend>What runs on the tablet</legend>
+      <label class="check"><input type="radio" name="kind" value="app" {{ 'checked' if lan.on else 'disabled' }}> The {{ brand }} app (Android, iPhone or iPad): keeps working while this PC is off</label>
+      <label class="check"><input type="radio" name="kind" value="browser" {{ 'checked' if not lan.on }}> Its web browser (any tablet or iPad): needs this PC on</label>
+    </fieldset>
+    <button class="btn" type="submit">Show the wall code</button>
+  </form>
+  <p class="muted small">The code works once, for {{ wl.minutes }} minutes. The wall can tick family lists and the
+    children's jobs (set them in Family › Routines); it never sees adults-only lists, critical info or papers.</p>
+</div></dialog>
+{% endif %}
+{% macro screen_fields(sc, key) %}
+<div class="seg ptabs" role="tablist" aria-label="Wall screen parts">
+  <button type="button" role="tab" class="on" aria-selected="true" data-ptab="{{ key }}-clock">Clock</button>
+  <button type="button" role="tab" aria-selected="false" data-ptab="{{ key }}-photos">Photos</button>
+  <button type="button" role="tab" aria-selected="false" data-ptab="{{ key }}-night">Night</button>
+  <button type="button" role="tab" aria-selected="false" data-ptab="{{ key }}-pages">Pages</button>
+  <button type="button" role="tab" aria-selected="false" data-ptab="{{ key }}-look">Look</button>
+</div>
+<div class="ppanel" id="{{ key }}-look" role="tabpanel" hidden>
+  <label>Look of the wall's pages<select name="theme">{% for t, label in wl.themes %}<option value="{{ t }}" {{ 'selected' if sc.theme == t }}>{{ label }}</option>{% endfor %}</select></label>
+  <p class="muted small">The resting clock keeps its own black screen. Photo uses one of the wall photos, a new one each day.</p>
+</div>
+<div class="ppanel" id="{{ key }}-clock" role="tabpanel">
+  <label>Clock<select name="clock"><option value="digital" {{ 'selected' if sc.clock == 'digital' }}>Digital</option>
+    <option value="analog" {{ 'selected' if sc.clock == 'analog' }}>Traditional (hands)</option>
+    <option value="modular" {{ 'selected' if sc.clock == 'modular' }}>Modular (big time, weather, next, jobs, dinner)</option>
+    <option value="typograph" {{ 'selected' if sc.clock == 'typograph' }}>Roman (hands, serif numerals)</option>
+    <option value="flip" {{ 'selected' if sc.clock == 'flip' }}>Flip (turning number cards)</option>
+    <option value="word" {{ 'selected' if sc.clock == 'word' }}>Words ("it is quarter past seven")</option>
+    <option value="dual" {{ 'selected' if sc.clock == 'dual' }}>Two cities (home and the other place)</option>
+    <option value="kidsday" {{ 'selected' if sc.clock == 'kidsday' }}>Kids' day (morning, afternoon, evening as a ring)</option>
+    <option value="led" {{ 'selected' if sc.clock == 'led' }}>LED (a desk clock read from across the room)</option></select></label>
+  <label>LED layout<select name="led_style">{% for k, label in wl.led_styles %}<option value="{{ k }}" {{ 'selected' if sc.led_style == k }}>{{ label }}</option>{% endfor %}</select></label>
+  <label>LED colour<select name="led_colour">{% for k in wl.led_colours %}<option value="{{ k }}" {{ 'selected' if sc.led_colour == k }}>{{ k|capitalize }}</option>{% endfor %}</select></label>
+  <label>LED background<select name="led_bg"><option value="black" {{ 'selected' if sc.led_bg == 'black' }}>Black</option>
+    <option value="wood" {{ 'selected' if sc.led_bg == 'wood' }}>Dark wood</option></select></label>
+  <label class="check"><input type="checkbox" name="led_weekdays" value="1" {{ 'checked' if sc.led_weekdays }}> LED: the weekdays down the side (the weekdays, rain and temperature layout)</label>
+  <label class="check"><input type="checkbox" name="hours24" value="1" {{ 'checked' if sc.hours24 }}> LED: 24-hour time (20:15; off = 08:15 PM)</label>
+  <label>Other place (two cities)<select name="zone">{% for z, label in wl.zones %}<option value="{{ z }}" {{ 'selected' if sc.zone == z }}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Clock shows (seconds)<input type="number" name="clock_seconds" min="10" max="3600" value="{{ sc.clock_seconds }}" required></label>
+</div>
+<div class="ppanel" id="{{ key }}-photos" role="tabpanel" hidden>
+  <label class="check"><input type="checkbox" name="photos" value="1" {{ 'checked' if sc.photos }}> Show photos in turn with the clock</label>
+  <label>Photos from<input type="time" name="photos_from" value="{{ sc.photos_from }}" required></label>
+  <label>Photos until<input type="time" name="photos_to" value="{{ sc.photos_to }}" required></label>
+  <label>Each photo (seconds)<input type="number" name="photo_seconds" min="5" max="300" value="{{ sc.photo_seconds }}" required></label>
+  <label>Photos each turn<input type="number" name="per_turn" min="1" max="20" value="{{ sc.per_turn }}" required></label>
+  <label>Photo style<select name="photo_style"><option value="fade" {{ 'selected' if sc.photo_style == 'fade' }}>Fade (one photo, then the next)</option>
+    <option value="kenburns" {{ 'selected' if sc.photo_style == 'kenburns' }}>Slow zoom (a gentle pan and zoom)</option>
+    <option value="blur" {{ 'selected' if sc.photo_style == 'blur' }}>Blurred fill (no black bars beside upright photos)</option>
+    <option value="collage" {{ 'selected' if sc.photo_style == 'collage' }}>Collage (three at a time)</option>
+    <option value="frame" {{ 'selected' if sc.photo_style == 'frame' }}>Frame and date (a print with the month it was taken)</option>
+    <option value="scrapbook" {{ 'selected' if sc.photo_style == 'scrapbook' }}>Scrapbook page (framed, tilted prints, the months they were taken)</option></select></label>
+</div>
+<div class="ppanel" id="{{ key }}-night" role="tabpanel" hidden>
+  <label>Night clock<select name="night_tone"><option value="dim" {{ 'selected' if sc.night_tone == 'dim' }}>Dim (the same clock, darker)</option>
+    <option value="red" {{ 'selected' if sc.night_tone == 'red' }}>Red (bedroom)</option>
+    <option value="amber" {{ 'selected' if sc.night_tone == 'amber' }}>Amber (bedroom)</option></select></label>
+  <label>Night from<input type="time" name="night_from" value="{{ sc.night_from }}" required></label>
+  <label>Night until<input type="time" name="night_to" value="{{ sc.night_to }}" required></label>
+</div>
+<div class="ppanel" id="{{ key }}-pages" role="tabpanel" hidden>
+  <label>Turn the pages by themselves (seconds per page, 0 = off)<input type="number" name="rotate_seconds" min="0" max="110" value="{{ sc.rotate_seconds }}" required></label>
+  <label class="check"><input type="checkbox" name="clock_only" value="1" {{ 'checked' if sc.clock_only }}> Clock only (a bedroom wall: the clock and photos, no pages; the pages below are ignored)</label>
+  <p class="muted small">Today, Week, Lists and Money are always on the wall. Tick a page to add it.</p>
+  <label class="check"><input type="checkbox" name="tab_chores" value="1" {{ 'checked' if 'chores' in sc.tabs }}> Chores (the children's jobs and stars)</label>
+  <label class="check"><input type="checkbox" name="tab_meals" value="1" {{ 'checked' if 'meals' in sc.tabs }}> Meals (this week's meal plan)</label>
+</div>
+{% endmacro %}
+{% for d in wl.rows %}
+<dialog class="txndlg devdlg" id="dev-w{{ d.id }}" aria-labelledby="dev-w{{ d.id }}-t"><div class="txm">
+  <header class="txm-head"><h2 id="dev-w{{ d.id }}-t">{{ d.name }}</h2><button type="button" class="btn alt" data-dlg-close>Close</button></header>
+  <p class="muted small">{{ 'app' if d.kind == 'app' else 'browser' }} · paired {{ d.created|day }}{% if d.last_seen %} · last seen {{ d.last_seen[:10]|day }} {{ d.last_seen[11:16] }}{% endif %}{% if d.kind == 'app' %} · {% if d.last_sync %}last update {{ d.last_sync[:10]|day }}{% if d.sync_days and d.sync_days >= 14 %} ({{ d.sync_days }} days ago){% endif %}{% else %}no update yet{% endif %}{% endif %}</p>
+  <form class="nform wscreen" hx-post="/settings/wall/own" data-own-auto>
+    <input type="hidden" name="id" value="{{ d.id }}">
+    <label class="check wide"><input type="checkbox" name="own" value="1" {{ 'checked' if d.own }}> Its own screen (untick to follow the household's wall screen)</label>
+    <p class="muted small wide" data-own-hint>Changing anything below ticks this for you. Unticked, {{ d.name }} ignores these choices and follows the household.</p>
+    {{ screen_fields(d.screen, 'w' ~ d.id) }}
+    <button class="btn" type="submit">Save for {{ d.name }}</button>
+    <button class="btn alt" type="button" data-wall-preview>Preview</button>
+  </form>
+  <form class="nform devrm" hx-post="/settings/wall/revoke">
+    <input type="hidden" name="id" value="{{ d.id }}">
+    <label class="check"><input type="checkbox" name="sure" value="1" required> Remove {{ d.name }}: it shows the pairing page again</label>
+    <button class="btn alt" type="submit">Remove</button>
+  </form>
+</div></dialog>
+{% endfor %}
+<section class="card">
+  <h2 id="wall-seasonal">Seasonal looks</h2>
+  <p class="muted small">On {{ wl.season_looks|join(', ') }} (and the three days before) the wall's resting clock shows a drawn
+    backdrop and decorations. It stays still at night. To see one today, add <code>?season=halloween</code>, <code>diwali</code> or
+    <code>christmas</code> to the clock's address.</p>
+  <form class="nform" hx-post="/settings/wall/seasonal" hx-trigger="change" hx-disabled-elt="find input">
+    <label class="switch"><input type="checkbox" role="switch" name="on" value="1" {{ 'checked' if wl.seasonal }} aria-label="Seasonal looks"><span aria-hidden="true"></span></label>
+  </form>
+</section>
+<section class="card">
+  <h2 id="wall-screen">Wall screen <span class="muted small">· every wall without its own</span></h2>
+  <p class="muted small">After two minutes untouched the wall shows a full-size clock, and in the day the family's photos
+    in turn. At night it stays on a dark clock; red or amber makes it a bedroom clock (black, the time and date only).
+    Click a wall above to give it its own screen, for example a bedroom clock.</p>
+  <form class="nform wscreen" hx-post="/settings/wall/screen">
+    {{ screen_fields(wl.screen, 'wd') }}
+    <button class="btn" type="submit">Save the wall screen</button>
+    <button class="btn alt" type="button" data-wall-preview>Preview</button>
+  </form>
+</section>
+<section class="card">
+  <h2>Wall photos <span class="muted small">· {{ wl.photos|length }} of {{ wl.max_photos }}</span></h2>
+  {% if wl.photos %}<div class="wphotos">{% for p in wl.photos %}
+    <figure><img src="/settings/wall/photo/{{ p }}" alt="" loading="lazy" width="160" height="110">
+      <form hx-post="/settings/wall/photo/remove"><input type="hidden" name="name" value="{{ p }}">
+        <button class="btn alt" type="submit">Remove</button></form></figure>{% endfor %}</div>
+  {% else %}<p class="muted">No photos yet: the wall shows only the clock.</p>{% endif %}
+  <div class="optrow"><input type="file" id="wphoto" accept="image/jpeg,image/png,image/webp,.heic" multiple>
+    <button type="button" class="btn" data-upload="#wphoto" data-upload-to="/settings/wall/photo" data-upload-name="1" data-upload-each="1">Add photos</button>
+    <span id="wphoto-said" class="muted" role="status"></span></div>
+  <p class="muted small">Each photo is made again on this PC: turned upright, at most 1920 pixels a side and without its
+    location or camera details. They stay on this PC (in the household folder, wall_photos) and only a paired wall shows them.</p>
+</section>
+
+{% else %}
+<section class="card" id="phones-mode">
+  <h2>Phones and walls on the home Wi-Fi</h2>
+  {% if not pm.want %}
+  <p><b>Off.</b> {{ brand }} starts for this PC only, so phones and walls cannot connect.</p>
+  {% elif not pm.pins %}
+  <p class="alert"><b>Step 1 of 2: please set up a PIN before you connect a phone.</b> Phones and walls sign in with a PIN, so {{ brand }} stays closed to the Wi-Fi until an adult has one (Settings > Agent > Sign-in PINs).</p>
+  <p><a class="btn" href="/settings?group=agent">Set a PIN (Settings &gt; Home Profile &gt; Sign-in PINs)</a></p>
+  <p class="muted small">Step 2 comes next: restart {{ brand }} here once, and phones can connect.</p>
+  {% elif not pm.on %}
+  <p class="alert"><b>Step 2 of 2: restart once.</b> A PIN is set, but {{ brand }} is still running for this PC only. A restart opens it to phones and walls.</p>
+  {% if local %}<form hx-post="/settings/phones/restart"><button class="btn" type="submit">Restart for phones</button></form>
+  {% else %}<p class="muted small">Restart from the PC itself.</p>{% endif %}
+  {% else %}
+  <p><b>On.</b> Phones and walls on this Wi-Fi can connect, every time {{ brand }} starts.</p>
+  {% endif %}
+  {% if not pm.want and pm.on %}
+  <p class="alert">{{ brand }} is still running for phones until it restarts.</p>
+  {% if local %}<form hx-post="/settings/phones/restart"><button class="btn" type="submit">Restart for this PC only</button></form>
+  {% else %}<p class="muted small">Restart from the PC itself.</p>{% endif %}
+  {% endif %}
+  <details class="sfold"><summary>{{ 'Keep phones out' if pm.want else 'Let phones in' }}</summary>
+    <form class="optrow" hx-post="/settings/phones/mode">
+      <input type="hidden" name="on" value="{{ '0' if pm.want else '1' }}">
+      <span>{{ 'Switch off to start ' ~ brand ~ ' for this PC only (phones and walls cannot connect).' if pm.want else 'Switch on to let phones and walls on this Wi-Fi connect when ' ~ brand ~ ' starts.' }}</span>
+      <button class="btn alt" type="submit">{{ 'Switch off' if pm.want else 'Switch on' }}</button>
+    </form>
+  </details>
+  {% if local and pm.windows %}
+  <h3>Windows Firewall and this network</h3>
+  <div id="fw-check" hx-get="/settings/phones/firewall" hx-trigger="load" hx-swap="innerHTML">
+    <p class="muted small">Checking Windows Firewall and this network (a few seconds)...</p></div>
+  {% endif %}
+</section>
+<section class="card">
+  <h2>How phones reach {{ brand }}</h2>
+  {% if lan.on %}
+  <p>Phones on this Wi-Fi reach {{ brand }} at <b>https://{{ lan.ip or "this PC's address" }}:{{ lan.port }}</b>, encrypted
+    with this PC's own certificate.</p>
+  <p class="muted small">Certificate fingerprint (SHA-256): <span class="fp">{{ lan.fp_pretty }}</span>. A phone's browser
+    warns about this certificate the first time: continue only when it shows the same fingerprint.</p>
+  {% if lan.url_qr %}
+  <h3>Open it in a phone's browser</h3>
+  <img class="qr" src="{{ lan.url_qr }}" alt="Code with the address {{ lan.url }}" width="200" height="200">
+  <p class="muted small">No app needed: point the phone's camera at this code (or type the address), then sign in with
+    your name and PIN. Add it to the home screen to keep it one tap away. It works only on this Wi-Fi and only while
+    {{ brand }} runs "for phones" on this PC. The code holds the address only; it lets nobody in without a PIN.</p>
+  {% endif %}
+  {% if lan.remote_url %}
+  <h3>Away from home</h3>
+  <p>Phones signed in to the same private network (Tailscale) reach {{ brand }} at <b>{{ lan.remote_url }}</b>, also away
+    from home. Only devices you added to that network can open it; sign-in still needs a PIN.</p>
+  {% else %}
+  <p class="muted small">Away from home: {{ brand }} never opens this PC to the internet. A private network such as
+    Tailscale lets your own phones reach it anywhere; see docs/REMOTE_ACCESS.md in the app folder.</p>
+  {% endif %}
+  {% else %}
+  <p>Phones cannot reach {{ brand }} yet.{% if not pm.want %} Switch phone access on above.{% elif not pm.pins %} First give an adult a PIN (step 1 above).{% else %} Restart it once (step 2 above).{% endif %}</p>
+  <p class="muted small">Phones then use HTTPS on the home Wi-Fi only; nothing goes through the internet.</p>
+  {% endif %}
+</section>
+{% endif %}
+
+{% else %}
+<details class="card sfold" id="data-where"><summary><h2>Where things are</h2><span class="muted">{{ brand }} {{ where.version }}: the app, your papers and the database on this PC</span></summary>
+  <ul class="wherelist">
+    {% for r in where.rows %}<li><span><b>{{ r.label }}</b>{% if r.note %} <span class="muted small">({{ r.note }})</span>{% endif %}<br>
+      <span class="wpath">{{ r.path }}</span>{% if not r.exists %} <span class="muted small">(not made yet)</span>{% endif %}</span>
+      {% if local and r.exists %}<form hx-post="/settings/folder"><input type="hidden" name="key" value="{{ r.key }}"><button class="btn alt" type="submit">Open</button></form>{% endif %}</li>
+    {% endfor %}
+    <li><span><b>Database</b> <span class="muted small">(one file; back it up with Settings &gt; Data &gt; Back up now)</span><br><span class="wpath">{{ where.db }}</span></span></li>
+    <li><span><b>Phones and walls</b><br><span class="wpath">{{ where.phones or ('switched off' if not where.want else 'not open to the Wi-Fi right now: Settings > Phones > Connection') }}</span></span></li>
+  </ul>
+  {% if not local %}<p class="muted small">Open buttons work on the PC itself.</p>{% endif %}
+</details>
+{% if local %}<details class="card sfold" id="data-stop"><summary><h2>Stop {{ brand }}</h2><span class="muted">It runs with no window; closing the browser leaves it running</span></summary>
+  <p>Phones, walls and the scheduled jobs cannot reach it while it is stopped. Start it again from the Start menu or the
+    desktop icon. If it is set to start by itself, it also comes back the next time this PC restarts.</p>
+  <form hx-post="/settings/stop"><button class="btn alt" type="submit">Stop {{ brand }}</button></form>
+</details>{% endif %}
+<details class="card sfold" open><summary><h2>Health check</h2></summary>
+  {% if bad %}<ul class="calmlist">{% for r in bad %}<li><span class="dotm t-bad" aria-hidden="true"></span><span><b>{{ r.name }}</b>: {{ r.note }}{% if r.here %}<br><span class="muted">Fix it in: {{ r.here }}</span>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
+  <p class="muted">{{ (bad|length ~ (' thing to fix.' if bad|length == 1 else ' things to fix.')) if bad else 'Nothing to fix.' }}</p>
+  {% if checks %}
+  <details><summary>All checks ({{ checks|length }})</summary>
+  <div class="tablewrap"><table>
+    <thead><tr><th></th><th>Check</th><th>What</th><th>Where to fix it</th></tr></thead>
+    <tbody>{% for r in checks %}<tr><td>{{ {'ok': 'OK', 'warn': 'Fix', 'info': 'Note'}.get(r.status, r.status) }}</td><td>{{ r.name }}</td><td>{{ r.note }}</td><td>{{ r.here }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  </details>
+  {% endif %}
+</details>
+<details class="card sfold" id="data-audit"><summary><h2>Data check</h2><span class="muted">Records that do not add up, entered twice or missing</span></summary>
+  <p class="muted">Every week, with the weekly digest, {{ brand }} reads through the records for charges entered twice, bills
+    still open long after their due date, phone bills that do not add up and filed papers missing on disk. It fixes only
+    what cannot be wrong, with Undo; what needs you waits in the Inbox. No AI is used.</p>
+  <div class="optrow"><a class="btn alt" href="/settings/audit">Open the data check</a>
+    <button type="button" class="btn" hx-post="/settings/audit" hx-disabled-elt="this">Check now</button></div>
+</details>
+<details class="card sfold"><summary><h2>Calendar file</h2><span class="muted">Every due date for a phone's calendar</span></summary>
+  <p><a class="btn" href="/settings/calendar.ics" download>Download the calendar file (next 365 days)</a></p>
+  <p class="muted small">Open it on your phone to add every due date to its calendar. It holds names, amounts and last-4 digits
+    only; importing it again updates the events instead of doubling them.</p>
+</details>
+{% include "_data.html" %}
+{% if changes %}
+<details class="card sfold"><summary><h2>Changes made here</h2><span class="muted">Who changed which setting</span></summary>
+  <div class="tablewrap"><table>
+    <thead><tr><th>When</th><th>Who</th><th>What</th><th>Detail</th></tr></thead>
+    <tbody>{% for r in changes %}<tr><td>{{ r.when }}</td><td>{{ r.who }}</td><td>{{ r.what }}</td><td>{{ r.detail }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="muted small">Settings changes only; no keys, tokens or questions are recorded.</p>
+</details>
+{% endif %}
+{% if not simple %}
+<details class="card more-form"><summary><h2>Advanced</h2></summary>
+  <div class="tablewrap"><table><tbody>{% for k, val in adv.facts %}<tr><th>{{ k }}</th><td>{{ val }}</td></tr>{% endfor %}<tr><th>Version</th><td>{{ version }}</td></tr></tbody></table></div>
+  {% if adv.beats %}
+  <h3>Last run of each task</h3>
+  <div class="tablewrap"><table><thead><tr><th>Task</th><th>Result</th><th>Last run</th><th>Note</th></tr></thead>
+    <tbody>{% for b in adv.beats %}<tr><td>{{ b.task }}</td><td>{{ b.result }}</td><td>{{ b.at }}</td><td>{{ b.note }}</td></tr>{% endfor %}</tbody></table></div>
+  {% endif %}
+  {% if adv.cmds %}
+  <h3>Commands for the checks above</h3>
+  <p class="muted small">In a terminal, in the {{ brand }} folder.</p>
+  <div class="tablewrap"><table><tbody>{% for n, c in adv.cmds %}<tr><td>{{ n }}</td><td><code>{{ c }}</code></td></tr>{% endfor %}</tbody></table></div>
+  {% endif %}
+  {% if adv.cron %}<p class="muted small">To start the phone bot with this computer, add this line to your crontab (crontab -e):</p><pre class="doc">{{ adv.cron }}</pre>{% endif %}
+  <p class="muted small">Restore a backup into a new folder without touching this one: python data/restore_backup.py. Full check in a
+    terminal: python onboard.py doctor. Load a bank CSV export by hand: python data/import_statement.py detect FILE.csv.
+    Encrypted backups and a second backup place: python onboard.py add backup. Emergency contacts for the emergency sheet:
+    config/contacts.json (copy contacts.example.json).</p>
+</details>
+{% endif %}
+<p class="muted small">Version {{ version }} · stored on this PC.</p>
+{% endif %}
+{% endblock %}

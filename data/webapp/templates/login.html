@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}Sign in · {{ brand }}{% endblock %}
+{% block main %}
+<form class="card login" method="post" action="/login" autocomplete="on">
+  <h1 class="logohead"><img src="/static/icon.svg" alt="" width="40" height="40"><span class="bt">{{ brand }}<small>AI Agent</small></span></h1>
+  <p class="sub">Who is this?</p>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  {% if note %}<p class="notice" role="status">{{ note }}</p>{% endif %}
+  <label>Name
+    <select name="name" required>
+      {% for n in names %}<option value="{{ n }}" {{ 'selected' if n == who }}>{{ n }}</option>{% endfor %}
+    </select>
+  </label>
+  <label>PIN
+    <input name="pin" type="password" inputmode="numeric" autocomplete="current-password" required autofocus>
+  </label>
+  <button class="primary" type="submit">Sign in</button>
+</form>
+{% endblock %}

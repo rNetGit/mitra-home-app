@@ -1,0 +1,79 @@
+{% macro kicon(k) %}<svg viewBox="0 0 24 24" aria-hidden="true">{% if k == 'place' %}<path d="M12 21s-7-6.2-7-11.5a7 7 0 0 1 14 0C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/>
+{% elif k == 'deal' %}<path d="M3 12V4h8l10 10-8 8z"/><circle cx="7.5" cy="8.5" r="1.4"/>
+{% elif k == 'video' %}<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/>
+{% elif k == 'repo' %}<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M13.5 6l-3 12"/>
+{% elif k == 'article' %}<path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h4"/>
+{% elif k == 'social' %}<path d="M4 5h16v11H9l-5 4z"/>
+{% elif k == 'note' %}<path d="M5 4h14v16H5z"/><path d="M8 9h8M8 13h8M8 17h5"/>
+{% else %}<path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/>{% endif %}</svg>{% endmacro %}
+{% macro meta(n) -%}
+  {%- set bits = [] -%}
+  {%- if n.site %}{% set _ = bits.append(n.site) %}{% endif -%}
+  {%- if n.where %}{% set _ = bits.append(n.where) %}{% endif -%}
+  {%- if n.owner %}{% set _ = bits.append('added by ' ~ n.owner) %}{% endif -%}
+  {%- set _ = bits.append(n.audience) -%}
+  {%- if not n.active %}{% set _ = bits.append('archived or ended') %}{% endif -%}
+  {{ bits|join(' · ') }}
+{%- endmacro %}
+{% macro actions(n) %}
+  {% if n.active %}
+  <div class="optrow nact">
+    <button type="button" class="btn alt" hx-post="/notes/act" hx-target="#notes" hx-swap="innerHTML" hx-include="#notes-filter"
+      hx-vals='{{ {"id": n.id|string, "op": "unpin" if n.pinned else "pin"}|tojson }}'>{{ 'Unpin' if n.pinned else 'Pin' }}</button>
+    <details class="more-form"><summary class="btn alt">Tags</summary>
+      <form class="nform" hx-post="/notes/act" hx-target="#notes" hx-swap="innerHTML" hx-include="#notes-filter">
+        <input type="hidden" name="id" value="{{ n.id }}"><input type="hidden" name="op" value="tags">
+        <label>Tags (comma separated)<input name="tags" maxlength="500" value="{{ n.tags|join(', ') }}"></label>
+        <button class="btn" type="submit">Save tags</button>
+      </form>
+    </details>
+    <button type="button" class="btn alt" hx-post="/notes/act" hx-target="#notes" hx-swap="innerHTML" hx-include="#notes-filter"
+      hx-vals='{{ {"id": n.id|string, "op": "archive"}|tojson }}'>Archive</button>
+  </div>
+  {% endif %}
+{% endmacro %}
+{% macro title(n) %}{% if n.url %}<a href="{{ n.url }}" target="_blank" rel="noopener noreferrer nofollow">{{ n.title }}</a>{% else %}{{ n.title }}{% endif %}{% endmacro %}
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if not ready %}
+<div class="card"><h2>Notes arrive with the next update.</h2><p class="muted">Settings > Data > Check for updates.</p></div>
+{% else %}
+{% set filtered = f.q or f.kind or f.tag or f.who %}
+{% set one = rows|length == 1 %}<p class="muted ncount">{{ rows|length }} item{{ '' if one else 's' }}{{ (' matches' if one else ' match') if filtered else '' }}.</p>
+{% set pins = rows|selectattr('pinned')|selectattr('active')|list %}
+{% set rest = rows|rejectattr('id', 'in', pins|map(attribute='id')|list)|list %}
+{% if pins %}
+<h2 class="nsec">Pinned <span class="muted">{{ pins|length }}</span></h2>
+<div class="npins">
+{% for n in pins %}
+<article class="card ncard pinned">
+  <div class="nhead"><span class="nk-ico" aria-hidden="true">{{ kicon(n.kind) }}</span><h2>{{ title(n) }}</h2></div>
+  <p class="nmeta">{{ meta(n) }}{% if n.ends[0] %} · <b>{{ n.ends[0] }}</b>{% endif %}</p>
+  {% if n.note %}<div class="nnote">{{ n.note }}{% if n.more %}… <details class="inline"><summary>more</summary>{{ n.more }}</details>{% endif %}</div>{% endif %}
+  {% if n.tags %}<p class="ntags">{% for t in n.tags %}<span class="ntag">#{{ t }}</span>{% endfor %}</p>{% endif %}
+  {{ actions(n) }}
+</article>
+{% endfor %}
+</div>
+{% endif %}
+{% if rest %}
+{% if pins %}<h2 class="nsec">Everything else <span class="muted">{{ rest|length }}</span></h2>{% endif %}
+<div class="card nlist">
+{% for n in rest %}
+<article class="ncard nrow{{ ' gone' if not n.active }}">
+  <span class="nk-ico k-{{ n.kind }}" aria-hidden="true">{{ kicon(n.kind) }}</span>
+  <div class="nbody">
+    <div class="nhead"><h2>{{ title(n) }}</h2>{% if n.ends[0] %}<span class="chip-s t-{{ n.ends[1] or 'n' }}">{{ n.ends[0] }}</span>{% endif %}</div>
+    <p class="nmeta muted">{{ meta(n) }}</p>
+    {% if n.note %}<div class="nnote">{{ n.note }}{% if n.more %}… <details class="inline"><summary>more</summary>{{ n.more }}</details>{% endif %}</div>{% endif %}
+    {% if n.tags %}<p class="ntags">{% for t in n.tags %}<span class="ntag">#{{ t }}</span>{% endfor %}</p>{% endif %}
+    {% if n.active %}<details class="nmenu"><summary aria-label="Pin, tags or archive {{ n.title }}" title="Pin, tags, archive"><i class="ic ic-more" aria-hidden="true"></i></summary>{{ actions(n) }}</details>{% endif %}
+  </div>
+</article>
+{% endfor %}
+</div>
+{% endif %}
+{% if not rows %}
+<div class="card nempty"><h2>{{ 'Nothing matches.' if filtered else 'Nothing saved yet.' }}</h2>
+  <p class="muted">{{ 'Try fewer words or another filter.' if filtered else 'Add the first link, note, place or deal above.' }}</p></div>
+{% endif %}
+{% endif %}

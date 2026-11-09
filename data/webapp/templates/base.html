@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="en" data-theme="{{ theme }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="htmx-config" content='{"includeIndicatorStyles":false}'>
+  <meta name="csrf-token" content="{{ csrf }}">
+  <meta name="theme-color" content="{{ '#0D1512' if theme == 'dark' else '#F3F4F6' }}">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+  <link rel="icon" href="/static/icon-192.png" type="image/png">
+  <link rel="apple-touch-icon" href="/static/icon-180.png">
+  <link rel="stylesheet" href="/tokens.css">
+  <link rel="stylesheet" href="/static/app.css?v={{ version }}">
+  <script src="/static/vendor/htmx.min.js?v={{ version }}" defer></script>
+  {% block head %}{% endblock %}
+  <script src="/static/app.js?v={{ version }}" defer></script>
+  <title>{% block title %}{{ brand }}{% endblock %}</title>
+</head>
+{% set shell = user is not none and (signed_in or not can_logout) and not bare %}
+{% set adult = shell and user.role == 'adult' %}
+<body class="{{ 'has-bnav' if adult }}">
+{% macro more_items(skip=()) %}
+        {% for key, label in more if key not in skip %}<a href="/{{ key }}" {% if active == key %}class="on" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+        {% if help_key %}<button type="button" class="ghost" hx-get="/help/panel?key={{ help_key }}" hx-target="#helpp" hx-swap="innerHTML">Help on this page</button>{% endif %}
+        <button type="button" class="ghost" data-theme-toggle data-mode="{{ theme }}">{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}</button>
+        {% if signed_in %}<button type="button" class="ghost" hx-post="/logout">Log out{% if user.name %} ({{ user.name }}){% endif %}</button>{% endif %}
+{% endmacro %}
+{% if shell %}
+  <nav class="rail" aria-label="Main">
+    <a class="brand" href="/" aria-label="{{ brand }}, Today"><img src="/static/icon.svg" alt="" width="40" height="40"><span class="bt"><b>{{ brand }}</b><small>AI Agent</small></span></a>
+    {% if adult %}
+      {% for key, label, href, icon in tabs %}
+      <a href="{{ href }}" class="tab{{ ' add' if key == 'inbox' }}{{ ' on' if tab == key }}"{% if tab == key %} aria-current="{{ 'page' if active == key else 'true' }}"{% endif %}{% if key == 'inbox' %} aria-label="Add or scan{% if inbox_n %}, {{ inbox_n }} waiting in the Inbox{% endif %}"{% endif %}><i class="ic ic-{{ icon }}" aria-hidden="true"></i><span class="tl">{{ label }}</span>{% if key == 'inbox' and inbox_n %}<span class="badge" aria-hidden="true">{{ inbox_n }}</span>{% endif %}</a>
+      {% endfor %}
+      {% if rail_extra %}<span class="rsep" aria-hidden="true"></span>{% endif %}
+      {% for key, label, href, icon in rail_extra %}
+      <a href="{{ href }}" class="tab{{ ' on' if active == key }}"{% if active == key %} aria-current="page"{% endif %}><i class="ic ic-{{ icon }}" aria-hidden="true"></i><span class="tl">{{ label }}</span></a>
+      {% endfor %}
+      <span class="grow"></span>
+      <details class="rmore">
+        <summary class="me{{ ' on' if active in more|map('first')|list and active not in rail_extra|map('first')|list }}" title="More"><span class="av {{ me_av[1] if me_av[1] != 'avn' else 'avall' }}" aria-hidden="true">{{ me_av[0] or '⋯' }}</span><span class="mename">{% if user.name %}<b>{{ user.name }}</b>{% endif %}<small>More</small></span></summary>
+        <div class="rmenu">{{ more_items(rail_extra|map('first')|list) }}</div>
+      </details>
+    {% else %}
+      <a href="/" {% if active == 'home' %}class="on" aria-current="page"{% endif %}>Home</a>
+      <span class="grow"></span>
+      <div class="railfoot">
+        {% if user.name %}<span class="me" title="{{ user.name }}"><span class="av sm {{ me_av[1] }}" aria-hidden="true">{{ me_av[0] }}</span><span class="mename">{{ user.name }}</span></span>{% endif %}
+        <button type="button" class="ghost ibtn" data-theme-toggle data-mode="{{ theme }}" title="{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}" aria-label="{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}"><i class="ic ic-theme" aria-hidden="true"></i></button>
+        {% if signed_in %}<button type="button" class="ghost ibtn" hx-post="/logout" title="Log out{% if user.name %} ({{ user.name }}){% endif %}" aria-label="Log out"><i class="ic ic-logout" aria-hidden="true"></i></button>{% endif %}
+      </div>
+    {% endif %}
+    <small class="ver">v{{ version }}</small>
+  </nav>
+{% endif %}
+  <main>
+{% if adult and active != 'chat' %}
+  <form class="askbar" role="search" hx-post="/chat/ask" hx-swap="none" hx-disabled-elt="find button" aria-label="Ask Mitra">
+    <span class="mav" aria-hidden="true">M</span>
+    <label class="vh" for="askq">Ask Mitra, or tell it something</label>
+    <input id="askq" name="text" maxlength="1000" autocomplete="off" required
+      placeholder="Ask Mitra, or tell it something: &ldquo;Mateo has the dentist Friday at 4&rdquo;">
+    <kbd class="askkey" aria-hidden="true">Ctrl K</kbd>
+    <button class="btn" type="submit">Ask</button>
+    <span class="thinking muted" role="status">Thinking&hellip;</span>
+  </form>
+{% endif %}
+  {% block main %}{% endblock %}</main>
+{% if help_key %}
+  <aside id="helpp" class="helpp" hidden tabindex="-1" aria-label="Help"></aside>
+{% endif %}
+{% if adult %}
+  <details class="bmore pme">
+    <summary aria-label="More{% if user.name %} for {{ user.name }}{% endif %}"{% if active in more|map('first')|list %} class="on"{% endif %}><span class="av {{ me_av[1] if me_av[1] != 'avn' else 'avall' }}" aria-hidden="true">{{ me_av[0] or '⋯' }}</span></summary>
+    <div class="sheet">{{ more_items() }}</div>
+  </details>
+  <nav class="bnav" aria-label="Main (phone)">
+    {% for key, label, href, icon in tabs %}
+    {% if key == 'inbox' %}
+    <a href="{{ href }}" class="scan{{ ' on' if tab == key }}" aria-label="Add or scan{% if inbox_n %}, {{ inbox_n }} waiting in the Inbox{% endif %}"><i class="ic ic-add" aria-hidden="true"></i>{% if inbox_n %}<span class="badge" aria-hidden="true">{{ inbox_n }}</span>{% endif %}</a>
+    {% else %}
+    <a href="{{ href }}" {% if tab == key %}class="on" aria-current="{{ 'page' if active == key else 'true' }}"{% endif %}><i class="ic ic-{{ icon }}" aria-hidden="true"></i>{{ label }}</a>
+    {% endif %}
+    {% endfor %}
+  </nav>
+{% endif %}
+<dialog id="pview" class="pview" aria-label="Filed paper"><div class="pview-head"><b id="pview-title">Filed paper</b> <a class="btn alt sm" id="pview-dl" href="#">Download</a><button type="button" class="btn alt sm" data-pview-close>Close</button></div><iframe title="Filed paper" id="pview-frame"></iframe></dialog>
+</body>
+</html>

@@ -1,0 +1,145 @@
+{# The first run in six screens (setup_data.SCREENS); each part is one step of the setup interview with its own checks. #}
+{% set n = v.titles|length %}
+<div class="wz-top">
+  <ol class="wz-steps" aria-label="Setup steps">
+  {% for t in v.titles %}
+    <li class="{{ 'done' if loop.index0 < v.step else ('now' if loop.index0 == v.step else '') }}"{% if loop.index0 == v.step %} aria-current="step"{% endif %}>
+      <span class="wz-seg" aria-hidden="true"></span><span class="wz-lbl">{{ t }}</span></li>
+  {% endfor %}
+  </ol>
+  <p class="muted small">Step {{ v.step + 1 }} of {{ n }}: {{ v.title }}. About three minutes; everything can be changed later in Settings.</p>
+</div>
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if problems %}<div class="alert" role="alert">{% for p in problems %}<p>{{ p }}</p>{% endfor %}</div>{% endif %}
+
+<div class="wizgrid">
+<div class="wizmain">
+{% if v.title == 'Welcome' %}
+<section class="card wz-welcome">
+  <h2 class="wz-q">{{ v.ask }}</h2>
+  <p class="wz-lead">I am {{ v.agent }}. I keep track of your family's bills, papers, birthdays, checkups and renewals, right here on this PC.</p>
+  <ul class="wz-promises">
+    <li><span class="wz-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg></span>
+      <span><b>Stays on this PC</b><small>Your papers and records never leave it unless you choose to.</small></span></li>
+    <li><span class="wz-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"/></svg></span>
+      <span><b>AI unlocks the rest, privately</b><small>Reminders, the calendar and lists work without it. Simple text statements are read on this PC, but unfamiliar letters, scanned papers and many bank statements need an AI you choose: your papers are read on this PC, names and numbers are masked, and only the masked text goes to it. A key costs about $5 to $10 a year (OpenRouter is the simple way). You can add it on the next screens or later.</small></span></li>
+    <li><span class="wz-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M3 10l9-6 9 6"/><path d="M5 10v9h14v-9"/><path d="M9 19v-5h6v5"/></svg></span>
+      <span><b>Skip the monthly statement download</b><small>Optional: connect <a href="https://beta-bridge.simplefin.org/" target="_blank" rel="noopener">SimpleFIN Bridge</a> in Settings > Connections and new transactions arrive every morning. More connections are planned.</small></span></li>
+    <li><span class="wz-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><circle cx="17" cy="9" r="2.5"/><path d="M16 14.5a5 5 0 0 1 5.5 5"/></svg></span>
+      <span><b>Everyone gets their view</b><small>Kids see their own things, never money. Stop any time and come back.</small></span></li>
+  </ul>
+  {% set p = v.parts[0] %}
+  <form class="wz-form" hx-post="/setup" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "next", "step": v.step|string}|tojson }}'>
+    <details class="wz-rules"><summary>The rules I keep</summary><ul>{% for r in p.rules %}<li>{{ r }}</li>{% endfor %}</ul></details>
+    <label class="check"><input type="checkbox" name="accept" value="1" {{ 'checked' if v.a.accept_rules }} required> I understand and accept these rules.</label>
+    <div class="wz-actions">
+      <button type="button" class="btn alt" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "later", "step": v.step|string}|tojson }}'>Save, finish later</button>
+      <button class="btn" type="submit">Get started</button>
+    </div>
+  </form>
+</section>
+{% else %}
+<h2 class="wz-q">{{ v.ask }}</h2>
+{% if ai %}
+<section class="card wz-ai wz-aiscreen">
+  <h3>What an AI does here</h3>
+  <ul>{% for line in v.ai_does %}<li>{{ line }}</li>{% endfor %}</ul>
+  <h3>How your privacy is protected</h3>
+  <ul>{% for line in v.ai_privacy %}<li>{{ line }}</li>{% endfor %}</ul>
+  <p class="muted small">Connected now: <b>{{ ai.provider if ai.provider and ai.provider != 'none' else 'No AI' }}</b>. Pick a provider below and press Save, or leave it on No AI and press Continue.</p>
+  {% set guide_open, guide_flat = not (ai.provider in ai.keyed and ai.key_hint), true %}{% include "_ai_guide.html" %}
+  {% include "_conn_ai.html" %}
+</section>{% endif %}
+<form class="card nform wz-form" hx-post="/setup" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "next", "step": v.step|string}|tojson }}'>
+{% for p in v.parts %}
+<fieldset class="wz-part wide"><legend>{{ p.title }}</legend><div class="wz-fields">
+{% if p.name == 'Family' %}
+  <label class="wide">Family name<input name="family_name" maxlength="80" required value="{{ v.a.family_name }}" placeholder="for example: The Patel family"></label>
+{% elif p.name == 'Where' %}
+  <label>Country<select name="country" data-currency-map='{{ p.currency_by_country|tojson }}'>{% for c in p.codes %}<option value="{{ c }}" {{ 'selected' if c == p.country }}>{{ p.country_names.get(c, c) }}</option>{% endfor %}</select></label>
+  <label>City or town (optional)<input name="place" maxlength="80" value="{{ v.a.place }}"></label>
+  <label>{{ p.state_label }}<input name="state" maxlength="60" value="{{ v.a.state }}"></label>
+  <label>{{ p.zip_label }}<input name="zip" maxlength="12" value="{{ v.a.zip }}"></label>
+  <fieldset class="radios tiles wide"><legend>Climate</legend>
+  {% for c, lbl in p.climates %}<label class="check"><input type="radio" name="climate" value="{{ c }}" {{ 'checked' if v.a.climate == c or (not v.a.climate and loop.first) }}> {{ lbl }}</label>{% endfor %}
+  </fieldset>
+  <label>Currency the family uses<select name="currency" data-currency>{% for c, lbl in p.currencies %}<option value="{{ c }}" {{ 'selected' if c == p.currency }}>{{ lbl }}</option>{% endfor %}</select></label>
+{% elif p.name == 'People' %}
+  <div class="wz-howto wide">
+    <p>Put each person on a line of their own: <b>name, adult / child / pet, birthday</b>. The birthday is optional.</p>
+    <pre class="wz-example" aria-label="Example">Alex, adult, March 14 1980
+Sam, child, 5/2/2012
+Rex, pet</pre>
+    <p class="muted small">Adults sign in and see money; children get their own page without money. Any date style works:
+      March 14 1980, 3/14/1980 or 1980-03-14.</p>
+  </div>
+  <label class="wide">Everyone in the household<textarea name="people" rows="5" maxlength="4000" placeholder="Alex, adult, March 14 1980&#10;Sam, child, 5/2/2012&#10;Rex, pet">{{ p.text }}</textarea></label>
+  {% if p.understood %}
+  <div class="wide"><p class="muted">Here is what I understood. Change a role if I guessed wrong.</p>
+  <ul class="checklist wz-people">
+  {% for m in p.understood %}
+    <li><span class="av sm av{{ loop.index0 % 6 }}" aria-hidden="true">{{ m.name|initial }}</span><span class="ctext"><b>{{ m.name }}</b> <span class="muted">· {{ m.birthday_text }}</span></span>
+      <input type="hidden" name="name_{{ loop.index0 }}" value="{{ m.name }}">
+      <select name="role_{{ loop.index0 }}" aria-label="Role of {{ m.name }}">{% for r in p.roles %}<option value="{{ r }}" {{ 'selected' if m.role == r }}>{{ r }}</option>{% endfor %}</select></li>
+  {% endfor %}
+  </ul></div>
+  {% endif %}
+  <div class="wide"><button type="button" class="btn alt" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "check", "step": v.step|string}|tojson }}'>Check what I typed</button></div>
+  <details class="wide wz-more"><summary>Full names as printed on bills and policies (optional)</summary>
+    <label>One per line. They are hidden before anything goes to an AI.<textarea name="papers" rows="2" maxlength="4000" placeholder="Alexander Q Patel">{{ p.papers }}</textarea></label>
+  </details>
+{% elif p.name == 'Home' %}
+  <fieldset class="radios tiles wide"><legend>Do you own or rent?</legend>
+  {% for t, lbl in p.tenures %}<label class="check"><input type="radio" name="tenure" value="{{ t }}" {{ 'checked' if (v.a.tenure or '') == t }}> {{ lbl }}</label>{% endfor %}
+  </fieldset>
+  {% for k, lbl, val in p.taxes %}
+  <label>{{ lbl }}: next due date (owners, optional)<input type="date" name="tax_{{ k }}" value="{{ val }}"></label>
+  {% endfor %}
+  <label class="check wide"><input type="checkbox" name="home_office" value="1" {{ 'checked' if v.a.home_office }}> Someone works for themselves or runs a business from home</label>
+  <p class="muted small wide">Seasonal reminders (furnace filter, smoke alarms, gutters...) use the {{ p.pack }} pack for {{ v.a.place or 'your area' }}.{% if p.taxes %} Leave a tax date empty if it is part of your mortgage payment.{% endif %}</p>
+{% elif p.name == 'Cars' %}
+  <label class="wide">Year, make and model, separated by commas, or "no car"<input name="cars" maxlength="1000" value="{{ p.text }}" placeholder="2019 Honda CR-V, 2015 Toyota Camry"></label>
+{% elif p.name == 'Traditions' %}
+  <fieldset class="radios tiles wide"><legend>Pick any (optional)</legend>
+  {% for t in p.choices %}<label class="check"><input type="checkbox" name="trad_{{ loop.index0 }}" value="1" {{ 'checked' if t in p.chosen }}> {{ t }}</label>{% endfor %}
+  </fieldset>
+  <label class="wide">Another tradition, or a more exact one (optional)<input name="trad_other" maxlength="200" value="{{ p.other }}" placeholder="for example: Hindu (Telugu), Orthodox Christian, Diwali only"></label>
+  <label class="check wide"><input type="checkbox" name="lookup" value="1" {{ 'checked' if p.lookup }}> Look up this year's dates with our AI, once a year</label>
+  <p class="muted small wide">Only the tradition's name, the year and the country are sent. The dates wait in the Inbox until an adult accepts them.{% if p.ai_note %} Right now {{ p.ai_note }}: the dates are looked up once an AI is connected.{% endif %}</p>
+{% elif p.name == 'Logins' %}
+  <p class="muted small wide">Adults see everything; children see only their own things and no money. A household convenience, not strong security.</p>
+  <label class="check wide"><input type="checkbox" name="on" value="1" {{ 'checked' if p.on }}> Give people their own PIN</label>
+  {% for m in p.people %}
+  <label class="pinf">PIN for {{ m.name }} ({{ m.role }}; 4 or more characters)<input type="password" name="pin_{{ m.name }}" minlength="4" maxlength="64" inputmode="numeric" autocomplete="new-password" {% if m.name in p.have %}placeholder="kept for now; type to change"{% endif %}></label>
+  {% endfor %}
+  <p class="muted small wide">PINs are saved only when you press "Set everything up", and then only as a hash.</p>
+{% elif p.name == 'Finish' %}
+  <dl class="wz-summary wide">{% for k, val in p.summary %}<div><dt>{{ k }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl>
+  {% for q in p.problems %}<p class="alert wide">{{ q }}</p>{% endfor %}
+{% endif %}
+</div></fieldset>
+{% endfor %}
+  <div class="wz-actions wide">
+    <button type="button" class="btn alt" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "back", "step": v.step|string}|tojson }}'>Back</button>
+    <button type="button" class="btn alt" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "later", "step": v.step|string}|tojson }}'>Save, finish later</button>
+    {% if v.last %}
+    <button type="button" class="btn" hx-post="/setup/finish" hx-target="#setup" hx-swap="innerHTML" hx-indicator="#setting-up" hx-disabled-elt="this" {{ 'disabled' if v.blocked }}>Set everything up</button>
+    <span id="setting-up" class="setting-up muted" role="status">Setting up... this takes up to a minute.</span>
+    {% else %}
+    <button class="btn" type="submit">Continue</button>
+    {% endif %}
+  </div>
+</form>
+{% endif %}
+</div>
+<aside class="wizside">
+  {% if v.help %}<section class="card wizhelp"><h2>{{ v.help[0] }}</h2>
+    <ul>{% for line in v.help[1] %}<li>{{ line|helpfmt }}</li>{% endfor %}</ul></section>{% endif %}
+  {% if v.answers %}<section class="card wizans"><h2>Your answers so far</h2>
+    <dl>{% for i, label, ans in v.answers %}<div><dt>{{ label }}</dt><dd>{{ ans }}</dd>
+      <button type="button" class="linkbtn" hx-post="/setup" hx-target="#setup" hx-swap="innerHTML"
+        hx-vals='{{ {"op": "goto", "to": i|string, "step": v.step|string}|tojson }}' aria-label="Change {{ label }}">Change</button></div>{% endfor %}</dl>
+  </section>{% endif %}
+</aside>
+</div>
+{% if rerun %}<p class="muted small"><a href="#" hx-post="/setup/cancel">Cancel and go back to Settings</a> (nothing changes until "Set everything up").</p>{% endif %}

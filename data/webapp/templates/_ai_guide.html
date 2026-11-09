@@ -1,0 +1,30 @@
+{# How to get an AI key: shown in the first run's AI card and in Settings > Connections while no API key provider is set.
+   Figures: OpenRouter's default model (llm.DEFAULTS) at $0.30 / $2.50 per million tokens, a paper about 2,000 tokens
+   in, a Chat question about three rounds of 6,000; OpenRouter's card fee 5.5 % ($0.80 at least). #}
+<details class="{{ '' if guide_flat else 'card ' }}rblock fold ai-guide"{% if guide_open %} open{% endif %}>
+  <summary><h2>Recommended: an OpenRouter key ($5 lasts most families a year)</h2></summary>
+  <p>Without an AI, bank statements, phone bills, PayPal statements and school calendars are still read on this PC.
+    Other papers (bills, policies, receipts, statement layouts it does not know) <b>wait in the Inbox</b> for you, and
+    Chat cannot answer questions.</p>
+  <ul class="ai-why">
+    <li><b>Only for what needs it.</b> The AI reads just the papers this PC cannot read by itself, and Chat questions.</li>
+    <li><b>Private first.</b> Names and account, policy and ID numbers are masked before anything is sent (the last four
+      digits stay). Photos are sent only if you tick that box below.</li>
+    <li><b>Not used for training.</b> It is a paid key under your own account, and {{ brand }} asks OpenRouter to use only
+      hosts that neither keep nor train on what is sent. Free AI tiers (such as Gemini's free API) can use what you
+      send for training: use a paid key.</li>
+    <li><b>Cost.</b> About 60 cents a month for a busy family (40 papers and 60 Chat questions), less for most. $5 of
+      credit lasts most families a year or more.</li>
+  </ul>
+  <ol class="ai-steps">
+    <li>Sign up at <a href="https://openrouter.ai/" target="_blank" rel="noopener noreferrer nofollow">openrouter.ai</a>.</li>
+    <li>Add $5 of credit in <a href="https://openrouter.ai/settings/credits" target="_blank" rel="noopener noreferrer nofollow">Credits</a>
+      (OpenRouter adds a card fee of $0.80). Leave auto top-up off: when the credit is used up the AI simply pauses, and you
+      are never charged more.</li>
+    <li>In <a href="https://openrouter.ai/settings/keys" target="_blank" rel="noopener noreferrer nofollow">Keys</a>, create a
+      key named {{ brand }} and set its credit limit (for example $2 a month). Copy the key: it is shown only once.</li>
+    <li>Check that training stays off in <a href="https://openrouter.ai/settings/privacy" target="_blank" rel="noopener noreferrer nofollow">Privacy</a>.</li>
+    <li>Here: Provider OpenRouter, paste the key, tick the box, press Save. Leave Model blank for the default.</li>
+  </ol>
+  <p class="muted small">Not now? Everything else works; add a key any time in Settings &gt; Connections.</p>
+</details>

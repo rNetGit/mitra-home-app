@@ -1,0 +1,104 @@
+{
+  "key": "india",
+  "title": "India (general; adjust to your city and monsoon)",
+  "kind": "base",
+  "description": "Summer heat, monsoon prep and post-monsoon health. Windows are general guidance.",
+  "tasks": [
+    {
+      "name": "AC service before summer",
+      "category": "Home",
+      "start": "02-15",
+      "end": "03-31",
+      "lead_days": 14,
+      "notes": "Clean filters and check gas."
+    },
+    {
+      "name": "Pest control (termite / cockroach)",
+      "category": "Home",
+      "start": "03-01",
+      "end": "04-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Overhead water tank cleaning",
+      "category": "Home",
+      "start": "04-01",
+      "end": "05-31",
+      "lead_days": 14,
+      "notes": "Repeat about every 6 months."
+    },
+    {
+      "name": "Pre-monsoon: roof/terrace waterproofing and drain check",
+      "category": "Home",
+      "start": "04-15",
+      "end": "05-31",
+      "lead_days": 21,
+      "notes": ""
+    },
+    {
+      "name": "Car monsoon prep: wipers, tyres, brakes, battery",
+      "category": "Car",
+      "start": "05-15",
+      "end": "06-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Mosquito control; clear standing water",
+      "category": "Health",
+      "start": "06-15",
+      "end": "10-15",
+      "lead_days": 14,
+      "notes": "Dengue and malaria season."
+    },
+    {
+      "name": "Flu and seasonal vaccinations",
+      "category": "Health",
+      "start": "06-01",
+      "end": "07-31",
+      "lead_days": 21,
+      "notes": "Ask your doctor about timing for your city."
+    },
+    {
+      "name": "Geyser / water heater service",
+      "category": "Home",
+      "start": "10-15",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "LPG hose and regulator safety check",
+      "category": "Safety",
+      "start": "01-01",
+      "end": "01-31",
+      "lead_days": 14,
+      "notes": "Replace per the supplier schedule."
+    },
+    {
+      "name": "Smoke / fire safety check, extinguisher expiry",
+      "category": "Safety",
+      "start": "01-01",
+      "end": "02-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Winter: heater, blankets and warm clothing check (north India)",
+      "category": "Home",
+      "start": "10-15",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Annual health check-up",
+      "category": "Health",
+      "start": "01-01",
+      "end": "03-31",
+      "lead_days": 21,
+      "notes": ""
+    }
+  ]
+}

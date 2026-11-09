@@ -1,0 +1,30 @@
+Mitra Home (formerly FamilyAgent)
+Copyright (c) 2026 Rajesh Katukojwala (rNetGit)
+
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General
+Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+any later version. It is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the
+implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Affero General Public License
+(the LICENSE file) for details.
+
+Earlier releases
+  Releases up to and including 0.73.2 were published under the MIT License. Copies you already have of those
+  releases remain under the MIT License. Releases after 0.73.2 are AGPL-3.0-or-later.
+
+Name and logo
+  "Mitra Home" (and the earlier name "FamilyAgent") and the logo are not licensed by the AGPL. See TRADEMARK.md.
+
+Third-party software (not part of this project; each keeps its own licence)
+  pypdf                BSD-3-Clause      https://github.com/py-pdf/pypdf
+  Pillow               MIT-CMU (HPND)    https://github.com/python-pillow/Pillow
+  pillow-heif          BSD-3-Clause      https://github.com/bigcat88/pillow_heif
+  Markdown             BSD-3-Clause      https://github.com/Python-Markdown/markdown
+  cryptography         Apache-2.0 OR BSD-3-Clause   https://github.com/pyca/cryptography
+  discord.py (optional) MIT              https://github.com/Rapptz/discord.py
+  FastAPI              MIT               https://github.com/fastapi/fastapi
+  Uvicorn              BSD-3-Clause      https://github.com/encode/uvicorn
+  Jinja2               BSD-3-Clause      https://github.com/pallets/jinja
+  htmx (vendored)      0BSD              https://github.com/bigskysoftware/htmx
+  Apache ECharts (vendored)  Apache-2.0  https://github.com/apache/echarts
+  Python standard library (PSF License) is used for everything else.
+Check each package's own licence file for the exact terms of the version you install.

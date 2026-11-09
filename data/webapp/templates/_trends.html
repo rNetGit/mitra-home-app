@@ -1,0 +1,65 @@
+<nav class="fchips" aria-label="Range">
+  {% for r in ranges %}
+  <button type="button" hx-get="/money/trends?months={{ r }}" hx-target="#trends" hx-swap="innerHTML"
+          hx-push-url="/money?part=trends&months={{ r }}" class="{{ 'on' if r == months }}"{% if r == months %} aria-current="true"{% endif %}>{{ r }} months</button>
+  {% endfor %}
+</nav>
+{% if not newest %}
+<div class="card"><h2>No transactions yet</h2><p>Drop a bank statement in the inbox and it shows up here.</p></div>
+{% else %}
+<div class="kpis">
+  <div class="kpi"><span>Income · {{ newest.label }}</span><b>{{ newest.income|money }}</b></div>
+  <div class="kpi"><span>Spent</span><b>{{ newest.expenses|money }}</b>
+    {% if newest.vs_prev is not none %}<i class="{{ 'bad' if newest.vs_prev > 0 else 'good' }}">{{ newest.vs_prev|pct }} vs last month</i>{% endif %}</div>
+  <div class="kpi"><span>Left</span><b>{{ newest.left|money }}</b>
+    {% if newest.left_pct is not none %}<i>{{ '%.0f'|format(newest.left_pct) }}% of income</i>{% endif %}</div>
+  <div class="kpi"><span>Typical month</span><b>{{ (totals.expenses / totals.months)|money if totals.months else '' }}</b><i>last {{ totals.months }} months</i></div>
+</div>
+{% if so_far %}<p class="hint">{{ so_far.label }} is still running: {{ so_far.income|money }} in and {{ so_far.expenses|money }} out so far. It joins the charts when the month ends.</p>{% endif %}
+
+<div class="tgrid">
+<section class="card tflow"><h2>Each month</h2><p class="muted small">Only months with statements{% if flow %} · {{ flow[0].label }} to {{ flow[-1].label }}{% endif %}</p>
+  {% set n = flow|length %}{% set step = 300 / ([n, 1]|max) %}{% set bw = [step * 0.3, 18]|min %}{% set every = ((n / 6)|round(0, 'ceil')|int) or 1 %}
+  <svg class="tchart" viewBox="0 0 300 150" role="img" aria-label="Money in and out by month">
+    <line class="tbase" x1="0" y1="128" x2="300" y2="128"/>
+    {% for r in flow %}{% set x = loop.index0 * step + step / 2 %}
+    <g>
+      <rect class="inc" x="{{ x - bw - 1 }}" y="{{ 128 - r.income / top * 110 }}" width="{{ bw }}" height="{{ [r.income / top * 110, 0.5]|max }}" rx="2"><title>{{ r.label }}: in {{ r.income|money }}</title></rect>
+      <rect class="spd" x="{{ x + 1 }}" y="{{ 128 - r.expenses / top * 110 }}" width="{{ bw }}" height="{{ [r.expenses / top * 110, 0.5]|max }}" rx="2"><title>{{ r.label }}: out {{ r.expenses|money }}</title></rect>
+      {% if n <= 8 or loop.index0 % every == 0 or loop.last %}<text x="{{ x }}" y="143" text-anchor="middle">{{ r.label[:3] }}</text>{% endif %}
+    </g>{% endfor %}
+  </svg>
+  <p class="tkey"><i class="inc"></i>In <i class="spd"></i>Out{% if newest.vs_prev is not none %} · {{ newest.label[:3] }} out {{ newest.vs_prev|pct }} vs the month before{% endif %}</p>
+</section>
+
+<section class="card tcats">
+  {% if compared %}<h2>What changed</h2><p class="muted small">Last {{ cat_months }} months against the {{ cat_months }} before</p>
+  {% else %}<h2>Where it goes</h2><p class="muted small">Last {{ cat_months }} months · share of spending</p>{% endif %}
+  <ul class="fbars">{% for c in cats %}
+    <li class="{{ ('t-bad' if c.change > 0 else 't-ok') if compared else 't-n' }}">
+      <div class="fb-top"><span class="fb-l">{{ c.category|capitalize }}</span>
+        <span class="fb-v">{% if compared %}<b>{{ '+' if c.change > 0 else '−' }}{{ (c.change|abs)|money }}</b>{% if c.pct is not none %} ({{ c.pct|pct }}){% else %} new{% endif %}{% else %}<b>{{ c.now|money }}</b> · {{ c.share }}%{% endif %}</span></div>
+      <svg class="fb-bar" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><rect class="fb-bg" x="0" y="0" width="100" height="6" rx="3"/><rect class="fb-fill" x="0" y="0" width="{{ [c.w, 1]|max }}" height="6" rx="3"/></svg>
+      {% if compared %}<p class="muted fb-n">{{ c.now|money }} now, {{ c.before|money }} before</p>{% endif %}
+    </li>{% endfor %}</ul>
+  {% if not compared %}<p class="muted small">What changed shows once there are statements from the {{ cat_months }} months before.</p>{% endif %}
+</section>
+
+{% if yoy %}
+<section class="card"><h2>Against last year</h2><p class="muted small">Spending, same month a year earlier</p>
+  <ul class="rlist">{% for r in yoy|reverse %}
+    <li><div><span class="rl-main"><span class="rl-t">{{ r.label }}</span><span class="rl-m">{{ r.last_year|money }} a year before</span></span>
+      <span class="rl-r"><b>{{ r.expenses|money }}</b><span class="chip-s {{ 't-bad' if r.vs_last_year and r.vs_last_year > 0 else 't-ok' }}">{{ r.vs_last_year|pct }}</span></span></div></li>
+  {% endfor %}</ul></section>
+{% endif %}
+</div>
+
+<section class="card"><h2>Month by month</h2>
+  <ul class="rlist tmonths">{% for r in table %}
+    {% if r.gap %}<li class="gap"><div><span class="rl-m">{{ r.gap }}: no statements</span></div></li>
+    {% else %}<li><div><span class="rl-main"><span class="rl-t">{{ r.label }}{% if r.partial %} <span class="muted">(so far)</span>{% endif %}</span>
+      <span class="rl-m">in {{ r.income|money }} · out {{ r.expenses|money }} · left {{ r.left|money }}{% if r.vs_last_year is not none %} · {{ r.vs_last_year|pct }} vs last year{% endif %}</span></span>
+      <span class="rl-r">{% if r.vs_prev is not none %}<span class="chip-s {{ 't-bad' if r.vs_prev > 0 else 't-ok' }}" title="spending against the month before">{{ r.vs_prev|pct }}</span>{% endif %}</span></div></li>{% endif %}
+  {% endfor %}</ul>
+</section>
+{% endif %}

@@ -1,0 +1,31 @@
+{% extends "base.html" %}
+{% block title %}Set up · {{ brand }}{% endblock %}
+{% block main %}
+<section class="card wz-welcome wz-done">
+  <span class="wz-check" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+  <h1 class="wz-q">You are set up</h1>
+  <p class="wz-lead">Your household is ready on this PC, with a few starter reminders to begin with.</p>
+  <details class="muted small"><summary>What was done</summary><p>{% for m in msgs %}{{ m[:1]|upper }}{{ m[1:].rstrip('.') }}. {% endfor %}</p></details>
+  <h2 class="wz-next">What next</h2>
+  <ul class="wz-promises">
+    <li><span class="wz-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 4v11M7.5 10.5L12 15l4.5-4.5"/><path d="M4 17v2a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-2"/></svg></span>
+      <span><b>Drop in a few papers</b><small>A bank statement, a bill, a school calendar: drag them onto the Inbox.
+        {{ 'The AI files them for you.' if ai_on else 'Statements, phone bills, PayPal and school calendars are read on this PC; an AI helper (Settings > Connections) files the rest.' }}</small></span></li>
+    {% if not ai_on %}<li><span class="wz-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M18.5 15.5l.8 2.2 2.2.8-2.2.8-.8 2.2-.8-2.2-2.2-.8 2.2-.8z"/></svg></span>
+      <span><b>Add an AI helper</b><small>Papers this PC cannot read itself wait in the Inbox until you do. An OpenRouter key with $5 of credit lasts most families a year: <a href="/settings?group=connections#conn-ai">Settings &gt; Connections</a>.</small></span></li>
+    {% endif %}<li><span class="wz-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="7" y="2.5" width="10" height="19" rx="2"/><path d="M11 18.5h2"/></svg></span>
+      <span><b>Pair your phones</b><small>Settings > Phones: scans go to the Inbox and Mitra Home opens on the home Wi-Fi. Optional.</small></span></li>
+    <li><span class="wz-ico" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg></span>
+      <span><b>Connect Google</b><small>Your calendar and bills that arrive by email, under Settings > Connections. Optional, can wait.</small></span></li>
+  </ul>
+  {% if user is none %}
+  <p class="muted">PINs are on now. Sign in with yours to go on.</p>
+  <p><a class="btn wz-go" href="/login">Sign in</a></p>
+  {% else %}
+  <div class="optrow">
+    <a class="btn wz-go" href="/">Open Today</a>
+    <a class="btn alt" href="/add">Drop papers in the Inbox</a>
+  </div>
+  {% endif %}
+</section>
+{% endblock %}

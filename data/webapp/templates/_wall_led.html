@@ -1,0 +1,24 @@
+{# The LED face (wall_screen led_*, routes_wall.led_view): seven-segment digits as SVG polygons, lit with `.on`; wall.js
+   lights the time's cells ([data-led="h0"] ...) every second. Colours are classes (led-c-*, led-bg-*), never inline. #}
+{% macro seg(s, cls='') %}<svg class="lsvg {{ cls }}" viewBox="0 0 {{ s.w }} 100" aria-hidden="true">
+{%- for c in s.cells %}<g transform="translate({{ c.x }} 0)"{% if c.key %} data-led="{{ c.key }}"{% endif %}>
+{%- for k, pts in s.segs %}<polygon class="sg{{ ' on' if k in c.lit }}" data-s="{{ k }}" points="{{ pts }}"></polygon>{% endfor %}
+{%- if c.dp %}<circle class="sg on" cx="{{ s.dpx }}" cy="{{ s.dpy }}" r="{{ s.r }}"></circle>{% endif %}</g>{% endfor %}</svg>{% endmacro %}
+{% macro colon(c) %}<svg class="lsvg lcol" viewBox="0 0 16 100" aria-hidden="true"><circle class="sg on" cx="8" cy="32" r="{{ c.r }}"></circle><circle class="sg on" cx="8" cy="68" r="{{ c.r }}"></circle></svg>{% endmacro %}
+{% macro reading(r, key='', cls='') %}<div class="lrd {{ cls }}" role="img" aria-label="{{ r.label }}">{% if key %}<span class="lk">{{ key }}</span>{% endif %}
+  <span class="lrv">{{ seg(r.svg) }}{% if r.unit %}<span class="lu">{{ r.unit }}</span>{% endif %}</span></div>{% endmacro %}
+<div class="ledf led-{{ led.style }} led-c-{{ show.led_colour }} led-bg-{{ show.led_bg }}{{ ' led-wk' if led.style == 'side' and show.led_weekdays }}{{ ' led-solo' if led.style == 'side' and not (led.rain or led.now or led.hilo) }}" data-led-24="{{ 1 if show.hours24 else 0 }}">
+  {% if led.wood %}<svg class="lwood" viewBox="0 0 1000 600" preserveAspectRatio="none" aria-hidden="true"><rect class="wbase" x="0" y="0" width="1000" height="600"></rect>
+    {% for g in led.wood %}<path class="{{ g.cls }}" d="{{ g.d }}"></path>{% endfor %}</svg>{% endif %}
+  {% if led.style == 'side' and show.led_weekdays %}<ol class="lwkc" aria-label="Today is {{ now.strftime('%A') }}">{% for d in led.week %}<li class="{{ 'on' if d.today }}">{{ d.n }}</li>{% endfor %}</ol>{% endif %}
+  <div class="lt" role="img" aria-label="Clock: {{ led.hm }}" data-led-time="">
+    <span class="lhh">{{ seg(led.hh) }}</span>{{ colon(led.colon) }}<span class="lmm">{{ seg(led.mm) }}{% if led.ap %}<span class="lap" data-led-ap="">{{ led.ap }}</span>{% endif %}</span>
+  </div>
+  {% if led.style == 'wide' %}
+  <div class="lr">{{ reading(led.r1) }}{{ reading(led.r2, cls='ldate') }}</div>
+  <ol class="lstrip" aria-label="Today is {{ now.strftime('%A') }}">{% for d in led.week %}<li class="{{ 'on' if d.today }}">{{ d.n }}</li>{% endfor %}</ol>
+  {% elif led.style == 'side' and (led.rain or led.now or led.hilo) %}
+  <div class="lr">{% if led.rain %}{{ reading(led.rain, 'RAIN') }}{% endif %}{% if led.now %}{{ reading(led.now, 'NOW') }}{% endif %}
+    {% if led.hilo %}<div class="lhl">{{ led.hilo }}</div>{% endif %}</div>
+  {% endif %}
+</div>

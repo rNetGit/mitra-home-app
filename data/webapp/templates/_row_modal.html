@@ -1,0 +1,28 @@
+{% if gone %}
+<div class="txm"><p class="notice" role="status">{{ flash[1] }}</p><p class="muted">It has left this list. Close this window to see the list without it.</p><p><button type="button" class="btn alt" data-txn-close>Close</button></p></div>
+{% elif not det or not det.one %}
+<div class="txm"><p class="muted">That record is not there any more, or it is private.</p><p><button type="button" class="btn alt" data-txn-close>Close</button></p></div>
+{% else %}
+<div class="txm" data-row="{{ ref }}">
+  <header class="txm-head">
+    {% if has_nav %}<div class="txm-nav">
+      <button type="button" class="btn alt" data-txn-prev aria-label="Previous (left arrow)" {% if prev_url %}hx-get="{{ prev_url }}" hx-target="#txn-body" hx-swap="innerHTML"{% else %}disabled{% endif %}>‹ Previous</button>
+      <span class="muted txm-pos" aria-live="polite">{{ pos }} of {{ total }}</span>
+      <button type="button" class="btn alt" data-txn-next aria-label="Next (right arrow)" {% if next_url %}hx-get="{{ next_url }}" hx-target="#txn-body" hx-swap="innerHTML"{% else %}disabled{% endif %}>Next ›</button>
+    </div>{% else %}<span></span>{% endif %}
+    <button type="button" class="btn alt" data-txn-close>Close</button>
+  </header>
+  <h2 id="txn-title">{{ det.one.label }}</h2>
+  {% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+  <dl class="rfields">{% for k, v in det.one.fields %}<div><dt>{{ k }}</dt><dd>{{ v }}</dd></div>{% endfor %}</dl>
+  {% if det.one.paper %}
+  <div class="rpaper"><span class="rl-main"><span class="rl-t">{{ det.one.paper.label }}</span><span class="rl-m">Filed paper</span></span>
+    {% if det.one.paper.here %}<span class="optrow"><a class="btn alt" href="/records/paper/{{ det.one.paper.id }}">Download</a></span>
+    {% elif det.one.paper.path %}<span class="muted">The filed copy is not on this PC any more.</span>{% endif %}</div>
+  {% endif %}
+  {% if edit %}<section class="txm-edit redit"><div id="redit">{% include "_redit.html" %}</div></section>{% endif %}
+  {% if det.one.history %}<details class="txm-hist"><summary>Changes <span class="muted">{{ det.one.history|length }}</span></summary>
+    <ul class="calmlist">{% for h in det.one.history %}<li><span>{{ h.what }} · {{ h.who }} · {{ h.when }}</span></li>{% endfor %}</ul></details>{% endif %}
+  <p class="muted small"><a href="{{ link(ref) }}">Open the full record</a>{% if has_nav %} · Left and right arrow keys move between rows, Esc closes.{% endif %}</p>
+</div>
+{% endif %}

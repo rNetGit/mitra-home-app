@@ -1,0 +1,49 @@
+{
+  "code": "XX",
+  "name": "Generic (no country rules)",
+  "currency": "USD",
+  "metric": true,
+  "date_order": "ymd",
+  "units": {"area": "m²", "distance": "km", "temperature": "C"},
+  "address": {"state": "State / province / region", "county": "District (optional)", "zip": "Postal code (optional)"},
+  "id_types": ["passport", "drivers_license", "national_id", "residence_permit", "vehicle_registration", "insurance_card", "other"],
+  "id_lead_days": {"passport": 274},
+  "vehicle": {"registration_label": "registration", "inspection_label": "inspection", "authority": "licensing office"},
+  "tax": {
+    "authority": "your tax office",
+    "year_start": "01-01",
+    "filing_note": "Check your tax office's filing deadline; drop each form in inbox/ when it arrives.",
+    "checklist": [
+      ["Employment income statement (each employer)", ["payslip", "income statement", "salary certificate"], "One per employer, for each working adult"],
+      ["Bank / broker interest and dividend statements", ["interest", "dividend", "annual statement"], "Add your institutions in config/tax_prep.json"],
+      ["Mortgage interest statement", ["mortgage"], "Only if there is a mortgage"],
+      ["Tuition / education receipts", ["tuition", "school fee"], "Only if someone is in college"],
+      ["Property tax bill/receipt", ["property tax", "council tax", "municipal tax"], ""],
+      ["Charitable donation receipts", ["donation", "charit"], ""],
+      ["Health insurance / medical expense statements", ["health insurance", "medical"], ""],
+      ["Home-office records (self-employed only)", ["home office", "home_office"], "See reports/<year>_home_office.md"],
+      ["Estimated / advance tax payment records", ["estimated", "advance tax"], "Bank rows typed 'tax' cover payments made"]
+    ]
+  },
+  "home_office": {
+    "method": "none",
+    "label": "actual-cost share only (no simplified method configured for this country)",
+    "note": "Records and arithmetic only. Whether any deduction is allowed, and how it is computed, is for your tax preparer."
+  },
+  "seasonal_packs": {"cold": "generic", "mild": "generic", "hot": "generic"},
+  "starter_rules": [
+    ["%PAYROLL%", "salary", "income", "Payroll"],
+    ["%SALARY%", "salary", "income", "Salary"],
+    ["%INTEREST%", "interest", "interest", "Bank interest"],
+    ["%INSURANCE%", "insurance", "insurance", null],
+    ["%ELECTRIC%", "utilities", "utility", null],
+    ["%WATER%", "utilities", "utility", null],
+    ["%GAS%", "utilities", "utility", null],
+    ["%INTERNET%", "utilities", "utility", null],
+    ["%MOBILE%", "utilities", "utility", null],
+    ["ATM%", "cash withdrawal", "spend", "ATM"],
+    ["%FUEL%", "fuel", "spend", null],
+    ["%PETROL%", "fuel", "spend", null],
+    ["%SUPERMARKET%", "groceries", "spend", null]
+  ]
+}

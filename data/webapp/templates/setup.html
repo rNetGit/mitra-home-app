@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Setup · {{ brand }}{% endblock %}
+{% block main %}
+<header class="wiz-head">
+  <img src="/static/icon.svg" alt="" width="52" height="52">
+  <div>
+    <h1>{{ 'Welcome to ' ~ brand if v.title == 'Welcome' and not rerun else 'Setting up ' ~ brand }}</h1>
+    <p class="muted">Your family's AI agent, on this PC.</p>
+  </div>
+</header>
+<section id="setup" class="wiz">{% include "_setup.html" %}</section>
+{% endblock %}

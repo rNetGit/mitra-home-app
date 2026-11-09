@@ -1,0 +1,8 @@
+{# Money > This month (`part=month&ym=`): the month's story card and every category below it. Bills, subscriptions,
+   the budget and upkeep live on their own pages (Bills, Regular, Pay, Keep, Today). Needs `v` (today_data.month_view). #}
+{% set m = v.summary %}
+{% if m %}
+{% include "_month_card.html" %}
+{% else %}
+<div class="card"><h2>No statements yet</h2><p class="muted">Drop a bank or card statement in the <a href="/add">Inbox</a> and this page fills in.</p></div>
+{% endif %}

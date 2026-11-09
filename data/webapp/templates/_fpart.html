@@ -1,0 +1,172 @@
+{% set f = v.filters %}
+{% macro rows(b) %}
+  {% if b.bars %}
+  <ul class="fbars">{% for r in b.bars %}
+    <li class="t-{{ r.tone }}"><div class="fb-top"><span class="fb-l">{{ r.label }}</span><span class="fb-v"><b>{{ r.value }}</b> of {{ r.of }}</span></div>
+      <svg class="fb-bar" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><rect class="fb-bg" x="0" y="0" width="100" height="6" rx="3"/><rect class="fb-fill" x="0" y="0" width="{{ [r.pct, 1]|max }}" height="6" rx="3"/>{% if r.mark %}<rect class="fb-mark" x="{{ [r.mark, 99]|min }}" y="0" width="1" height="6"/>{% endif %}</svg>
+      <p class="muted fb-n">{{ r.note }}</p></li>
+  {% endfor %}</ul>
+  {% if b.bars|selectattr('mark')|list %}<p class="muted small">The thin line is where it would be by today at an even pace.</p>{% endif %}
+  {% elif b.rows %}
+  <ul class="rlist fl-phone">{% for r in b.rows %}{% set l = r.list %}
+    <li>{% if b.table and r.id is not none %}<a href="{{ link(b.table ~ ':' ~ r.id) }}" hx-get="/money/row/{{ b.table }}/{{ r.id }}?part={{ part }}{% if rq %}&amp;{{ rq }}{% endif %}" hx-target="#txn-body" hx-swap="innerHTML">{% else %}<div>{% endif %}
+      <span class="rl-av t-{{ l.tone or 'n' }}" aria-hidden="true">{{ l.title|initial }}</span>
+      <span class="rl-main"><span class="rl-t">{{ l.title or 'open' }}</span>{% if l.meta %}<span class="rl-m">{{ l.meta }}</span>{% endif %}</span>
+      <span class="rl-r">{% if l.amount %}<b>{{ l.amount }}</b>{% endif %}{% if l.pill %}<span class="chip-s t-{{ l.tone or 'n' }}">{{ l.pill }}</span>{% endif %}</span>
+    {% if b.table and r.id is not none %}</a>{% else %}</div>{% endif %}</li>
+  {% endfor %}</ul>
+  <div class="tablewrap fl-wide"><table>
+    <thead><tr>{% for c in b.cols %}<th{% if loop.index0 in b.nums %} class="num"{% endif %}>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for r in b.rows %}<tr>{% for val in r.cells %}<td{% if loop.index0 in b.nums %} class="num"{% endif %}>{% if loop.index0 == b.title_ix and b.table and r.id is not none %}<a href="{{ link(b.table ~ ':' ~ r.id) }}" hx-get="/money/row/{{ b.table }}/{{ r.id }}?part={{ part }}{% if rq %}&amp;{{ rq }}{% endif %}" hx-target="#txn-body" hx-swap="innerHTML">{{ val or 'open' }}</a>{% elif loop.index0 in r.pills %}<span class="chip-s t-{{ r.pills[loop.index0] }}">{{ val }}</span>{% else %}{{ val }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  {% elif b.empty %}<p class="muted">{{ b.empty }}</p>{% endif %}
+{% endmacro %}
+{% if f.range %}
+<form class="rsearch ffilter frange" action="/money" method="get" role="search">
+  <input type="hidden" name="part" value="{{ part }}">
+  <label class="fsel"><span>From</span><select name="from">{% for m in f.months %}<option value="{{ m }}" {% if m == f.from %}selected{% endif %}>{{ m }}</option>{% endfor %}</select></label>
+  <label class="fsel"><span>To</span><select name="to">{% for m in f.months %}<option value="{{ m }}" {% if m == f.to %}selected{% endif %}>{{ m }}</option>{% endfor %}</select></label>
+  {% if f.cats %}<label class="fsel"><span>Category</span><select name="cat"><option value="">All categories</option>{% for c in f.cats %}<option value="{{ c }}" {% if c == f.cat %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></label>
+  {% endif %}{% if not f.nosearch %}<label class="vh" for="fq">{{ f.search }}</label>
+  <input id="fq" type="search" name="q" value="{{ f.q }}" maxlength="100" placeholder="{{ f.search }}">
+  {% endif %}<button class="btn" type="submit">Show</button>
+</form>
+{% elif f.ledger %}
+<form class="rsearch ffilter frange fledger" action="/money" method="get" role="search" data-ledger data-today="{{ f.today }}">
+  <input type="hidden" name="part" value="{{ part }}">
+  <label class="fsel"><span>Period</span><select name="period" data-period>{% for k, lbl in f.periods %}<option value="{{ k }}" {% if k == f.period %}selected{% endif %}>{{ lbl }}</option>{% endfor %}<option value="custom" {% if f.period == 'custom' %}selected{% endif %}>Custom dates</option></select></label>
+  <label class="fsel"><span>From</span><input type="date" name="from" value="{{ f.from }}" required></label>
+  <label class="fsel"><span>To</span><input type="date" name="to" value="{{ f.to }}" required></label>
+  <label class="fsel"><span>Account</span><select name="account"><option value="">All accounts</option>{% for i, lbl in f.accounts %}<option value="{{ i }}" {% if i == f.account %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label class="fsel"><span>Category</span><select name="cat"><option value="">All categories</option><option value="{{ f.none }}" {% if f.cat == f.none %}selected{% endif %}>Uncategorized</option>{% for c in f.cats %}<option value="{{ c }}" {% if c == f.cat %}selected{% endif %}>{{ c }}</option>{% endfor %}</select></label>
+  <label class="fsel"><span>Type</span><select name="type"><option value="">All types</option>{% for k, lbl in f.types %}<option value="{{ k }}" {% if k == f.type %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select></label>
+  {% if f.members %}<label class="fsel"><span>Card member</span><select name="member"><option value="">Everyone</option>{% for m in f.members %}<option value="{{ m }}" {% if m == f.member %}selected{% endif %}>{{ m }}</option>{% endfor %}</select></label>
+  {% endif %}<label class="fsel"><span>Amount from</span><input type="number" name="min" value="{{ f.min }}" min="0" step="0.01" inputmode="decimal" placeholder="0.00"></label>
+  <label class="fsel"><span>Amount to</span><input type="number" name="max" value="{{ f.max }}" min="0" step="0.01" inputmode="decimal" placeholder="any"></label>
+  <label class="vh" for="fq">{{ f.search }}</label>
+  <input id="fq" type="search" name="q" value="{{ f.q }}" maxlength="100" placeholder="{{ f.search }}">
+  <button class="btn" type="submit">Show</button>
+  <a class="btn alt" href="{{ furl(part) }}">Reset</a>
+</form>
+{% elif f.month %}
+<form class="rsearch ffilter" action="/money" method="get" role="search">
+  <input type="hidden" name="part" value="{{ part }}">
+  {% if f.cards %}<label class="vh" for="fcard">Card</label>
+  <select id="fcard" name="card"><option value="">All cards</option>{% for i, lbl in f.cards %}<option value="{{ i }}" {% if i == f.card %}selected{% endif %}>{{ lbl }}</option>{% endfor %}</select>
+  {% endif %}<label class="vh" for="fmonth">Month</label>
+  <select id="fmonth" name="month">{% for m in f.months %}<option value="{{ m }}" {% if m == f.month %}selected{% endif %}>{{ m }}</option>{% endfor %}</select>
+  <label class="vh" for="fq">{{ f.search }}</label>
+  <input id="fq" type="search" name="q" value="{{ f.q }}" maxlength="100" placeholder="{{ f.search }}">
+  <button class="btn" type="submit">Show</button>
+</form>
+{% elif f.span %}
+<nav class="fchips" aria-label="Range">{% for n in [6, 12, 24] %}<a href="{{ furl(part, months=n) }}" {% if n == f.span %}class="on" aria-current="true"{% endif %}>{{ n }} months</a>{% endfor %}</nav>
+{% elif f.years %}
+<nav class="fchips" aria-label="Year">{% for y in f.years %}<a href="{{ furl(part, year=y) }}" {% if y == f.year %}class="on" aria-current="true"{% endif %}>{{ y }}</a>{% endfor %}</nav>
+{% endif %}
+
+{# The page's pieces, made once: every part shows them in this order; the parts in finance_data.SIDE_PANEL (v.side) move
+   the summary ones into a side panel so the filters sit right above the list. #}
+{% set tiles_html %}{% if v.tiles %}
+<div class="kpis rk">{% for t in v.tiles %}<div class="kpi"><span>{{ t[0] }}</span><b {% if t[2] in ('bad', 'good') %}class="{{ t[2] }}"{% endif %}>{{ t[1] }}</b>{% if t|length > 3 and t[3] %}<i>{{ t[3] }}</i>{% endif %}</div>{% endfor %}</div>
+{% endif %}{% endset %}
+{% set rules_html %}{% if v.rules and v.rules.deposits and v.rules.merchants %}
+<details class="card rblock merch fold" open>
+  <summary><h2>Where deposits come from <span class="muted">{{ v.rules.merchants|length }}</span></h2></summary>
+  <p class="muted small">Only pay and interest count as income. Say once what a source is (money back from TreasuryDirect or a brokerage, your own money moved, a refund) and every deposit from it, now and later, follows. The text to match can be shortened.</p>
+  <datalist id="merch-cats">{% for c in v.rules.cats %}<option value="{{ c }}">{% endfor %}</datalist>
+  <ul class="merchlist">{% for m in v.rules.merchants %}
+    <li><form class="merchrow dep" hx-post="/money/rule" hx-disabled-elt="find button">
+      <input type="hidden" name="back" value="deposits"><input type="hidden" name="from" value="{{ v.filters.from }}"><input type="hidden" name="to" value="{{ v.filters.to }}"><input type="hidden" name="q" value="{{ v.filters.q }}">
+      <span class="mr-info"><b>{{ m.key }}</b><span class="muted small">{{ m.n }} deposit{{ '' if m.n == 1 else 's' }} · {{ m.total|money }} · <span class="chip-s t-{{ 'warn' if not m.kind else 'n' }}">{{ m.kind_word }}</span></span></span>
+      <label class="vh" for="dp{{ loop.index }}">Text to match</label><input id="dp{{ loop.index }}" name="pattern" maxlength="60" required value="{{ m.key }}">
+      <label class="vh" for="dk{{ loop.index }}">What it is</label><select id="dk{{ loop.index }}" name="kind" required>{% for k, w in v.rules.kinds %}<option value="{{ k }}" {% if k == m.kind %}selected{% endif %}>{{ w }}</option>{% endfor %}</select>
+      <label class="vh" for="dc{{ loop.index }}">Category (optional)</label><input id="dc{{ loop.index }}" name="category" maxlength="40" list="merch-cats" placeholder="Category (optional)" value="{{ m.category }}">
+      <button class="btn" type="submit">Remember</button>
+    </form></li>
+  {% endfor %}</ul>
+</details>
+{% elif v.rules and v.rules.merchants %}
+<section class="card rblock merch">
+  <h2>Uncategorized merchants <span class="muted">{{ v.rules.merchants|length }}</span></h2>
+  <p class="muted small">Name a category once and every charge from that merchant, now and later, gets it. The text to match can be shortened.</p>
+  <datalist id="merch-cats">{% for c in v.rules.cats %}<option value="{{ c }}">{% endfor %}</datalist>
+  <ul class="merchlist">{% for m in v.rules.merchants %}
+    <li><form class="merchrow" hx-post="/money/rule" hx-disabled-elt="find button">
+      {% if v.rules.back == 'ledger' %}<input type="hidden" name="back" value="ledger">{% for k, val in v.filters.base.items() %}<input type="hidden" name="{{ k }}" value="{{ val }}">{% endfor %}
+      {% else %}<input type="hidden" name="card" value="{{ v.filters.card }}"><input type="hidden" name="month" value="{{ v.filters.month }}"><input type="hidden" name="q" value="{{ v.filters.q }}">{% endif %}
+      <span class="mr-info"><b>{{ m.key }}</b><span class="muted small">{{ m.n }} charge{{ '' if m.n == 1 else 's' }} · {{ m.spent|money }}</span></span>
+      <label class="vh" for="mp{{ loop.index }}">Text to match</label><input id="mp{{ loop.index }}" name="pattern" maxlength="60" required value="{{ m.key }}">
+      <label class="vh" for="mc{{ loop.index }}">Category</label><input id="mc{{ loop.index }}" name="category" maxlength="40" required list="merch-cats" placeholder="Category">
+      <button class="btn" type="submit">Remember</button>
+    </form></li>
+  {% endfor %}</ul>
+</section>
+{% endif %}
+{% for add in adds or [] %}
+<details class="card addnote" id="add-{{ add.table if add.table is string else add.table[0] }}">
+  <summary><h2>{{ add.title }}</h2></summary>
+  <div id="radd-{{ add.table }}">{% include "_radd.html" %}</div>
+</details>
+{% endfor %}{% endset %}
+{% set notes_html %}{% set flags = v.notes|selectattr(0, 'in', ['bad', 'warn'])|list %}
+{% if flags %}<ul class="calmlist">{% for tone, text in flags %}<li><span class="dotm t-{{ tone }}" aria-hidden="true"></span><span>{{ text }}</span></li>{% endfor %}</ul>{% endif %}
+{% for tone, text in v.notes %}{% if tone not in ('bad', 'warn') %}<p class="notice">{{ text }}</p>{% endif %}{% endfor %}
+{% if v.go %}<p class="optrow">{% for label, url in v.go %}<a class="btn alt" href="{{ url }}">{{ label }}</a>{% endfor %}</p>{% endif %}
+{% if part == 'work' %}<p><a class="btn" href="/work">Open the work page (hours, schedule, invoices)</a></p>{% endif %}
+{% if download %}<p class="optrow"><a class="btn alt" href="{{ download }}" download>Download {{ 'this list (.csv)' if part == 'ledger' else 'it (.md)' }}</a>
+  {% if part == 'tax' %}<a class="btn" href="{{ download }}&amp;pack=1" download>Download the pack for your tax preparer (.zip)</a>{% endif %}</p>
+{% if part == 'tax' %}<p class="muted small">The pack holds this checklist, the year-end summary, the home-office figures and copies of the
+  year's filed tax papers. Records only, not tax advice.</p>{% endif %}{% endif %}
+{% if md_html %}<section class="card doc">{{ md_html|safe }}</section>{% endif %}{% endset %}
+{% set blocks_html %}{% for b in v.blocks %}
+{% if b.fold %}
+<details class="card rblock fold"><summary><h2>{{ b.heading }} <span class="muted">{{ (b.bars or b.rows)|length }}</span></h2></summary>{{ rows(b) }}</details>
+{% else %}
+<section class="card rblock"><h2>{{ b.heading }}</h2>{{ rows(b) }}</section>
+{% endif %}
+{% endfor %}{% endset %}
+{% set pager_html %}{% if f.ledger and f.pages > 1 %}
+<nav class="fchips pager" aria-label="Pages">
+  {% if f.page > 1 %}<a href="{{ furl(part, page=f.page - 1, **f.base) }}" rel="prev">Newer</a>{% endif %}
+  <span class="muted">Page {{ f.page }} of {{ f.pages }}</span>
+  {% if f.page < f.pages %}<a href="{{ furl(part, page=f.page + 1, **f.base) }}" rel="next">Older</a>{% endif %}
+</nav>
+{% endif %}{% endset %}
+
+{% if v.side or v.ledger %}
+{% set L = v.ledger %}
+<div class="lgrid">
+  {# wide screens: a panel on the right that stays in view; tablet and phone: one line above the list that unfolds
+     (app.js closes it there and keeps it open on a wide screen; without JavaScript it stays open) #}
+  <details class="lside" open data-lside aria-label="Summary">
+    <summary class="lside-sum"><b>Summary</b>{% for t in (v.tiles or [])[:3] %}<span class="lmini">{{ t[0] }} {{ t[1] }}</span>{% endfor %}</summary>
+    {{ tiles_html }}
+    {{ notes_html }}
+    {% if L and L.sums %}<details class="card rblock fold lsum">
+      <summary><h2>How the tiles add up</h2></summary>
+      <table class="lsumt"><thead><tr><th>Kind of line</th><th class="num">In</th><th class="num">Out</th></tr></thead>
+        <tbody>{% for label, i, o in L.sums.rows %}<tr><td>{{ label }}</td><td class="num">{{ i }}</td><td class="num">{{ o }}</td></tr>{% endfor %}</tbody>
+        <tfoot><tr><th>Every line</th><th class="num">{{ L.sums.in }}</th><th class="num">{{ L.sums.out }}</th></tr></tfoot></table>
+    </details>{% endif %}
+    {% if L %}{{ blocks_html }}{% endif %}
+  </details>
+  <div class="lmain">
+    {{ rules_html }}
+    {% if L %}{% include "_ledger_table.html" %}{% else %}{{ blocks_html }}{% endif %}
+    {{ pager_html }}
+  </div>
+</div>
+{% else %}
+{{ tiles_html }}
+{{ rules_html }}
+{{ notes_html }}
+{{ blocks_html }}
+{{ pager_html }}
+{% endif %}
+{% if editable_here %}
+<p class="muted small">Open a row to change it here, or tell Chat.</p>
+{% else %}
+<p class="muted small">Looking up only here: open a row to see it in full. To change one of these, tell Chat.</p>
+{% endif %}
+<dialog id="txn-dialog" class="txndlg" aria-labelledby="txn-title"><div id="txn-body"></div></dialog>

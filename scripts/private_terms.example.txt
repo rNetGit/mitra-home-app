@@ -1,0 +1,2 @@
+# Copy to private_terms.txt (git-ignored). One term per line, case-insensitive.
+# e.g. original family first names, emails, hometown, insurer names, Drive/USB paths

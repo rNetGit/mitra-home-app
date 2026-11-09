@@ -1,0 +1,156 @@
+{% set v = add.v %}
+{% if err %}<p class="alert" role="alert">{{ err }}</p>{% endif %}
+{% if note %}<p class="notice" role="status">{{ note }}</p>{% endif %}
+{% if add.table == 'recipes' %}
+<form class="nform" hx-post="/records/recipe/url" hx-target="#radd-recipes" hx-swap="innerHTML" hx-disabled-elt="find button" autocomplete="off">
+  <label>Fill it in from a web address (optional)<input name="url" type="url" maxlength="2000" placeholder="https://..." spellcheck="false"></label>
+  <button class="btn alt" type="submit">Fill it in</button>
+</form>
+<p class="muted small">Reads the recipe most recipe sites include in the page (no AI). Needs Look things up online on
+  (Family &gt; House). Check what it filled in below, then Add.</p>
+{% endif %}
+<form class="nform" hx-post="/records/add" hx-target="#radd-{{ add.table }}" hx-swap="innerHTML" hx-vals='{{ {"part": add.part, "table": add.table, "back": back|default("")}|tojson }}'>
+{% if add.table == 'life_items' %}
+  <label>Type<select name="domain">{% for d in ch.domains %}<option value="{{ d }}" {{ 'selected' if v.domain == d }}>{{ d }}</option>{% endfor %}</select></label>
+  <label>For<select name="who"><option value="household">household</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>What<input name="title" maxlength="120" required value="{{ v.title }}"></label>
+  <label>Due date (optional)<input name="due" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.due }}"></label>
+  <label>Repeats every N months (0 = once)<input name="every" type="number" min="0" max="600" step="1" value="{{ v.every or 0 }}"></label>
+  <label>Cost (0 = none)<input name="amount" type="number" min="0" max="10000000" step="0.01" value="{{ v.amount or 0 }}"></label>
+  <label>Where / who<input name="provider" maxlength="80" value="{{ v.provider }}"></label>
+{% elif add.table == 'activity_schedules' %}
+  <label>What<input name="title" maxlength="80" required placeholder="Swimming" value="{{ v.title }}"></label>
+  <label>For<select name="who"><option value="household">household</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <fieldset class="days"><legend>Every</legend>{% for k, lbl in ch.weekdays %}<label class="check"><input type="checkbox" name="d_{{ k }}" value="1" {{ 'checked' if v['d_' ~ k] }}> {{ lbl }}</label>{% endfor %}</fieldset>
+  <label>Starts (optional)<input name="start_time" type="time" value="{{ v.start_time }}"></label>
+  <label>Ends (optional)<input name="end_time" type="time" value="{{ v.end_time }}"></label>
+  <label>Where (optional)<input name="provider" maxlength="80" placeholder="YMCA" value="{{ v.provider }}"></label>
+  <label>First day (optional)<input name="term_start" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.term_start }}"></label>
+  <label>Last day (optional)<input name="term_end" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.term_end }}"></label>
+  <label class="check"><input type="checkbox" name="school_days" value="1" {{ 'checked' if v.school_days }}> Not on days off school</label>
+  <p class="muted small">Only the name, place, days and times are kept: no addresses or phone numbers.</p>
+{% elif add.table == 'calendar_days' %}
+  <label>Name<input name="name" maxlength="80" required placeholder="Winter break" value="{{ v.name }}"></label>
+  <label>Kind<select name="kind">{% for k, lbl in ch.day_kinds %}<option value="{{ k }}" {{ 'selected' if (v.kind or 'holiday') == k }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>Day<input name="day" type="date" min="2000-01-01" max="2100-12-31" required value="{{ v.day }}"></label>
+  <label>Last day, for a break (optional)<input name="end" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.end }}"></label>
+  <label>For<select name="who"><option value="household">household</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <p class="muted small">Classes marked "Not on days off school" skip a no-school day.</p>
+{% elif add.table == 'events' %}
+  <label>What<input name="name" maxlength="80" required placeholder="Family dinner" value="{{ v.name }}"></label>
+  <label>Day<input name="date" type="date" min="2000-01-01" max="2100-12-31" required value="{{ v.date or ch.today }}"></label>
+  <label>Starts (optional)<input name="start_time" type="time" value="{{ v.start_time }}"></label>
+  <label>Ends (optional)<input name="end_time" type="time" value="{{ v.end_time }}"></label>
+  <label>Repeats<select name="repeats"><option value="once">once</option><option value="yearly" {{ 'selected' if v.repeats == 'yearly' }}>every year on this day</option></select></label>
+  <p class="muted small">For the whole family. A visit for one person (doctor, dentist) goes under Health; a class every week under Classes.</p>
+{% elif add.table == 'vaccinations' %}
+  <label>For<select name="who" required><option value="">pick</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Vaccine<input name="vaccine" maxlength="60" required placeholder="Flu, MMR, Rabies" value="{{ v.vaccine }}"></label>
+  <label>Given on<input name="given" type="date" min="1990-01-01" max="2100-12-31" required value="{{ v.given or ch.today }}"></label>
+  <label>Next one due (optional)<input name="next_due" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.next_due }}"></label>
+  <label>Clinic or vet (optional)<input name="provider" maxlength="80" value="{{ v.provider }}"></label>
+  <label>Note (optional)<input name="notes" maxlength="200" value="{{ v.notes }}"></label>
+  <p class="muted small">The name and dates only: no lot numbers or diagnoses. A next due date puts a reminder on Today, the Calendar and the weekly digest. A record, not medical advice.</p>
+{% elif add.table == 'member_info' %}
+  <label>For<select name="who" required><option value="">pick</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Kind<select name="category">{% for k, lbl in ch.info_categories %}<option value="{{ k }}" {{ 'selected' if v.category == k }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>What<input name="label" maxlength="60" required list="info-labels" placeholder="Allergies" value="{{ v.label }}"></label>
+  <datalist id="info-labels">{% for k, labels in ch.info_labels.items() %}{% for l in labels %}<option value="{{ l }}">{% endfor %}{% endfor %}</datalist>
+  <label>Fact<input name="value" maxlength="200" required placeholder="Peanuts; carries an EpiPen" value="{{ v.value }}"></label>
+  <p class="muted small">Stays on this PC and is shown to adults only. No passwords, PINs or full account or ID numbers.</p>
+{% elif add.table == 'subscriptions' %}
+  <label>Name<input name="name" maxlength="80" required value="{{ v.name }}"></label>
+  <label>Amount (optional)<input name="amount" type="number" min="0" max="1000000" step="0.01" value="{{ v.amount }}"></label>
+  <label>How often<select name="frequency">{% for fq in ch.freqs %}<option value="{{ fq }}" {{ 'selected' if (v.frequency or 'monthly') == fq }}>{{ fq }}</option>{% endfor %}</select></label>
+  <label>Next renewal (optional)<input name="renew" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.renew }}"></label>
+{% elif add.table == 'receipts' %}
+  <label>Store<input name="merchant" maxlength="80" required value="{{ v.merchant }}"></label>
+  <label>Date<input name="date" type="date" min="2000-01-01" max="2100-12-31" required value="{{ v.date or ch.today }}"></label>
+  <label>Total<input name="total" type="number" min="0" max="1000000" step="0.01" required value="{{ v.total }}"></label>
+  <label>Card last 4 (optional)<input name="last4" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" value="{{ v.last4 }}"></label>
+{% elif add.table == 'budget' %}
+  <label>Category<input name="category" maxlength="60" required list="budget-lines" value="{{ v.category }}"></label>
+  <datalist id="budget-lines">{% for c in ch.budget_lines %}<option value="{{ c }}">{% endfor %}</datalist>
+  <label>Monthly limit<input name="limit" type="number" min="0" max="10000000" step="0.01" value="{{ v.limit }}"></label>
+  <label class="check"><input type="checkbox" name="remove" value="1"> Remove this budget line instead</label>
+  <p class="muted small">A category that already has a line gets the new limit.</p>
+{% elif add.table == 'loans' %}
+  <label>Name<input name="name" maxlength="80" required value="{{ v.name }}"></label>
+  <label>Kind<select name="kind">{% for k in ch.loan_kinds %}<option value="{{ k }}" {{ 'selected' if (v.kind or 'other') == k }}>{{ k }}</option>{% endfor %}</select></label>
+  <label>Lender (optional)<input name="lender" maxlength="80" value="{{ v.lender }}"></label>
+  <label>Balance today (optional)<input name="balance" type="number" min="0" max="1000000000" step="0.01" value="{{ v.balance }}"></label>
+  <label>Rate % (optional)<input name="rate" type="number" min="0" max="100" step="0.001" value="{{ v.rate }}"></label>
+  <label>Monthly payment (optional)<input name="payment" type="number" min="0" max="10000000" step="0.01" value="{{ v.payment }}"></label>
+  <label>Payoff date (optional)<input name="payoff" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.payoff }}"></label>
+{% elif add.table == 'home_office_profile' %}
+  {% macro yn(name, label) %}<label>{{ label }}<select name="{{ name }}"><option value="">Not sure yet</option><option value="1" {{ 'selected' if v[name] == '1' }}>Yes</option><option value="0" {{ 'selected' if v[name] == '0' }}>No</option></select></label>{% endmacro %}
+  <label>For<select name="who" required><option value="">pick</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Tax year<input name="year" type="number" min="2000" max="2100" required value="{{ v.year or ch.today[:4] }}"></label>
+  <label>Office area (sq ft)<input name="office" type="number" min="0" max="1000000" step="0.1" value="{{ v.office }}"></label>
+  <label>Whole home area (sq ft)<input name="home" type="number" min="0" max="1000000" step="0.1" value="{{ v.home }}"></label>
+  <label>Months the space qualified<input name="months" type="number" min="1" max="12" value="{{ v.months or 12 }}"></label>
+  <label>Method<select name="method"><option value="">Decide later</option><option value="simplified" {{ 'selected' if v.method == 'simplified' }}>Simplified</option><option value="regular" {{ 'selected' if v.method == 'regular' }}>Regular (actual costs)</option></select></label>
+  {{ yn('self_employed', 'Self-employed or business owner (not an employee)?') }}
+  {{ yn('exclusive', 'Space used ONLY for the business?') }}
+  {{ yn('regular', 'Used on a regular basis?') }}
+  {{ yn('principal', 'Principal place of business, or another qualifying use?') }}
+  <label>Gross business income (optional)<input name="income" type="number" min="0" max="1000000000" step="0.01" value="{{ v.income }}"></label>
+  <p class="muted small">Saving again for the same person and year updates it. Records and arithmetic only, not tax advice. Costs (rent, utilities, internet) are added in Chat for now.</p>
+{% elif add.table == 'savings_goals' %}
+  <label>What it is for<input name="name" maxlength="60" required placeholder="Summer holiday" value="{{ v.name }}"></label>
+  <label>Amount to save<input name="target" type="number" min="0.01" max="1000000000" step="0.01" required value="{{ v.target }}"></label>
+  <label>By when (optional)<input name="due" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.due }}"></label>
+  <label>Saved so far (optional)<input name="saved" type="number" min="0" max="1000000000" step="0.01" value="{{ v.saved }}"></label>
+  <label>Or follow an account kept for it (optional)<select name="account"><option value="">(none: I type what is saved)</option>{% for i, lbl in ch.goal_accounts %}<option value="{{ i }}" {{ 'selected' if v.account == i }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <p class="muted small">With an account, the amount saved is its latest statement balance.</p>
+{% elif add.table == 'home_contacts' %}
+  {% include "_contact_fields.html" %}
+  <p class="muted small">Stays on this PC. A business line is fine; no account numbers or passwords.</p>
+{% elif add.table == 'home_assets' %}
+  {% include "_asset_fields.html" %}
+{% elif add.table == 'lists' %}
+  <label>Name<input name="name" maxlength="60" required value="{{ v.name }}"></label>
+  <label>Kind<select name="kind">{% for k in ch.list_kinds %}<option value="{{ k }}" {{ 'selected' if (v.kind or 'todo') == k }}>{{ k }}</option>{% endfor %}</select></label>
+  <label class="check"><input type="checkbox" name="adults" value="1"> Adults only (children and guests do not see it)</label>
+{% elif add.table == 'meal_plan' %}
+  <label>Day<input name="day" type="date" min="2000-01-01" max="2100-12-31" required value="{{ v.day or ch.today }}"></label>
+  <label>Meal<select name="slot">{% for s in ch.slots %}<option value="{{ s }}" {{ 'selected' if (v.slot or 'dinner') == s }}>{{ s }}</option>{% endfor %}</select></label>
+  <label>What (a recipe name or any text)<input name="what" maxlength="80" required value="{{ v.what }}"></label>
+  <label>Note (optional)<input name="note" maxlength="200" value="{{ v.note }}"></label>
+{% elif add.table == 'recipes' %}
+  <label>Name<input name="name" maxlength="80" required value="{{ v.name }}"></label>
+  <label>Ingredients, one per line<textarea name="ingredients" rows="6" maxlength="6000">{{ v.ingredients }}</textarea></label>
+  <label>Servings (optional)<input name="servings" type="number" min="1" max="50" step="1" value="{{ v.servings }}"></label>
+  <label>Tags, comma separated (optional)<input name="tags" maxlength="120" value="{{ v.tags }}"></label>
+  <label>Link (optional)<input name="url" type="url" maxlength="500" value="{{ v.url }}"></label>
+  <label>Notes (optional)<textarea name="notes" rows="3" maxlength="5000">{{ v.notes }}</textarea></label>
+  <p class="muted small">A recipe with the same name is replaced.</p>
+{% elif add.table == 'meal_shop' %}
+  <label>From<input name="start" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.start or ch.today }}"></label>
+  <label>To<input name="end" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.end or ch.week_end }}"></label>
+  <label>Shopping list<input name="list_name" maxlength="60" value="{{ v.list_name or 'Groceries' }}"></label>
+  <p class="muted small">Ingredients of the planned recipes, staples left out; a meal is only added once.</p>
+{% elif add.table == 'id_documents' %}
+  <label>Whose<select name="person" required>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.person == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Document<select name="doc_type">{% for k, lbl in ch.id_types %}<option value="{{ k }}" {{ 'selected' if v.doc_type == k }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>Expires<input name="expires" type="date" min="1990-01-01" max="2100-12-31" required value="{{ v.expires }}"></label>
+  <label>Number, last 4 (optional)<input name="last4" maxlength="4" pattern="[A-Za-z0-9]{1,4}" value="{{ v.last4 }}"></label>
+  <p class="muted small">Already recorded for this person? Its expiry is updated. Only the last four characters, never the whole number.</p>
+{% elif add.table == 'vehicles' %}
+  <label>Make<input name="make" maxlength="40" required value="{{ v.make }}"></label>
+  <label>Model<input name="model" maxlength="60" required value="{{ v.model }}"></label>
+  <label>Year (optional)<input name="year" type="number" min="1950" max="2100" step="1" value="{{ v.year }}"></label>
+{% elif add.table == 'accounts' %}
+  <label>Name<input name="name" maxlength="60" required value="{{ v.name }}"></label>
+  <label>Type<select name="kind">{% for k in ch.account_types %}<option value="{{ k }}" {{ 'selected' if v.kind == k }}>{{ k }}</option>{% endfor %}</select></label>
+  <label>Last 4 digits (optional)<input name="last4" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" value="{{ v.last4 }}"></label>
+  <label>Owner (optional)<input name="owner" maxlength="40" value="{{ v.owner }}"></label>
+  <p class="muted small">Only the last four digits, never the whole account number.</p>
+{% else %}
+  <label>Name<input name="name" maxlength="40" required value="{{ v.name }}"></label>
+  <label>Role<select name="role">{% for r in ch.roles %}<option value="{{ r }}" {{ 'selected' if v.role == r }}>{{ r }}</option>{% endfor %}</select></label>
+  <label>Birthday (MM-DD, optional)<input name="birthday" maxlength="5" pattern="[0-9]{2}-[0-9]{2}" placeholder="04-23" value="{{ v.birthday }}"></label>
+  <label>Birth year (optional)<input name="year" type="number" min="1900" max="2100" step="1" value="{{ v.year }}"></label>
+{% endif %}
+  <button class="btn" type="submit">{{ "Put them on the list" if add.table == "meal_shop" else "Add" }}</button>
+</form>

@@ -1,0 +1,27 @@
+{% if prog.state %}
+<section class="card iprog iprog-{{ prog.state }}" id="iprog"
+  {% if prog.poll %}hx-get="/inbox/progress" hx-trigger="every 2s" hx-swap="outerHTML"{% endif %} aria-live="polite">
+  <div class="iprog-head">
+    <h2>{% if prog.state == 'running' %}<span class="spin" aria-hidden="true"></span>{% endif %}{{ prog.title }}</h2>
+    {% if prog.state == 'running' %}<span class="muted">{{ prog.done }} of {{ prog.total }} done</span>
+    {% endif %}
+  </div>
+  {% if (prog.state == 'waiting' or prog.left) and note %}<p class="muted">{{ note }}</p>{% endif %}
+  {% if prog.state == 'running' %}<progress class="iprog-all" max="{{ prog.total }}" value="{{ prog.done }}" aria-label="Files done"></progress>{% endif %}
+  {% if prog.state != 'waiting' %}<ol class="psteps" aria-label="Steps"><li>In line</li><li>Checking</li><li>Reading</li><li>Sorting</li><li>Filed</li></ol>{% endif %}
+  <ul class="pfiles">
+  {% for r in prog.rows %}
+    <li class="pfile t-{{ r.tone }}">
+      <svg class="pf-ico" viewBox="0 0 24 24" aria-hidden="true"><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h7l5 5v11a2 2 0 0 1-2 2z"/></svg>
+      <div class="pf-main">
+        <div class="pf-top"><span class="pf-name">{{ r.name }}</span><span class="chip-s">{{ r.label }}</span></div>
+        {% if prog.state != 'waiting' %}<progress max="4" value="{{ r.step }}" aria-label="{{ r.name }}: {{ r.label }}"></progress>{% endif %}
+        {% if r.line %}<p class="muted pf-line">{{ r.line }}</p>{% endif %}
+      </div>
+    </li>
+  {% endfor %}
+  </ul>
+  {% if (prog.state == 'waiting' or prog.left) and can_file %}<button type="button" class="btn" hx-post="/inbox/filenow" hx-target="#inbox" hx-swap="innerHTML"
+    hx-vals='{{ {"view": view}|tojson }}' hx-disabled-elt="this">File them now</button>{% endif %}
+</section>
+{% else %}<section id="iprog" hidden></section>{% endif %}

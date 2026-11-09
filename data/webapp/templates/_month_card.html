@@ -1,0 +1,133 @@
+{# This month: the story card (five slides, tap or swipe left/right) and, unless `story_only` (Money > Overview), every
+   category below it. Needs `m` (trends.month_summary) and `v`. #}
+{% import "_ui.html" as ui with context %}
+<section class="msum{{ ' solo' if story_only }}" id="msum" aria-label="Monthly summary">
+  <div class="story tall has-top" data-story tabindex="0" aria-roledescription="carousel" aria-label="{{ m.long }} summary">
+    <header class="stop">
+      <a class="mnav snav" {% if m.older %}href="/money?part=month&amp;ym={{ m.older }}" hx-get="/money?part=month&amp;ym={{ m.older }}" {% if story_only %}hx-target="main" hx-select="main"{% else %}hx-target="#msum" hx-select="#msum"{% endif %} hx-swap="outerHTML" hx-push-url="true"{% else %}aria-disabled="true"{% endif %} aria-label="Month before">&lsaquo;</a>
+      <form class="mpick" method="get" action="/money" hx-get="/money" hx-trigger="change" {% if story_only %}hx-target="main" hx-select="main"{% else %}hx-target="#msum" hx-select="#msum"{% endif %} hx-swap="outerHTML" hx-push-url="true">
+        <input type="hidden" name="part" value="month"><label for="ym" class="vh">Month</label>
+        <select id="ym" name="ym">{% for x, xl in m.months %}<option value="{{ x }}"{% if x == m.month %} selected{% endif %}>{{ xl }}</option>{% endfor %}</select>
+        <noscript><button class="btn alt" type="submit">Show</button></noscript>
+      </form>
+      <a class="mnav snav" {% if m.newer %}href="/money?part=month&amp;ym={{ m.newer }}" hx-get="/money?part=month&amp;ym={{ m.newer }}" {% if story_only %}hx-target="main" hx-select="main"{% else %}hx-target="#msum" hx-select="#msum"{% endif %} hx-swap="outerHTML" hx-push-url="true"{% else %}aria-disabled="true"{% endif %} aria-label="Month after">&rsaquo;</a>
+      {% if m.partial %}<span class="mchip">so far</span>{% endif %}
+    </header>
+
+    <article class="slide g-over" aria-label="Overview">
+      <p class="kick">{{ m.long }}</p>
+      <div class="mdonut">
+        {{ ui.donut(m.categories) }}
+        <div class="mmid"><small>Spent</small><b>{{ m.spent|money }}</b>{% if m.kept_pct is not none %}<small>{{ m.kept_pct }}% of income kept</small>{% endif %}</div>
+      </div>
+      <ul class="mlegend">{% for c in m.categories %}<li><i class="dot s{{ loop.index0 % 7 }}" aria-hidden="true"></i>{{ c.category|capitalize }} <b>{{ c.pct|round|int }}%</b></li>{% endfor %}</ul>
+      <dl class="mtiles">
+        <div><dt>Income</dt><dd>{{ m.income|money }}</dd></div>
+        <div><dt>Spent</dt><dd>{{ m.spent|money }}</dd></div>
+        <div><dt>Saved</dt><dd>{{ m.saved|money }}</dd></div>
+        <div class="{{ 'neg' if m.left < 0 }}"><dt>Left</dt><dd>{{ m.left|money }}</dd></div>
+      </dl>
+    </article>
+
+    <article class="slide g-flow" aria-label="Cash flow">
+      <p class="kick">Cash flow</p>
+      {% if m.income %}
+      <h3 class="mbig">{{ m.kept_pct }}%<small> of income kept</small></h3>
+      {% set base = [m.income, m.fixed + m.flexible + [m.saved, 0]|max + [m.left, 0]|max]|max %}
+      <svg class="mflow" viewBox="0 0 100 10" preserveAspectRatio="none" role="img" aria-label="Income: fixed {{ m.fixed|money }}, everyday {{ m.flexible|money }}, saved {{ m.saved|money }}, left {{ m.left|money }}">
+        {% set fx = namespace(x=0) %}{% for k, val in [('f1', m.fixed), ('f2', m.flexible), ('f3', m.saved), ('f4', m.left)] %}{% if val > 0 %}{% set w = val / base * 100 %}<rect class="{{ k }}" x="{{ fx.x|round(2) }}" y="0" width="{{ w|round(2) }}" height="10"/>{% set fx.x = fx.x + w %}{% endif %}{% endfor %}
+      </svg>
+      <ul class="mrows">
+        <li><i class="dot f1" aria-hidden="true"></i><span>Fixed costs <small>housing, loans, bills</small></span><b>{{ m.fixed|money }}</b></li>
+        <li><i class="dot f2" aria-hidden="true"></i><span>Everyday spending</span><b>{{ m.flexible|money }}</b></li>
+        <li><i class="dot f3" aria-hidden="true"></i><span>Saved <small>{% if m.invested %}invested {{ m.invested|money }}{% endif %}{% if m.invested and m.to_savings %}, {% endif %}{% if m.to_savings %}to savings {{ m.to_savings|money }}{% endif %}</small></span><b>{{ m.saved|money }}</b></li>
+        <li class="{{ 'neg' if m.left < 0 }}"><i class="dot f4" aria-hidden="true"></i><span>{{ 'Over by' if m.left < 0 else 'Left' }}</span><b>{{ m.left|abs|money }}</b></li>
+      </ul>
+      <p class="kick sm">Income came from</p>
+      <ul class="mrows">{% for s in m.sources %}<li><span>{{ s.payee }}</span><b>{{ s.amount|money }}</b></li>{% endfor %}
+        {% if m.sources_more %}<li class="dim"><span>{{ m.sources_more }} more</span></li>{% endif %}</ul>
+      {% else %}<p class="dim">No income filed for {{ m.label }} yet.</p>{% endif %}
+    </article>
+
+    <article class="slide g-cat" aria-label="Where it went">
+      <p class="kick">Where it went</p>
+      <ul class="mcats">
+        {% for c in m.all[:8] %}
+        <li><i class="dot s{{ loop.index0 % 7 if loop.index0 < 6 else 6 }}" aria-hidden="true"></i><span>{{ c.category|capitalize }}</span><b>{{ c.amount|money }}</b>
+          {% set scale = [m.all[0].amount, c.limit or 0]|max %}
+          <svg class="mbar" viewBox="0 0 100 8" preserveAspectRatio="none" aria-hidden="true"><rect class="track" width="100" height="8"/><rect class="s{{ loop.index0 % 7 if loop.index0 < 6 else 6 }}" width="{{ [c.amount / scale * 100, 1]|max|round(2) }}" height="8"/>{% if c.limit %}<rect class="tick{{ ' over' if c.amount > c.limit }}" x="{{ (c.limit / scale * 100 - 0.8)|round(2) }}" width="1.6" height="8"><title>Budget {{ c.limit|money }}</title></rect>{% endif %}</svg>
+          <small>{% if c.change is none %}new{% elif c.change|abs < 1 %}same{% else %}<span class="{{ 'up' if c.change > 0 else 'down' }}">{{ '▲' if c.change > 0 else '▼' }}{{ c.change|abs|round|int }}%</span>{% endif %}</small></li>
+        {% else %}<li class="dim">No spending in this month.</li>{% endfor %}
+      </ul>
+      {% if m.all|length > 8 %}<p class="dim">{{ m.all|length - 8 }} more below the card.</p>{% endif %}
+      <p class="dim sm">▲▼ against {{ m.months[1][1] if m.older else 'the month before' }}{% if m.all|selectattr('limit')|list %} · tick = budget{% endif %}</p>
+    </article>
+
+    <article class="slide g-trend" aria-label="Trend">
+      <p class="kick">Six months</p>
+      {% set top = (m.history|map(attribute='income')|list + m.history|map(attribute='spent')|list)|max or 1 %}
+      <svg class="mchart" viewBox="0 0 300 150" role="img" aria-label="Income and spending, last six months">
+        {% for h in m.history %}{% set x = 12 + loop.index0 * 48 %}
+        <g class="{{ 'on' if h.month == m.month }}">
+          <rect class="inc" x="{{ x }}" y="{{ 128 - h.income / top * 112 }}" width="15" height="{{ [h.income / top * 112, 0.5]|max }}" rx="3"><title>{{ h.label }} income {{ h.income|money }}</title></rect>
+          <rect class="spd" x="{{ x + 17 }}" y="{{ 128 - h.spent / top * 112 }}" width="15" height="{{ [h.spent / top * 112, 0.5]|max }}" rx="3"><title>{{ h.label }} spent {{ h.spent|money }}</title></rect>
+          <text x="{{ x + 16 }}" y="144" text-anchor="middle">{{ h.label }}</text>
+        </g>{% endfor %}
+      </svg>
+      <p class="mkey"><i class="inc"></i>Income <i class="spd"></i>Spent</p>
+      <ul class="mfacts">
+        {% if m.projected %}<li><span>On pace for</span><b>{{ m.projected|money }}</b></li>
+        {% if m.pace_vs_prev is not none %}<li><span>That pace against {{ m.prev_label[:3] }}</span><b class="{{ 'up' if m.pace_vs_prev > 0 else 'down' }}">{{ '%+.0f'|format(m.pace_vs_prev) }}%</b></li>{% endif %}
+        {% else %}<li><span>Against the month before</span><b class="{{ 'up' if m.vs_prev and m.vs_prev > 0 else 'down' if m.vs_prev }}">{% if m.vs_prev is not none %}{{ '%+.0f'|format(m.vs_prev) }}%{% else %}n/a{% endif %}</b></li>{% endif %}
+        <li><span>Against {{ m.label[:3] }} last year</span><b class="{{ 'up' if m.vs_last_year and m.vs_last_year > 0 else 'down' if m.vs_last_year }}">{% if m.vs_last_year is not none %}{{ '%+.0f'|format(m.vs_last_year) }}%{% else %}n/a{% endif %}</b></li>
+        <li><span>Average a day</span><b>{{ m.per_day|money }}</b></li>
+      </ul>
+    </article>
+
+    <article class="slide g-high" aria-label="Highlights">
+      <p class="kick">Highlights</p>
+      <p class="dim sm">Everyday spending, not housing, loans or bills.</p>
+      <div class="mhigh">
+        {% if m.biggest %}<div><small>Biggest buy</small><b>{{ m.biggest.amount|money }}</b><span>{{ m.biggest.payee }}</span></div>{% endif %}
+        {% if m.merchant %}<div><small>Top place</small><b>{{ m.merchant.payee }}</b><span>{{ m.merchant.n }}× · {{ m.merchant.amount|money }}</span></div>{% endif %}
+        {% if m.busiest %}<div><small>Busiest day</small><b>{{ m.busiest.date[5:7]|int }}/{{ m.busiest.date[8:]|int }}</b><span>{{ m.busiest.amount|money }}</span></div>{% endif %}
+        <div><small>Charges</small><b>{{ m.n }}</b><span>{{ m.all|length }} categor{{ 'y' if m.all|length == 1 else 'ies' }}</span></div>
+        <div><small>Subscriptions</small><b>{{ v.subs_month|money if v.subs_month else '-' }}</b><span>a month, {{ v.subs|length }} tracked</span></div>
+        <div><small>Bills ahead</small><b>{{ v.bills|length }}</b><span>in the next 30 days</span></div>
+      </div>
+    </article>
+    <p class="shint" aria-hidden="true">Tap or swipe</p>
+  </div>
+
+  {% if not story_only %}
+  <div class="card mlist">
+    <h2 class="row-h">All categories, {{ m.label }} <span class="mtot muted">{{ m.spent|money }} · {{ m.n }} charges</span></h2>
+    <div class="msort" role="group" aria-label="Sort charges"><button type="button" class="on" data-sort="a">Biggest first</button><button type="button" data-sort="d">By date</button></div>
+    {% for c in m.all %}
+    <details class="mcat">
+      <summary><i class="dot s{{ loop.index0 % 7 if loop.index0 < 6 else 6 }}" aria-hidden="true"></i><span>{{ c.category|capitalize }}</span><small class="muted">{{ c.n }} · {{ c.pct|round|int }}%</small><b>{{ c.amount|money }}</b></summary>
+      <div class="mrowsx">{% for t in c['items'] %}<div class="mrow" data-d="{{ t.date }}" data-a="{{ t.amount }}"><span class="muted">{{ t.date[5:] }}</span><span>{{ t.payee }}</span><span class="n">{{ t.amount|money2 }}</span></div>{% endfor %}</div>
+      {% if c.category == 'uncategorized' %}
+      {% if m.loose %}
+      <p class="muted sm">Name a category once and every charge from that merchant, now and later, gets it.</p>
+      <datalist id="mm-cats">{% for n in m.cat_names %}<option value="{{ n }}">{% endfor %}<option value="transfer"></datalist>
+      <ul class="merchlist">{% for g in m.loose %}
+        <li><form class="merchrow" hx-post="/money/rule" hx-disabled-elt="find button">
+          <input type="hidden" name="back" value="month"><input type="hidden" name="month" value="{{ m.month }}">
+          <span class="mr-info"><b>{{ g.key }}</b><span class="muted small">{{ g.n }} charge{{ '' if g.n == 1 else 's' }} · {{ g.spent|money }}</span></span>
+          <label class="vh" for="mmp{{ loop.index }}">Text to match</label><input id="mmp{{ loop.index }}" name="pattern" maxlength="60" required value="{{ g.key }}">
+          <label class="vh" for="mmc{{ loop.index }}">Category</label><input id="mmc{{ loop.index }}" name="category" maxlength="40" required list="mm-cats" placeholder="Category">
+          <button class="btn" type="submit">Remember</button>
+        </form></li>
+      {% endfor %}</ul>
+      <p class="muted sm">Money moved between your own accounts: choose <b>transfer</b> and it stops counting as spending.</p>
+      {% endif %}
+      {% else %}
+      <p class="muted sm"><a href="/records?q={{ c.category|urlencode }}">Search the records</a></p>
+      {% endif %}
+    </details>
+    {% else %}<p class="muted quiet">No spending in this month.</p>
+    {% endfor %}
+  </div>
+  {% endif %}
+</section>

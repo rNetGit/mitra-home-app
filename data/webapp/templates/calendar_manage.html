@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Manage calendar · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Manage calendar</h1>
+  <p class="sub">Family events, holidays and days off: add, change or remove them here. <a href="/calendar">Back to the calendar</a></p></div></header>
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+<section class="card" id="cm-add">
+  <h2>Add</h2>
+  {% for add in adds %}
+  <details class="more-form"><summary class="btn alt">{{ add.title }}</summary>
+    <div id="radd-{{ add.table }}">{% include "_radd.html" %}</div>
+  </details>
+  {% endfor %}
+</section>
+<form class="nform cm-filter" method="get" action="/calendar/manage" aria-label="Filter">
+  <label>From<input type="date" name="from" value="{{ start.isoformat() }}"></label>
+  <label>To<input type="date" name="to" value="{{ end.isoformat() }}"></label>
+  <label>Person<select name="who"><option value="">everyone</option>{% for p in people %}<option value="{{ p }}" {{ 'selected' if p == who }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Kind<select name="kind"><option value="">all kinds</option>{% for k in kinds %}<option value="{{ k }}" {{ 'selected' if k == kind }}>{{ k }}</option>{% endfor %}</select></label>
+  <label class="check"><input type="checkbox" name="all" value="1" {{ 'checked' if everything }}> Show everything on the calendar (bills, birthdays, built-in holidays ...)</label>
+  <button class="btn" type="submit">Show</button>
+</form>
+<p class="muted small">{{ items|length }} item{{ 's' if items|length != 1 }} from {{ start.strftime('%b') }} {{ start.day }} to {{ end.strftime('%b') }} {{ end.day }}, {{ end.year }}.</p>
+<div class="card rows" id="cm-list">
+  {% for r in items %}
+  <div class="brow cm-row{{ ' dim' if r.past }}" data-source="{{ r.source }}">
+    <div class="bmain"><b>{{ r.date.strftime('%a %b') }} {{ r.date.day }}</b> · {{ r.title }}
+      <small class="muted"><span class="kchip {{ kclass(r.kind) }}">{{ r.kind }}</span>{% if r.who %} · {{ r.who }}{% endif %}{% if r.repeats %} · every year{% endif %}{% if r.source == 'built in' %} · built in, read-only{% elif r.source == 'other' %} · read-only copy{% endif %}</small></div>
+    {% if r.editable %}
+    <div class="optrow">
+      <a class="btn alt" href="{{ link(r.ref) }}">Edit</a>
+      <details class="more-form"><summary class="btn alt">Remove</summary>
+        <form class="nform" hx-post="/records/edit" hx-swap="none" hx-vals='{{ {"table": r.ref.split(":")[0], "id": r.ref.split(":")[1], "op": "drop", "back": back}|tojson }}'>
+          <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove {% if r.repeats %}it for every year{% else %}this{% endif %}</label>
+          <button class="btn" type="submit">Remove</button>
+        </form>
+      </details>
+    </div>
+    {% elif r.source == 'record' %}<div class="optrow"><a class="btn alt" href="{{ link(r.ref) }}">Open record</a></div>{% endif %}
+  </div>
+  {% else %}
+  <p class="muted pad">Nothing here for these dates. Add a family event, holiday or day off above.</p>
+  {% endfor %}
+</div>
+{% endblock %}

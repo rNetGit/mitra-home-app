@@ -1,0 +1,41 @@
+{
+  "country": "CA",
+  "title": "Canada federal statutory holidays (provinces add their own)",
+  "observed": "",
+  "holidays": [
+    {"name": "New Year's Day", "date": "01-01"},
+    {"name": "Good Friday", "easter": -2},
+    {"name": "Victoria Day", "month": 5, "weekday": "MO", "before": 25},
+    {"name": "Canada Day", "date": "07-01"},
+    {"name": "Labour Day", "month": 9, "weekday": "MO", "nth": 1},
+    {"name": "National Day for Truth and Reconciliation", "date": "09-30", "since": 2021},
+    {"name": "Thanksgiving", "month": 10, "weekday": "MO", "nth": 2},
+    {"name": "Remembrance Day", "date": "11-11"},
+    {"name": "Christmas Day", "date": "12-25"},
+    {"name": "Boxing Day", "date": "12-26"}
+  ],
+  "observances": [
+    {"name": "Daylight saving time starts: clocks go forward 1 hour", "month": 3, "weekday": "SU", "nth": 2, "since": 2007},
+    {"name": "Daylight saving time ends: clocks go back 1 hour", "month": 11, "weekday": "SU", "nth": 1, "since": 2007}
+  ],
+  "regions": {
+    "AB": {"name": "Alberta", "holidays": [
+      {"name": "Family Day", "month": 2, "weekday": "MO", "nth": 3},
+      {"name": "Heritage Day", "month": 8, "weekday": "MO", "nth": 1}]},
+    "BC": {"name": "British Columbia", "holidays": [
+      {"name": "Family Day", "month": 2, "weekday": "MO", "nth": 3},
+      {"name": "British Columbia Day", "month": 8, "weekday": "MO", "nth": 1}]},
+    "MB": {"name": "Manitoba", "holidays": [
+      {"name": "Louis Riel Day", "month": 2, "weekday": "MO", "nth": 3}]},
+    "NS": {"name": "Nova Scotia", "holidays": [
+      {"name": "Heritage Day", "month": 2, "weekday": "MO", "nth": 3}]},
+    "ON": {"name": "Ontario", "holidays": [
+      {"name": "Family Day", "month": 2, "weekday": "MO", "nth": 3},
+      {"name": "Civic Holiday", "month": 8, "weekday": "MO", "nth": 1}]},
+    "QC": {"name": "Quebec", "holidays": [
+      {"name": "Saint-Jean-Baptiste Day", "date": "06-24"}]},
+    "SK": {"name": "Saskatchewan", "no_observances": true, "holidays": [
+      {"name": "Family Day", "month": 2, "weekday": "MO", "nth": 3},
+      {"name": "Saskatchewan Day", "month": 8, "weekday": "MO", "nth": 1}]}
+  }
+}

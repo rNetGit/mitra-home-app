@@ -1,0 +1,7 @@
+* text=auto eol=lf
+*.bat text eol=crlf
+*.sh text eol=lf
+*.db binary
+*.command text eol=lf
+# the Windows installer build scripts are for maintainers
+installer/ export-ignore

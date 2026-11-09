@@ -1,0 +1,9 @@
+{
+ "note": "Public keys that sign Mitra Home releases (data/updater.py checks SHA256SUMS.sig against these). Public, safe to share. Changing this file only takes effect after an update that was itself signed.",
+ "keys": [
+  {
+   "id": "familyagent-39af7819a8e2",
+   "ed25519": "lajVh4J19hsL8Xp4vZPeVG6QI9YNdCdm16Yi3Cezvic="
+  }
+ ]
+}

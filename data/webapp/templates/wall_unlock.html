@@ -1,0 +1,18 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon with context %}
+{% block title %}Unlock Money · {{ family }}{% endblock %}
+{% block main %}
+<form class="pinpad" method="post" action="/wall/unlock" data-wall>
+  <input type="hidden" name="part" value="{{ part or '' }}">
+  <h1>{{ icon('lock') }} Money</h1>
+  <p class="note">An adult types their own PIN. Money stays open for a minute, then locks itself.</p>
+  {% if error %}<p class="alert" role="alert">{{ error }}</p>{% endif %}
+  {% if adults %}
+  <label class="vh" for="who">Who</label>
+  <select id="who" name="name">{% for a in adults %}<option>{{ a }}</option>{% endfor %}</select>
+  <label class="vh" for="pin">PIN</label>
+  <input id="pin" name="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="12" required placeholder="PIN">
+  <button class="btn go" type="submit">Unlock</button>
+  {% else %}<p class="alert">No adult has a sign-in PIN yet. Set one on the PC: Settings › Agent › Sign-in PINs.</p>{% endif %}
+</form>
+{% endblock %}

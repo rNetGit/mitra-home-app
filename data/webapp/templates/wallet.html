@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+{% block title %}Wallet · {{ brand }}{% endblock %}
+{% macro carsvg() %}<svg class="wcar" viewBox="0 0 64 28" aria-hidden="true"><path d="M4 20v-5l7-2 8-7h22l9 7 9 2v5h-5a5 5 0 0 0-10 0H19a5 5 0 0 0-10 0z" fill="currentColor" opacity=".9"/><circle cx="14" cy="21" r="4" fill="currentColor"/><circle cx="49" cy="21" r="4" fill="currentColor"/></svg>{% endmacro %}
+{% block main %}
+{% import "_ui.html" as ui %}
+<header class="head"><div><h1>Family</h1><p class="sub">Wallet: where each number is, plates, policies and memberships.</p></div>
+</header>
+{{ ui.ftabs(family_tabs, 'wallet') }}
+<form class="rsearch wsearch" action="/wallet" method="get" role="search">
+  {% if g %}<input type="hidden" name="g" value="{{ g }}">{% endif %}
+  <label class="vh" for="wq">Search the wallet</label>
+  <input id="wq" type="search" name="q" value="{{ q }}" maxlength="100" placeholder="Search: plate, wifi, library card, passport">
+  <button class="btn" type="submit">Find</button>
+</form>
+{% if q %}<p class="muted small">{{ w.shown }} card{{ '' if w.shown == 1 else 's' }} for "{{ q }}". <a href="/wallet{{ '?g=' ~ g if g }}">Show all</a></p>{% endif %}
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+<nav class="fchips wchips" aria-label="Show">
+  <a href="/wallet{{ '?q=' ~ q|urlencode if q }}" class="{{ 'on' if not g }}" {% if not g %}aria-current="page"{% endif %}>All <small>{{ w.total }}</small></a>
+  {% for k, label, n in w.chips %}<a href="/wallet?g={{ k }}{{ '&q=' ~ q|urlencode if q }}" class="{{ 'on' if g == k }}" {% if g == k %}aria-current="page"{% endif %}>{{ label }} <small>{{ n }}</small></a>{% endfor %}
+  {% if w.soon %}<span class="wsoon">{{ w.soon }} expiring soon</span>{% endif %}
+</nav>
+{% if draft %}
+<section class="card wcheck" id="wcheck">
+  <h2>Check the card</h2>
+  <p class="{{ 'notice' if draft.msg.startswith('Read by AI') else 'muted' }}">{{ draft.msg }}</p>
+  <div class="wcheck-g">
+    <img class="wscan" src="/wallet/draft-photo" alt="The photo you added">
+    <form class="nform" hx-post="/wallet/card" hx-vals='{"op": "add", "draft": "1"}'>
+      {% set v = draft.v %}{% include "_wallet_fields.html" %}
+      <button class="btn" type="submit">Save card</button>
+    </form>
+  </div>
+  <form hx-post="/wallet/card" hx-vals='{"op": "discard"}'><button class="btn alt" type="submit">Discard the photo</button></form>
+</section>
+{% endif %}
+{% if not w.total %}
+<section class="card"><h2>Start your wallet</h2>
+  <p class="muted">Cards appear here from what is already on file: ID documents and insurance from filed papers, cars from
+    Family > Cars. Add memberships, library and store cards, health cards and home facts below.</p></section>
+{% endif %}
+{% for gk, glabel, cs in w.groups %}
+<section class="wgroup" aria-labelledby="wg-{{ gk }}">
+  <h2 id="wg-{{ gk }}" class="wgh">{{ glabel }}</h2>
+  <div class="wgrid">
+  {% for c in cs %}
+    <div class="wwrap{{ ' wwide' if c.plate }}">
+      <details class="wcard {{ c.tone }}">
+        <summary>
+          {% if c.plate %}
+          <span class="wcarrow">{{ carsvg() }}<span class="wtt"><b>{{ c.title }}</b><small>{{ c.sub }}</small></span>
+            {% if c.plate.text %}<span class="wplate" aria-label="Plate {{ c.plate.text }}">{% if c.plate.region %}<small>{{ c.plate.region }}</small>{% endif %}{{ c.plate.text }}</span>{% endif %}</span>
+          {% else %}
+          <span class="wtt"><b>{{ c.title }}</b><small>{{ c.sub }}</small></span>
+          {% if c.num %}<span class="wnum">{{ c.num }}</span>{% endif %}
+          {% endif %}
+          <span class="wfoot"><span>{{ c.foot }}</span>{% if c.due %}<span class="wpill w-{{ c.due[1] }}">{{ c.due[0] }}</span>{% endif %}</span>
+        </summary>
+        <div class="wback">
+          {% if c.hint %}<p class="whint"><b>Where's the number?</b> {{ c.hint }}</p>{% endif %}
+          {% if c.scan %}{% if c.scan.image %}<img class="wscan" src="/wallet/scan/{{ c.scan.id }}" loading="lazy" alt="Your scan of {{ c.title }}">
+          {% else %}<p class="small"><a href="/records/paper/{{ c.scan.id }}" data-view-paper="{{ c.scan.id }}">Open the {{ c.scan.label or 'scan' }}</a></p>{% endif %}{% endif %}
+          {% if c.ref %}<p class="small"><a href="{{ link(c.ref) }}">Open record</a></p>{% endif %}
+        </div>
+      </details>
+      {% if c.edit and c.plate %}
+      <details class="more-form wedit"><summary class="btn alt">Plate and colour</summary>
+        <form class="nform" hx-post="/wallet/car" hx-vals='{{ {"id": c.edit.id}|tojson }}'>
+          <label>Plate (as printed)<input name="plate" maxlength="10" value="{{ c.edit.plate }}" autocomplete="off"></label>
+          <label>State or region<input name="plate_region" maxlength="20" value="{{ c.edit.plate_region }}" placeholder="NJ"></label>
+          <label>Colour<input name="color" maxlength="20" value="{{ c.edit.color }}" placeholder="blue"></label>
+          <label>Body type<select name="body_type"><option value="">(not set)</option>{% for b in bodies %}<option value="{{ b }}" {{ 'selected' if c.edit.body_type == b }}>{{ b }}</option>{% endfor %}</select></label>
+          <button class="btn" type="submit">Save</button>
+        </form>
+      </details>
+      {% elif c.edit %}
+      <details class="more-form wedit"><summary class="btn alt">Change</summary>
+        <form class="nform" hx-post="/wallet/card" hx-vals='{{ {"op": "save", "id": c.edit.id}|tojson }}'>
+          {% set v = c.edit %}{% include "_wallet_fields.html" %}
+          <button class="btn" type="submit">Save card</button>
+        </form>
+        <form class="nform" hx-post="/wallet/card" hx-vals='{{ {"op": "drop", "id": c.edit.id}|tojson }}'>
+          <label class="check"><input type="checkbox" name="sure" value="1" required> Yes, remove this card</label>
+          <button class="btn alt" type="submit">Remove</button>
+        </form>
+      </details>
+      {% endif %}
+    </div>
+  {% endfor %}
+  </div>
+</section>
+{% endfor %}
+<details class="card sfold" id="wphoto">
+  <summary><h2>Add a card from a photo</h2></summary>
+  <div class="nform">
+    <label>Photo of the card (front or back)<input type="file" id="wallet-photo" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp{% if heic_ok %},.heic,image/heic{% endif %}" capture="environment"></label>
+    {% if photo_ai %}<label class="check wide"><input type="checkbox" id="wallet-photo-ai" value="1" checked> Let the AI ({{ photo_ai }}) read it and fill in the card (only the last four of a number come back)</label>
+    {% else %}<p class="muted small wide">The AI does not read photos here (turn it on in Settings > Connections > AI helper), so you fill in the card yourself.</p>{% endif %}
+    <p class="muted small wide" id="wallet-photo-msg" role="status"></p>
+  </div>
+  <p class="muted small">Membership, store, library, travel and health cards. Driver licences and passports come in through the Inbox.
+    The photo stays on this PC and is shown on the back of the card.</p>
+</details>
+<details class="card sfold" id="wadd">
+  <summary><h2>Add a card</h2></summary>
+  <form class="nform" hx-post="/wallet/card" hx-vals='{"op": "add"}' data-reset-on-save>
+    {% set v = {} %}{% include "_wallet_fields.html" %}
+    <button class="btn" type="submit">Save card</button>
+  </form>
+  <p class="muted small">Whole numbers only for membership, store and library cards (for the barcode); any other card keeps
+    the last 4. No passwords. IDs, cars and insurance come from Records and filed papers.</p>
+</details>
+<p class="muted small wref">Reference copies, not official IDs. Tap a card to see where its number is.</p>
+{% endblock %}

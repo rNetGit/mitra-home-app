@@ -1,0 +1,78 @@
+name: CI
+
+# Cost rules (RELEASING.md "Keeping CI cheap"): the repository is private, so every minute is billed, Windows at 2x and
+# macOS at 10x Linux. Pushes to main and pull requests run Ubuntu + Python 3.13 only. A release tag runs nothing here:
+# it points at the merge commit main already tested, and the full suite runs locally before every release. The full
+# OS / Python matrix is a manual run (Actions > CI > Run workflow, "full"), for changes to the installers, launch.py,
+# paths or anything else that differs between Windows, macOS and Linux. Docs-only changes do not run CI, and a newer
+# push to the same pull request cancels the run still going.
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**/*.md", "docs/**", "LICENSE", "NOTICE", ".github/ISSUE_TEMPLATE/**"]
+  pull_request:
+    paths-ignore: ["**/*.md", "docs/**", "LICENSE", "NOTICE", ".github/ISSUE_TEMPLATE/**"]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: "Windows + macOS + Linux, Python 3.12 + 3.13 (macOS is billed 10x)"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  lint:
+    name: ruff, verify_clean, agent lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+      - run: python -m pip install ruff
+      - run: python -m ruff check .
+      - run: python scripts/verify_clean.py
+      - run: python scripts/lint_agents.py
+
+  test:
+    name: pytest (${{ matrix.os }}, py${{ matrix.python }})
+    # macOS only in the manual full run; on the maintainer's own Mac (self-hosted, free) when vars.MAC_RUNNER is "self".
+    # Pull requests never reach a self-hosted runner: they run Ubuntu only.
+    runs-on: ${{ matrix.os == 'macos-latest' && vars.MAC_RUNNER == 'self' && fromJSON('["self-hosted","macOS"]') || matrix.os }}
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ${{ fromJSON(inputs.full && '["ubuntu-latest","windows-latest","macos-latest"]' || '["ubuntu-latest"]') }}
+        python: ${{ fromJSON(inputs.full && '["3.12","3.13"]' || '["3.13"]') }}
+    steps:
+      - uses: actions/checkout@v7
+      # setup-python creates /Users/runner (GitHub's runner home), which fails on the maintainer's Mac: there the
+      # Homebrew Python of the matrix version runs in a throwaway venv instead (as in installers.yml).
+      - if: runner.environment != 'self-hosted'
+        uses: actions/setup-python@v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: |
+            requirements.txt
+            requirements-dev.txt
+      - name: Use this Mac's Python ${{ matrix.python }}
+        if: runner.environment == 'self-hosted'
+        run: |
+          PY=/opt/homebrew/bin/python${{ matrix.python }}
+          [ -x "$PY" ] || { echo "Python ${{ matrix.python }} is missing on this Mac: brew install python@${{ matrix.python }}"; exit 1; }
+          "$PY" -m venv "$RUNNER_TEMP/venv"
+          echo "$RUNNER_TEMP/venv/bin" >> "$GITHUB_PATH"
+      - run: python -m pip install -r requirements.txt -r requirements-dev.txt
+      - name: Tests
+        # 4 workers like scripts/smoke_test.py (GitHub's runners have 4 cores): billed minutes are wall-clock minutes
+        run: python -m pytest -q -n 4 --dist loadfile

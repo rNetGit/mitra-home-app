@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}Records · {{ brand }}{% endblock %}
+{% macro icon(name) %}<svg viewBox="0 0 24 24" aria-hidden="true">{% if name == 'i-people' %}<circle cx="9" cy="8" r="3.2"/><path d="M3 20a6 6 0 0 1 12 0"/><circle cx="17" cy="9" r="2.4"/><path d="M15.5 14.2A4.8 4.8 0 0 1 21 19"/>
+{% elif name == 'i-home' %}<path d="M3 11l9-7 9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>
+{% elif name == 'i-car' %}<path d="M5 16V11l2-5h10l2 5v5"/><path d="M3 16h18v3H3z"/><circle cx="7.5" cy="16" r="1.2"/><circle cx="16.5" cy="16" r="1.2"/><path d="M5 11h14"/>
+{% else %}<path d="M7 3h7l5 5v13H7z"/><path d="M14 3v5h5"/><path d="M10 13h6M10 17h6"/>{% endif %}</svg>{% endmacro %}
+{% macro search(compact=False) %}
+<form class="rsearch card{{ ' rs-hero' if not compact }}" action="/records" method="get" role="search">
+  <label class="vh" for="rq">Search the records</label>
+  <input id="rq" type="search" name="q" value="{{ q }}" maxlength="200" placeholder="Search everything: water bill, passport, furnace...">
+  <button class="btn" type="submit">Search</button>
+</form>
+{% endmacro %}
+{% macro rows(b) %}
+  {% if b.rows %}
+  <ul class="rlist fl-phone">{% for r in b.rows %}{% set l = r.list %}
+    <li><a href="{{ link(b.table ~ ':' ~ r.id) }}">
+      <span class="rl-av t-{{ l.tone or 'n' }}" aria-hidden="true">{{ l.av }}</span>
+      <span class="rl-main"><span class="rl-t">{{ l.title or 'open' }}</span>{% if l.meta %}<span class="rl-m">{{ l.meta }}</span>{% endif %}</span>
+      <span class="rl-r">{% if l.right %}<b>{{ l.right }}</b>{% endif %}{% if l.pill %}<span class="chip-s t-{{ l.tone or 'n' }}">{{ l.pill }}</span>{% endif %}</span>
+      <span class="rl-go" aria-hidden="true">›</span>
+    </a></li>
+  {% endfor %}</ul>
+  <div class="tablewrap fl-wide"><table>
+    <thead><tr>{% for c in b.cols %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+    <tbody>{% for r in b.rows %}<tr>{% for v in r.cells %}<td>{% if loop.first %}<a href="{{ link(b.table ~ ':' ~ r.id) }}">{{ v or 'open' }}</a>{% if r.list.pill and r.list.tone in ('bad', 'warn') %} <span class="chip-s t-{{ r.list.tone }}">{{ r.list.pill }}</span>{% endif %}{% else %}{{ v }}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody>
+  </table></div>
+  {% else %}<p class="muted">{{ b.empty }}</p>{% endif %}
+{% endmacro %}
+{% block main %}
+{% import "_ui.html" as ui %}
+{% if q %}
+<header class="head"><div><h1>Family</h1><p class="sub">Search: every record and every filed paper.</p></div></header>
+{{ ui.ftabs(family_tabs, '-') }}
+{% elif ref %}
+<header class="head fhead"><div>{% if back %}<a class="fback" href="{{ back[1] }}">{{ back[0] }}</a>{% elif fin %}<a class="fback" href="{{ show_all[1] if show_all else '/money' }}">Money · {{ fin }}</a>{% else %}<a class="fback" href="/family">Family</a>{% endif %}<h1>{{ det.one.label if det and det.one else 'Record' }}</h1></div></header>
+{% else %}
+<header class="head"><div><h1>Family</h1><p class="sub">{{ area }}{% if title and parts|length > 1 and title != area %} · {{ title }}{% endif %}</p></div><a class="btn alt rsgo" href="/family#rq">Search</a></header>
+{{ ui.ftabs(family_tabs, dom) }}
+{% if parts|length > 1 %}
+<nav class="fchips" aria-label="{{ area }}">{% for k, lbl in parts %}<a href="/records?{{ {'domain': dom, 'section': k}|urlencode }}" {% if k == sec %}class="on" aria-current="true"{% endif %}>{{ lbl }}</a>{% endfor %}</nav>
+{% endif %}
+{% endif %}
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+
+{% if q %}
+{{ search(True) }}
+<section class="card rbox" aria-live="polite">
+  <div class="nhead"><h2>{% if hits %}{{ hits|length }} found for “{{ q }}”{% else %}Nothing found for “{{ q }}”. Every word has to match.{% endif %}</h2>
+    <a class="btn alt" href="/family">Clear</a></div>
+  {% if hits %}<ul class="rlist">{% for h in hits %}
+    <li><a href="{{ link(h.ref) }}"><span class="rl-av" aria-hidden="true">{{ h.label|initial }}</span><span class="rl-main"><span class="rl-t">{{ h.label }}</span></span><span class="rl-r"><span class="chip-s">{{ h.kind }}</span></span><span class="rl-go" aria-hidden="true">›</span></a></li>
+  {% endfor %}</ul>{% endif %}
+</section>
+
+{% elif ref %}
+<section class="card rbox rrec">
+  {% if det is none %}
+  <h2>That link does not point to a record.</h2>
+  {% elif det.one %}
+  <dl class="rfields">{% for k, v in det.one.fields %}<div><dt>{{ k }}</dt><dd>{{ v }}</dd></div>{% endfor %}</dl>
+  {% if det.one.paper %}
+  <div class="rpaper"><span class="rl-av" aria-hidden="true">{{ icon('i-paper') }}</span><span class="rl-main"><span class="rl-t">{{ det.one.paper.label }}</span><span class="rl-m">Filed paper</span></span>
+    {% if det.one.paper.here %}<span class="optrow">{% if det.one.paper.view %}<button type="button" class="btn" data-view-paper="{{ det.one.paper.id }}">View</button>{% endif %}<a class="btn alt" href="/records/paper/{{ det.one.paper.id }}">Download</a>{% if det.table != 'documents' %}<a class="btn alt" href="{{ link('documents:' ~ det.one.paper.id) }}">Open paper</a>{% endif %}</span>
+    {% elif det.one.paper.path %}<span class="muted">The filed copy is not on this PC any more.</span>{% endif %}</div>
+  {% endif %}
+  {% elif det.group %}
+  <h2>{{ det.group|length }} {{ det.noun }}</h2>
+  <ul class="rlist">{% for r, lbl in det.group %}<li><a href="{{ link(r) }}"><span class="rl-main"><span class="rl-t">{{ lbl }}</span></span><span class="rl-go" aria-hidden="true">›</span></a></li>{% endfor %}</ul>
+  {% else %}
+  <h2>That record is not there any more, or it is private.</h2>
+  {% endif %}
+  <div class="optrow">
+    {% if show_all %}<a class="btn alt" href="{{ show_all[1] }}">{{ show_all[0] }}</a>{% endif %}
+    {% if not fin and not show_all %}<a class="btn alt" href="/records">Close</a>{% endif %}
+  </div>
+</section>
+{% if edit %}<section class="card rbox redit"><div id="redit">{% include "_redit.html" %}</div></section>{% endif %}
+{% if det and det.one and det.one.history %}
+<details class="card rblock fold"><summary><h2>Changes <span class="muted">{{ det.one.history|length }}</span></h2></summary>
+  <ul class="rlist">{% for h in det.one.history %}<li><div><span class="rl-main"><span class="rl-t">{{ h.what }}</span><span class="rl-m">{{ h.who }}</span></span><span class="rl-r"><small class="muted">{{ h.when }}</small></span></div></li>{% endfor %}</ul>
+</details>
+{% endif %}
+
+{% else %}
+{% if strip %}
+<div class="kpis rk">{% for label, n in strip %}<div class="kpi"><span>{{ label }}</span><b>{{ n }}</b></div>{% endfor %}</div>
+{% endif %}
+{% if elsewhere %}
+<div class="card"><p>{{ elsewhere[0] }}</p><p><a class="btn" href="{{ elsewhere[1] }}">Open</a></p></div>
+{% endif %}
+{% for add in adds or [] %}
+<details class="card addnote" id="add-{{ add.table if add.table is string else add.table[0] }}">
+  <summary><h2>{{ add.title }}</h2></summary>
+  <div id="radd-{{ add.table }}">{% include "_radd.html" %}</div>
+</details>
+{% endfor %}
+{% if blocks and (find or (blocks|map(attribute='total')|sum) > 5) %}
+<form class="rsearch card" action="/records" method="get" role="search">
+  <input type="hidden" name="domain" value="{{ dom }}"><input type="hidden" name="section" value="{{ sec }}">
+  <label class="vh" for="rf">Filter this list</label>
+  <input id="rf" type="search" name="f" value="{{ find }}" maxlength="80" placeholder="Filter this list: vendor, type, date, words in notes or file name">
+  <button class="btn" type="submit">Filter</button>{% if find %} <a class="btn alt" href="/records?{{ {'domain': dom, 'section': sec}|urlencode }}">Clear</a>{% endif %}
+</form>
+{% if find %}<p class="muted small">{% for b in blocks %}{{ b.rows|length }} of {{ b.total }} in {{ b.heading }}{{ '; ' if not loop.last }}{% endfor %} match “{{ find }}”.</p>{% endif %}
+{% endif %}
+{% for b in blocks %}
+{% if b.fold %}
+<details class="card rblock fold"><summary><h2>{{ b.heading }} <span class="muted">{{ b.rows|length }}</span></h2></summary>{{ rows(b) }}</details>
+{% else %}
+<section class="card rblock"><h2>{{ b.heading }}{% if b.rows %} <span class="muted rcount">{{ b.rows|length }}</span>{% endif %}</h2>{{ rows(b) }}</section>
+{% endif %}
+{% endfor %}
+{% if editable_here %}
+<p class="muted small">Open a row to change it here, or tell Chat.</p>
+{% else %}
+<p class="muted small">Looking up only here: to add or change one of these, tell Chat.</p>
+{% endif %}
+{% endif %}
+{% endblock %}

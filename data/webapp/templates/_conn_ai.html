@@ -1,0 +1,21 @@
+<form class="nform" hx-post="/settings/ai" hx-vals='{{ {"from": conn_from or "settings"}|tojson }}' hx-disabled-elt="find button[type=submit]">
+  <label>Provider<select name="provider">{% for k, label, keyed, note in ai.providers %}<option value="{{ k }}" {{ 'selected' if k == ai.provider }}{{ ' data-keyed' if keyed }}{{ ' data-cli' if k in ai.clis }}{{ ' data-photos' if k in ai.test_now }}>{{ label }}</option>{% endfor %}</select></label>
+  {% if local %}
+  <label class="ai-field ai-key">API key{% if ai.key_hint %} (saved, ends {{ ai.key_hint }}; blank keeps it){% endif %}<input name="key" type="password" maxlength="300" autocomplete="off" spellcheck="false"></label>
+  {% else %}
+  <p class="muted small wide ai-field ai-key">A key can be typed only on this PC (not from a phone).{% if ai.key_hint %} One is saved (ends {{ ai.key_hint }}).{% endif %}</p>
+  {% endif %}
+  {% for k, exe in ai.clis.items() %}<p class="small wide ai-field ai-cli-{{ k }}">{% if ai.cli[k] %}Found <code>{{ exe }}</code> on this PC. Mitra Home never reads its sign-in; it runs it with no tools in an empty folder.{% else %}<b><code>{{ exe }}</code> was not found on this PC.</b> Install it from its maker and sign in to it in a terminal, then come back.{% endif %}</p>{% endfor %}
+  <label class="ai-field">Model (blank = the default)<input name="model" maxlength="80" value="{{ ai.model }}" autocomplete="off"></label>
+  <label class="check wide ai-field"><input type="checkbox" name="consent" value="1"> I understand the text of my documents (identifiers and names masked) goes to this provider under my own account.</label>
+  <label class="check wide ai-field ai-gemini"><input type="checkbox" name="paid" value="1" {{ 'checked' if ai.paid }}> Gemini only: this key's Google project has billing on (paid tier: prompts are not used for training).</label>
+  <label class="check wide ai-field ai-unattended"><input type="checkbox" name="unattended" value="1" {{ 'checked' if ai.unattended }}> Let the scheduled inbox check use it too (files are filed while you are away). Leave it off unless your plan's terms allow automated use; without it, press File now in the Inbox.</label>
+  <label class="check wide ai-field ai-photos"><input type="checkbox" name="photos" value="1" {{ 'checked' if ai.photos }}> Let the AI read photos: receipts in the Inbox and wallet cards (a photo cannot be masked first).</label>
+  <div class="optrow wide">
+    <button class="btn" type="submit">Save</button>
+    {% if ai.can_test %}<button type="button" class="btn alt" hx-post="/settings/ai/test" hx-vals='{{ {"from": conn_from or "settings"}|tojson }}' hx-disabled-elt="this">Test the AI now (one small call)</button>{% endif %}
+  </div>
+</form>
+<details class="more-form"><summary class="btn alt">What each choice costs and does</summary>
+  <ul>{% for k, label, keyed, note in ai.providers %}<li><b>{{ label }}</b>: {{ note }}{% if ai.defaults[k] %} <span class="muted">Default model: {{ ai.defaults[k] }}.</span>{% endif %}</li>{% endfor %}</ul>
+</details>

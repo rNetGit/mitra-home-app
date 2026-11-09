@@ -1,0 +1,21 @@
+{# The "?" panel: one help entry (data/help_text.py). Also used by the Help page as a macro. #}
+{% macro entry(e, key, heading='h2') %}
+<{{ heading }} class="hp-title">{{ e.title }}</{{ heading }}>
+<p class="hp-purpose">{{ e.purpose }}</p>
+{% for h, lines in e.sections %}
+<section class="hp-sec"><h3>{{ h }}</h3>
+  <ul>{% for line in lines %}<li>{{ line|helpfmt }}</li>{% endfor %}</ul>
+</section>
+{% endfor %}
+{% if e.links %}<p class="hp-links">{% for label, url in e.links %}<a href="{{ url }}">{{ label }}</a>{% endfor %}</p>{% endif %}
+{% endmacro %}
+{% if e is defined %}
+<div class="hp-head">
+  <span class="kick">Help</span>
+  <button type="button" class="hp-close" data-help-close aria-label="Close help">&times;</button>
+</div>
+<div class="hp-body">
+  {{ entry(e, key) }}
+  <p class="hp-more"><a href="/help">All help</a> · <a href="/chat">Ask Chat instead</a></p>
+</div>
+{% endif %}

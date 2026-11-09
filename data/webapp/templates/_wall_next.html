@@ -1,0 +1,11 @@
+{# The resting screen's "Next": the next thing today, else the next days' first ones (wall_rest.html). #}
+<div class="next">
+  {% set upcoming = v.line|rejectattr('past')|list %}
+  <span class="k">Next</span>
+  {% if upcoming %}<span class="main">{{ upcoming[0].title }} at {{ upcoming[0].time }}</span>
+  {% elif later %}<span class="main">{{ later[0].title }}, {{ later[0].when }} {{ later[0].time }}</span>
+  {% else %}<span class="main">A quiet day</span>{% endif %}
+  {% for e in ((upcoming[1:] + later) if upcoming else later[1:])[:3] %}
+  <div class="l {{ e.cls }}"><span>{{ e.when if e.when else e.time }}</span><i class="dot"></i><span>{{ e.title }}{% if e.when %} · {{ e.time }}{% endif %}</span></div>
+  {% endfor %}
+</div>

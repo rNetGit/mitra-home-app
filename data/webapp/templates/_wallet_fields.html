@@ -1,0 +1,9 @@
+  <label>Kind<select name="kind">{% for k, label in kinds %}<option value="{{ k }}" {{ 'selected' if (v.kind or 'membership') == k }}>{{ label }}</option>{% endfor %}</select></label>
+  <label>Name on the card<input name="title" maxlength="60" required value="{{ v.title }}" placeholder="City library"></label>
+  <label>Whose card (optional)<select name="member"><option value="">(the household)</option>{% for p in people %}<option value="{{ p }}" {{ 'selected' if v.member == p }}>{{ p }}</option>{% endfor %}</select></label>
+  <label>Issued by (optional)<input name="issuer" maxlength="60" value="{{ v.issuer }}"></label>
+  <label>Whole number (membership, store, library)<input name="number" maxlength="30" value="{{ v.number }}" autocomplete="off" inputmode="text"></label>
+  <label>Last 4 (any other card)<input name="number_last4" maxlength="4" value="{{ v.number_last4 }}" autocomplete="off"></label>
+  <label>Where the number is (optional)<input name="where_hint" maxlength="120" value="{{ v.where_hint }}" placeholder="back, under the barcode"></label>
+  <label>Details (optional)<input name="details" maxlength="300" value="{{ v.details }}" placeholder="Wi-Fi name, trash day, filter size"></label>
+  <label>Expires (optional)<input name="expires" type="date" min="2000-01-01" max="2100-12-31" value="{{ v.expires }}"></label>

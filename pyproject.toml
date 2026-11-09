@@ -1,0 +1,52 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mitra-home"
+dynamic = ["version"]
+description = "Local-first household assistant: bills, statements, insurance, family calendar, with the AI provider of your choice."
+readme = "README.md"
+requires-python = ">=3.12"
+license = { file = "LICENSE" }
+authors = [{ name = "Rajesh Katukojwala (rNetGit)" }]
+classifiers = ["License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)"]
+# The core (onboard.py, data/updater.py, data/migrate.py, data/llm.py and every data/ script a family runs
+# from the command line) is standard library only, so a fresh PC can run `python onboard.py` before pip.
+dependencies = []
+
+[project.optional-dependencies]
+web = ["fastapi>=0.115", "uvicorn>=0.30", "jinja2>=3.1"]
+crypto = ["cryptography>=42"]          # encrypted backups (backup_encrypt)
+pdf = ["pypdf>=4", "markdown>=3.5"]    # PDF text for the Python inbox pipeline; phone-sized Drive briefs
+chat = ["discord.py>=2.3"]               # Discord bot (the Telegram bot needs nothing extra)
+heic = ["pillow>=11.1", "pillow-heif>=1.1"]  # iPhone HEIC photos converted to JPEG for the AI
+all = ["mitra-home[web,crypto,pdf,chat,heic]"]
+dev = ["mitra-home[all]", "pytest>=8", "pytest-xdist>=3.5", "ruff>=0.6", "pre-commit>=3"]
+
+[project.urls]
+Homepage = "https://github.com/rNetGit/mitra-home-app"
+Changelog = "https://github.com/rNetGit/mitra-home-app/blob/main/CHANGELOG.md"
+
+[tool.setuptools]
+packages = []  # scripts run from the checkout; nothing is importable as a package
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.ruff]
+line-length = 140
+target-version = "py312"
+extend-exclude = ["archive", "inbox", "brief", "reports", "logs", "data/backups_pre_upgrade"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W"]
+# E501 long lines, E701/E702 one-liners, E731 lambdas and E741 short names are house style in the data/ scripts.
+ignore = ["E501", "E701", "E702", "E731", "E741"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+markers = [
+    "git: needs the git executable on PATH",
+]

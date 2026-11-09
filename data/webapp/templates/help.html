@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% from "_help_panel.html" import entry %}
+{% block title %}Help · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Help</h1><p class="sub">How to add and change things on each page. The <b>?</b> button on a page opens its part.</p></div></header>
+<form class="rsearch card" action="/help" method="get" role="search">
+  <label class="vh" for="hq">Search the help</label>
+  <input id="hq" type="search" name="q" value="{{ q }}" maxlength="100" placeholder="add a class, mark paid, pin a note ...">
+  <button class="btn" type="submit">Search</button>
+</form>
+{% if q %}<p class="muted">{{ n }} help page{{ 's' if n != 1 }} match "{{ q }}". <a href="/help">Show all</a></p>{% endif %}
+{% for label, entries in groups %}
+<h2 class="sec">{{ label }}</h2>
+<div class="helpall">
+  {% for key, e in entries %}<article class="card hp-card" id="help-{{ key|replace(':', '-') }}">{{ entry(e, key) }}</article>{% endfor %}
+</div>
+{% else %}
+<div class="card"><p>Nothing matches. Try fewer words, or <a href="/chat">ask Chat</a>.</p></div>
+{% endfor %}
+{% endblock %}

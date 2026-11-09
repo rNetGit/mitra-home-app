@@ -1,0 +1,76 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon, star, pop with context %}
+{% block title %}Today · {{ family }}{% endblock %}
+{% block main %}
+<div class="whead">
+  <div>
+    <div class="date">{{ date_now }}</div>
+    <h1>{{ 'Good night' if now.hour < 5 or now.hour >= 22 else 'Good morning' if now.hour < 12 else 'Good afternoon' if now.hour < 17 else 'Good evening' }}</h1>
+  </div>
+  <span class="grow"></span>
+  {% if wx %}<div class="wx">
+    {{ icon('wx_' ~ wx.look, 'i wxi l-' ~ wx.look) }}
+    {% if wx.temp is not none %}<span class="wxt">{{ wx.temp }}°</span>{% endif %}
+    <span class="wxs"><b>{{ wx.label }}{% if wx.hi is not none and wx.lo is not none %} · high {{ wx.hi }}°, low {{ wx.lo }}°{% elif wx.lo is not none %} · low {{ wx.lo }}° tonight{% endif %}</b>
+      {% if wx.rain %}<small>{{ wx.rain }}</small>{% endif %}</span>
+  </div>{% endif %}
+  <span class="figure" data-clock="">{{ hm_now }}</span>
+</div>
+
+<section class="card" aria-label="Today">
+  <h2>Today <span class="n">· {{ v.line|length }} on the calendar{% if v.allday %}, {{ v.allday|map(attribute='title')|join(', ') }}{% endif %}</span></h2>
+  {% if v.line %}
+  <div class="agenda">
+    {% set ns = namespace(marked=false) %}
+    {% for e in v.line %}
+    {% if not e.past and not ns.marked %}{% set ns.marked = true %}{% if not loop.first %}<span class="nowmark" aria-label="Now">Now</span>{% endif %}{% endif %}
+    <div class="tev {{ e.cls }}{{ ' past' if e.past }}{{ ' on' if e.now }}" role="button" tabindex="0" data-pop><small>{{ e.time }} – {{ e.end }}</small><b>{{ e.title }}</b>
+      {{ pop(e.kind, e.title, e.day ~ ' · ' ~ e.time ~ ' – ' ~ e.end, e.people) }}
+      {% if e.who %}<span class="who">{% for p in e.who %}<span class="av sm">{{ p }}</span>{% endfor %}</span>{% endif %}</div>
+    {% endfor %}
+    {% if not ns.marked %}<span class="agdone">Nothing more today</span>{% endif %}
+  </div>
+  {% else %}<p class="empty">Nothing at a set time today.</p>{% endif %}
+</section>
+
+<div class="tiles3">
+  <section class="card rows" aria-label="Needs doing">
+    <h2>Needs doing {% if v.needs|selectattr('late')|list %}<span class="late">· {{ v.needs|selectattr('late')|list|length }} late</span>{% endif %}</h2>
+    {% for n in v.needs %}
+    <div class="row"><span class="av fill {{ n.cls }}">{{ n.initial }}</span>
+      <div class="t"><b>{{ n.title }}</b><small class="{{ 'late' if n.late }}">{{ n.sub }}</small></div></div>
+    {% else %}<p class="empty">Nothing waiting today.</p>{% endfor %}
+  </section>
+
+  <section class="card" aria-label="Kids today">
+    <h2>Kids · {{ v.part|lower }}</h2>
+    {% for k in v.kids %}
+    {% set pct = (k.done / k.total) if k.total else 0 %}
+    {% set jobs = 'chores' in screen.tabs %}
+    <{{ 'a' if jobs else 'div' }} class="kid {{ k.cls }}"{% if jobs %} href="/wall/chores"{% endif %}>
+      <svg class="ring" viewBox="0 0 62 62" role="img" aria-label="{{ k.name }}: {{ k.done }} of {{ k.total }} done">
+        <circle class="bg" cx="31" cy="31" r="26"></circle>
+        <circle class="fg" cx="31" cy="31" r="26" stroke-dasharray="{{ '%.1f'|format(163.4 * pct) }} 999" transform="rotate(-90 31 31)"></circle>
+        <text x="31" y="36" text-anchor="middle">{{ k.done }}/{{ k.total }}</text>
+      </svg>
+      <span class="t"><b>{{ k.name }}</b><small>{{ 'All done' if k.total and k.done == k.total else ('Tap to see the jobs' if jobs else k.done ~ ' of ' ~ k.total ~ ' done') }}</small></span>
+      <span class="stars">{{ star() }}{{ k.stars_week }}</span>
+    </{{ 'a' if jobs else 'div' }}>
+    {% else %}<p class="empty">No routines yet. Parents add them in Family › Routines on the PC.</p>{% endfor %}
+  </section>
+
+  <section class="card coming" aria-label="Dinner and coming up">
+    <h2>Dinner tonight</h2>
+    <p class="big">{{ v.dinner or 'Not planned yet' }}</p>
+    <h2 class="sub">Coming up</h2>
+    {% for c in v.coming.rows %}
+    <div class="crow {{ c.cls }}{{ ' money ' ~ c.money if c.money }}" role="button" tabindex="0" data-pop>
+      <span class="cw">{{ c.when }}{% if c.time %}<small>{{ c.time }}</small>{% endif %}</span>
+      <span class="ct">{{ c.title }}</span>
+      {{ pop(c.kind, c.title, c.day ~ (' · ' ~ c.time if c.time else ''), c.who) }}
+    </div>
+    {% else %}<p class="empty">Nothing in the next three days.</p>{% endfor %}
+    {% if v.coming.more %}<a class="cmore" href="/wall/week">+{{ v.coming.more }} more this week</a>{% endif %}
+  </section>
+</div>
+{% endblock %}

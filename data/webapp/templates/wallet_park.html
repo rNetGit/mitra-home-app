@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Parking · {{ brand }}{% endblock %}
+{% block main %}
+<header class="fhead"><div><a class="fback" href="/wallet">Wallet</a><h1>Parking</h1></div></header>
+{% set c = p.car %}
+{% if c %}
+<section class="wpark" data-wake>
+  <p class="wpark-car">{{ c.title }}{% if c.sub %} · {{ c.sub }}{% endif %}</p>
+  <div class="wpark-plate" aria-label="Plate {{ c.plate.text }}">{% if c.plate.region %}<small>{{ c.plate.region }}</small>{% endif %}<b>{{ c.plate.text }}</b></div>
+  {% if not c.plate.full %}<p class="alert">Only the last four are on file. Add the whole plate on the Wallet: <a href="/wallet?g=car">Plate and colour</a>.</p>{% endif %}
+  <div class="optrow wpark-act">
+    {% if c.plate.full %}<button type="button" class="btn" data-copy="{{ c.plate.text }}">Copy the plate</button>{% endif %}
+    {% for id, name in p.cars if id != c.edit.id %}<a class="btn alt" href="/wallet/park?car={{ id }}">{{ name }}</a>{% endfor %}
+  </div>
+  <p class="muted small">The screen stays on while this page is open.</p>
+</section>
+{% else %}
+<section class="card"><h2>No plate on file yet</h2>
+  <p class="muted">Add a car in Family > Cars, then its plate on the Wallet with <a href="/wallet?g=car">Plate and colour</a>.</p></section>
+{% endif %}
+{% endblock %}

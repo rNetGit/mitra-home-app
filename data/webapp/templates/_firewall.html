@@ -1,0 +1,27 @@
+{# Settings > Phones > Connection: the Windows Firewall + network check (routes_settings.settings_phones_firewall) #}
+{% if not fw.supported %}
+<p class="muted small">No firewall check is needed on this computer. If phones cannot connect on a Mac, allow
+  {{ brand }} when macOS asks about incoming connections (System Settings &gt; Network &gt; Firewall).</p>
+{% elif fw.error %}
+<p class="muted small">Windows did not answer the check ({{ fw.error }}).
+  <button type="button" class="btn alt" hx-get="/settings/phones/firewall?fresh=1" hx-target="#fw-check" hx-swap="innerHTML">Check again</button></p>
+{% else %}
+<ul class="calmlist">
+  <li><span class="dotm {{ 't-ok' if fw.rule else 't-bad' }}" aria-hidden="true"></span>
+    <span><b>Windows Firewall</b>: {{ 'lets phones in on port ' ~ fw.port ~ ' (Private networks)' if fw.rule else 'no rule yet for port ' ~ fw.port ~ ': phones and walls may be blocked' }}</span></li>
+  <li><span class="dotm {{ 't-ok' if fw.network in ('Private', 'DomainAuthenticated') else 't-bad' if fw.network == 'Public' else 't-info' }}" aria-hidden="true"></span>
+    <span><b>This network</b>{% if fw.network_name %} ({{ fw.network_name }}){% endif %}:
+    {% if fw.network == 'Public' %}set to Public, so Windows blocks phones even with the rule. Set it to Private if this is your own home Wi-Fi.
+    {% elif fw.network %}{{ 'Private' if fw.network == 'Private' else 'a work (domain) network' }}: good.
+    {% else %}type not known.{% endif %}</span></li>
+</ul>
+<div class="optrow">
+  {% if not fw.rule %}<form hx-post="/settings/phones/firewall"><input type="hidden" name="op" value="allow">
+    <button class="btn" type="submit">Allow phones through Windows Firewall</button></form>{% endif %}
+  {% if fw.network == 'Public' %}<form hx-post="/settings/phones/firewall"><input type="hidden" name="op" value="network">
+    <button class="btn{{ ' alt' if not fw.rule }}" type="submit">Open Windows' Wi-Fi settings</button></form>{% endif %}
+  <button type="button" class="btn alt" hx-get="/settings/phones/firewall?fresh=1" hx-target="#fw-check" hx-swap="innerHTML">Check again</button>
+</div>
+{% if not fw.rule %}<p class="muted small">Windows asks you to confirm (it needs an administrator). It adds one rule: incoming
+  connections to port {{ fw.port }} only, on Private networks only. Nothing else on this PC is opened.</p>{% endif %}
+{% endif %}

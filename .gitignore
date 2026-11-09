@@ -1,0 +1,44 @@
+# family data (never commit)
+config/*.json
+!config/*.example.json
+data/*.db
+data/*.db-journal
+data/*.db-wal
+data/*.db-shm
+data/backups_pre_upgrade/
+data/__pycache__/
+__pycache__/
+inbox/*
+archive/*
+brief/*
+reports/*
+exports/*
+wall_photos/
+dist/
+logs/*
+!*/.gitkeep
+config/secrets.env
+config/tls/
+familyagent_home.txt
+# private maintainer terms and local overrides
+scripts/private_terms.txt
+CLAUDE.local.md
+.claude/settings.local.json
+.claude/agents/local-*.md
+.pytest_cache/
+.ruff_cache/
+.venv/
+.dashboard.json
+.webapp.json
+# signing keys never belong in the repo
+*.keystore
+*.jks
+# Windows installer build output
+installer/build/
+
+# maintainer-only audit material (kept locally, never shipped)
+docs/*Audit*.pdf
+
+# macOS Finder files
+.DS_Store
+.stopped

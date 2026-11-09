@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}{{ kinds[kind] }} · {{ brand }}{% endblock %}
+{% macro daterow(i, r) %}
+<fieldset class="prow">
+  <legend class="vh">Date {{ i + 1 }}</legend>
+  <label class="check"><input type="checkbox" name="keep" value="{{ i }}"{{ ' checked' if r.title }}> <span class="vh">Add this one</span></label>
+  <label>Day<input type="date" name="date" value="{{ r.date }}"></label>
+  <label class="grow">What<input name="title" maxlength="80" value="{{ r.title }}" placeholder="Picture day"></label>
+  <label>Time<input type="time" name="time" value="{{ r.time }}"></label>
+  <label>For<select name="who"><option value="">Everyone</option>{% for n in names %}<option{{ ' selected' if n == r.who }}>{{ n }}</option>{% endfor %}</select></label>
+  <label>Kind<select name="kind_of">{% for k, label in date_kinds.items() %}<option value="{{ k }}"{{ ' selected' if k == r.kind }}>{{ label }}</option>{% endfor %}</select></label>
+  <input type="hidden" name="end" value="{{ r.end }}"><input type="hidden" name="area" value="{{ r.area }}">
+  {% if r.end %}<span class="muted small">to {{ r.end|day }}</span>{% endif %}
+</fieldset>
+{% endmacro %}
+{% block main %}
+<header class="head"><div><h1>Add</h1><p class="sub">{{ kinds[kind] }}: {{ 'a flyer, invitation or school letter becomes dates on the calendar.' if kind == 'dates' else 'a recipe card or cookbook page becomes a recipe for the meal plan.' }}</p></div></header>
+<nav class="pchips mtabs" aria-label="From a photo">
+  {% for k, label in kinds.items() %}<a href="/add/photo?kind={{ k }}" class="pchip{{ ' on' if k == kind }}"{% if k == kind %} aria-current="true"{% endif %}>{{ label }}</a>{% endfor %}
+  <a href="/add" class="pchip">Back to Add</a>
+</nav>
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+
+{% if draft %}
+<section class="card" id="pcheck">
+  <h2>Check {{ 'the dates' if kind == 'dates' else 'the recipe' }}</h2>
+  <p class="{{ 'notice' if draft.msg.startswith('Read by AI') else 'muted' }}">{{ draft.msg }}</p>
+  <div class="wcheck-g">
+    <img class="wscan" src="/add/photo/img" alt="The photo you added">
+    {% if kind == 'dates' %}
+    <form class="nform pform" hx-post="/add/photo/save">
+      <input type="hidden" name="kind" value="dates"><input type="hidden" name="read" value="{{ (draft.v or [])|length }}">
+      {% set rows = (draft.v or []) + blank %}
+      {% for r in rows %}{{ daterow(loop.index0, r) }}{% endfor %}
+      <p class="muted small wide">Ticked lines are added. A day off or early dismissal goes on the calendar for everyone (or the one person);
+        "To do by this date" becomes a reminder; an event with a time and a person becomes an appointment.</p>
+      <button class="btn" type="submit">Add the ticked dates</button>
+    </form>
+    {% else %}
+    {% set v = draft.v or {} %}
+    <form class="nform" hx-post="/add/photo/save">
+      <input type="hidden" name="kind" value="recipe">
+      <label>Name<input name="name" maxlength="80" required value="{{ v.name }}"></label>
+      <label>Serves<input name="servings" inputmode="numeric" maxlength="2" value="{{ v.servings }}"></label>
+      <label class="wide">Ingredients, one a line (write "(pantry)" after the staples)<textarea name="ingredients" rows="8">{{ v.ingredients }}</textarea></label>
+      <label class="wide">How<textarea name="notes" rows="4" maxlength="400">{{ v.notes }}</textarea></label>
+      <button class="btn" type="submit">Save the recipe</button>
+    </form>
+    {% endif %}
+  </div>
+  <form hx-post="/add/photo/save" hx-vals='{{ {"op": "discard", "kind": kind}|tojson }}'><button class="btn alt" type="submit">Discard the photo</button></form>
+</section>
+{% else %}
+<section class="card">
+  <h2>Take or pick a photo</h2>
+  <div class="nform">
+    <label>Photo of the {{ 'flyer or letter' if kind == 'dates' else 'recipe' }}<input type="file" id="photo-read" data-kind="{{ kind }}" accept=".jpg,.jpeg,.png,.webp,image/jpeg,image/png,image/webp{% if heic_ok %},.heic,image/heic{% endif %}" capture="environment"></label>
+    {% if photo_ai %}<label class="check wide"><input type="checkbox" id="photo-read-ai" value="1" checked> Let the AI ({{ photo_ai }}) read it and fill in the form; you check it before anything is saved</label>
+    {% else %}<p class="muted small wide">The AI does not read photos here (turn it on in Settings > Connections > AI helper), so you fill in the form next to the photo.</p>{% endif %}
+    <p class="muted small wide" id="photo-read-msg" role="status"></p>
+  </div>
+  <p class="muted small">The photo stays on this PC while you check it and is removed when you save or discard (or after a day).
+    {% if kind == 'dates' %}To file the whole paper as well, drop it on the Add page.{% endif %}</p>
+</section>
+{% endif %}
+{% endblock %}

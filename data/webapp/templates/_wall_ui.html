@@ -1,0 +1,40 @@
+{# Shared bits of the Mitra Wall's pages: import with `{% from "_wall_ui.html" import icon with context %}`. #}
+{% macro icon(name, cls='i') -%}
+<svg class="{{ cls }}" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ icons.get(name, icons['star']) }}"></path></svg>
+{%- endmacro %}
+{# What a tap on an event shows (wall.js copies it into the one <dialog id="wpop"> and gives the dialog `data-cls`, the
+   person's colour, for its header band): kind, the full title, when, who. #}
+{% macro pop(kind, title, when, people=[], note='', cls='') -%}
+<div class="pop" hidden data-cls="{{ cls or (people[0].cls if people else 'ch') }}"><div class="phead"><small class="pk">{{ kind }}</small><b class="pt">{{ title }}</b></div>
+  <div class="pbody">{% if when %}<span class="pwhen">{{ when }}</span>{% endif %}
+  {%- if note %}<span class="pnote">{{ note }}</span>{% endif %}
+  {%- if people %}<span class="ppl">{% for p in people %}<span class="pp"><span class="av sm fill {{ p.cls }}">{{ p.initial }}</span>{{ p.name }}</span>{% endfor %}</span>{% endif %}</div></div>
+{%- endmacro %}
+{# A day's (or a lane's) things in the popup, grouped: Late, At a time (by time), All day. An item = {title, time, kind,
+   cls, who [{name}], late}; `until` (month) adds the end time; `note` = one line under the title (the day's weather). #}
+{% macro daypop(title, items, kind='', cls='ch', note='') -%}
+{% set late = items|selectattr('late')|list %}{% set timed = items|rejectattr('late')|selectattr('time')|list %}
+{% set rest = items|rejectattr('late')|rejectattr('time')|list %}
+<div class="pop" hidden data-cls="{{ cls }}"><div class="phead"><small class="pk">{{ kind or (items|length ~ ' thing' ~ ('s' if items|length != 1 else '')) }}</small><b class="pt">{{ title }}</b></div>
+  <div class="pbody">{% if note %}<span class="pnote">{{ note }}</span>{% endif %}
+  {%- for label, group in (('Late', late), ('At a time', timed), ('All day', rest)) if group %}
+  <small class="pg{{ ' late' if label == 'Late' }}">{{ label }}</small>
+  <ul class="plist">{% for i in group %}<li class="{{ i.cls }}">{% if i.time %}<span class="ptime">{{ i.time }}{% if i.until %}<small>{{ i.until }}</small>{% endif %}</span>{% else %}<span class="pdot"></span>{% endif %}<span><b>{{ i.title }}</b><small>{{ i.kind }}{% for p in i.who %} · {{ p.name }}{% endfor %}</small></span></li>{% endfor %}</ul>
+  {%- else %}<p class="pnote">Nothing on the calendar.</p>{% endfor %}</div></div>
+{%- endmacro %}
+{% macro weekmonth(on) -%}
+<nav class="seg" aria-label="Calendar view"><a href="/wall/day" class="{{ 'on' if on == 'day' }}"{% if on == 'day' %} aria-current="page"{% endif %}>Day</a><a href="/wall/week" class="{{ 'on' if on == 'week' }}"{% if on == 'week' %} aria-current="page"{% endif %}>Week</a><a href="/wall/month" class="{{ 'on' if on == 'month' }}"{% if on == 'month' %} aria-current="page"{% endif %}>Month</a></nav>
+{%- endmacro %}
+{% macro star() -%}
+<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.4 5.9.9-4.3 4.1 1 5.8L12 16.6 6.8 19.2l1-5.8L3.5 9.3l5.9-.9z"></path></svg>
+{%- endmacro %}
+{# The head of every Money page: title, Overview / Spending / Bills / Regular, who unlocked it, Lock now. #}
+{% macro moneyhead(title) -%}
+<div class="whead">
+  <h1>{{ title }}</h1>
+  <nav class="seg" aria-label="Money pages">{% for key, label in money_tabs %}<a href="/wall/money{{ '/' ~ key if key }}" class="{{ 'on' if part == key }}"{% if part == key %} aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}</nav>
+  <span class="grow"></span>
+  <span class="chip"><span class="av fill c0">{{ by[:1] }}</span>Unlocked by {{ by }} · <b data-unlock-left="{{ unlock_left }}">0:{{ '%02d'|format(unlock_left) }}</b></span>
+  <form method="post" action="/wall/lock" data-wall><button class="btn dark sq" type="submit" title="Lock now">{{ icon('lock') }}<span class="vh">Lock now</span></button></form>
+</div>
+{%- endmacro %}

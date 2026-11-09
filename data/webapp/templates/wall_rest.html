@@ -1,0 +1,187 @@
+{% extends "wall_base.html" %}
+{% from "_wall_ui.html" import icon with context %}
+{% block title %}{{ family }}{% endblock %}
+{% block bodyclass %}rest face-{{ show.clock }} tone-{{ show.night_tone }}{% endblock %}
+{% block idle %}0{% endblock %}
+{% block refresh %}{{ rest_refresh }}{% endblock %}
+{% block bodydata %} data-photos='{{ show.urls|tojson }}' data-photo-s="{{ show.photo_seconds }}" data-clock-s="{{ show.clock_seconds }}"
+  data-per-turn="{{ show.per_turn }}" data-photos-from="{{ show.photos_from }}" data-photos-to="{{ show.photos_to }}"
+  data-photo-look="{{ show.photo_style }}" data-photo-taken='{{ show.taken|tojson }}'{% if start_photos %} data-start-photos="1"{% endif %}{% if screen.clock_only %} data-clock-only="1"{% endif %}{% endblock %}
+{% block page %}
+<h1 class="vh">{{ family }}: clock</h1>
+{% if season %}{% include "_wall_season.html" %}<span class="schip">{{ season.name }}</span>{% endif %}
+{% set upcoming = v.line|rejectattr('past')|list %}
+<a class="restv"{% if not screen.clock_only %} href="/wall" aria-label="Open Today"{% endif %}>
+  {% if show.clock == 'led' %}
+  {% include "_wall_led.html" %}
+
+  {% elif show.clock == 'modular' %}
+  <div class="top"><span class="mdate">{{ now.strftime('%A') }} {{ now.day }} {{ now.strftime('%B') }}</span><small>{{ family }}{% if not screen.clock_only %} · Tap anywhere to open{% endif %}</small></div>
+  <div class="modgrid">
+    <div class="modtime">
+      <div class="bigt"><span class="t" data-clock="">{{ hm_now }}</span><span class="ap" data-ampm="">{{ ampm }}</span></div>
+      {% if wx and wx.rain %}<div class="pills"><span class="pill">{{ icon('wx_rain') }}{{ wx.rain }}</span></div>{% endif %}
+    </div>
+    {% set ncards = 1 + (1 if wx and wx.temp is not none else 0) + (1 if rings else 0) + (1 if v.dinner else 0) %}
+    <div class="modcards n-{{ ncards }}">
+      {% if wx and wx.temp is not none %}
+      <div class="mcard"><span class="k wxk">Weather</span>
+        <span class="mwx">{{ icon('wx_' ~ wx.look) }}<b>{{ wx.temp }}°</b></span>
+        <span class="sub">{{ wx.label }}{% if wx.hi is not none and wx.lo is not none %} · H {{ wx.hi }}° L {{ wx.lo }}°{% endif %}</span></div>
+      {% endif %}
+      <div class="mcard"><span class="k">Next up</span>
+        {% if upcoming %}<b class="big">{{ upcoming[0].title }}</b><span class="sub">Today · {{ upcoming[0].time }}</span>
+        {% elif later %}<b class="big">{{ later[0].title }}</b><span class="sub">{{ later[0].when }} · {{ later[0].time }}</span>
+        {% else %}<b class="big">A quiet day</b>{% endif %}
+        {% if ncards <= 2 %}{% for e in ((upcoming[1:] + later) if upcoming else later[1:])[:3] %}
+        <span class="sub more">{{ e.when ~ ' ' if e.when }}{{ e.time }} · {{ e.title }}</span>{% endfor %}{% endif %}</div>
+      {% if rings %}
+      <div class="mcard"><span class="k jobk">Jobs today</span>
+        <div class="rings">{% for k in rings %}
+          <span class="ring"><svg viewBox="0 0 76 76" role="img" aria-label="{{ k.name }}: {{ k.done }} of {{ k.total }} jobs done">
+            <circle class="rt" cx="38" cy="38" r="31"></circle>
+            <circle class="rv {{ 'all' if k.all }}" cx="38" cy="38" r="31" stroke-dasharray="{{ k.dash }}" transform="rotate(-90 38 38)"></circle>
+            <text x="38" y="45" text-anchor="middle">{{ k.done }}/{{ k.total }}</text></svg><span>{{ k.name }}</span></span>
+        {% endfor %}</div></div>
+      {% endif %}
+      {% if v.dinner %}<div class="mcard"><span class="k dink">Dinner</span><b class="big">{{ v.dinner }}</b></div>{% endif %}
+    </div>
+  </div>
+  {% if special or v.countdowns %}
+  <div class="modday">{{ icon('calendar') }}
+    {% if special %}<b>Today</b><span>{{ special|map(attribute='title')|join(' · ') }}</span>{% endif %}
+    {% if v.countdowns %}<span class="soft">Coming: {% for c in v.countdowns %}{{ c.title }} {{ c.when }}{{ ' · ' if not loop.last }}{% endfor %}</span>{% endif %}
+  </div>
+  {% endif %}
+
+  {% elif show.clock == 'typograph' %}
+  <div class="typo">
+    <svg class="tclock" viewBox="0 0 200 200" role="img" aria-label="Clock: {{ hm_now }}">
+      <circle class="rim" cx="100" cy="100" r="97"></circle>
+      {% for t in face.ticks if not t.major %}<line class="tk" x1="100" y1="7" x2="100" y2="9" transform="rotate({{ t.a }} 100 100)"></line>{% endfor %}
+      {% for n in roman %}<text class="{{ 'rn q' if n.q else 'rn' }}" x="{{ n.x }}" y="{{ n.y }}" text-anchor="middle">{{ n.t }}</text>{% endfor %}
+      <line class="hand hh" data-hand="h" x1="100" y1="106" x2="100" y2="52" transform="rotate({{ face.h }} 100 100)"></line>
+      <line class="hand mh" data-hand="m" x1="100" y1="108" x2="100" y2="23" transform="rotate({{ face.m }} 100 100)"></line>
+      <line class="hand sh" data-hand="s" x1="100" y1="113" x2="100" y2="15" transform="rotate({{ face.s }} 100 100)"></line>
+      <circle class="pin" cx="100" cy="100" r="2.6"></circle>
+    </svg>
+    <div class="tside">
+      <div><div class="tday">{{ now.strftime('%A') }}</div><div class="tdate">{{ now.day }} {{ now.strftime('%B') }}</div></div>
+      <hr>
+      <div class="tlines">
+        {% for e in (upcoming + later)[:3] %}<div class="l"><span>{{ e.when ~ ' ' if e.when }}{{ e.time }}</span><span>{{ e.title }}</span></div>
+        {% else %}<div class="l"><span></span><span>A quiet day</span></div>{% endfor %}
+        {% if v.dinner %}<div class="l"><span>Dinner</span><span>{{ v.dinner }}</span></div>{% endif %}
+      </div>
+      {% if wx and wx.temp is not none %}<hr><div class="twx">{{ wx.temp }}° {{ wx.label|lower }}{% if wx.rain %} · {{ wx.rain|lower }}{% endif %}</div>{% endif %}
+    </div>
+  </div>
+
+  {% else %}
+  <div class="top">{{ family }}{% if not screen.clock_only %}<small>Tap anywhere to open</small>{% endif %}</div>
+  <div class="mid">
+    {% if show.clock == 'analog' %}
+    <svg class="aclock" viewBox="0 0 200 200" role="img" aria-label="Clock: {{ hm_now }}">
+      <circle class="face" cx="100" cy="100" r="96"></circle>
+      {% for t in face.ticks %}<line class="{{ 'tk major' if t.major else 'tk' }}" x1="100" y1="{{ 10 if t.major else 8 }}" x2="100" y2="{{ 20 if t.major else 14 }}" transform="rotate({{ t.a }} 100 100)"></line>{% endfor %}
+      {% for n in face.nums %}<text class="num" x="{{ n.x }}" y="{{ n.y }}" text-anchor="middle">{{ n.n }}</text>{% endfor %}
+      <line class="hand hh" data-hand="h" x1="100" y1="108" x2="100" y2="52" transform="rotate({{ face.h }} 100 100)"></line>
+      <line class="hand mh" data-hand="m" x1="100" y1="112" x2="100" y2="26" transform="rotate({{ face.m }} 100 100)"></line>
+      <line class="hand sh" data-hand="s" x1="100" y1="118" x2="100" y2="22" transform="rotate({{ face.s }} 100 100)"></line>
+      <circle class="pin" cx="100" cy="100" r="4"></circle>
+    </svg>
+    <div class="aside">
+      <div class="day">{{ date_now }}</div>
+      {% if wx and wx.temp is not none %}<span class="wxr">{{ icon('wx_' ~ wx.look) }}{{ wx.temp }}°<span class="vh"> {{ wx.label }}</span></span>{% endif %}
+      {% include "_wall_next.html" %}
+    </div>
+    {% elif show.clock == 'flip' %}
+    <div>
+      <div class="flip" role="img" aria-label="Clock: {{ hm_now }}">
+        <span class="fd{{ ' blank' if not flip[0] }}" data-fd="0">{{ flip[0] }}</span><span class="fd" data-fd="1">{{ flip[1] }}</span>
+        <span class="fcol" aria-hidden="true">:</span>
+        <span class="fd" data-fd="2">{{ flip[2] }}</span><span class="fd" data-fd="3">{{ flip[3] }}</span>
+        <span class="ap" data-ampm="">{{ ampm }}</span>
+      </div>
+      <div class="day">{{ date_now }}{% if wx and wx.temp is not none %} · {{ wx.temp }}° {{ wx.label|lower }}{% endif %}</div>
+    </div>
+    {% include "_wall_next.html" %}
+    {% elif show.clock == 'word' %}
+    <div class="wordc" role="img" aria-label="Clock: {{ hm_now }}">
+      {% for row in word_rows %}<div class="wr">{% for k, t in row %}<span class="{{ 'on' if k in lit }}" data-w="{{ k }}">{{ t }}</span>{% endfor %}</div>{% endfor %}
+      <div class="wdots">{% for i in range(1, 5) %}<span class="{{ 'on' if ('d' ~ i) in lit }}" data-w="d{{ i }}"></span>{% endfor %}</div>
+    </div>
+    <div class="aside">
+      <div class="day">{{ date_now }}</div>
+      {% if wx and wx.temp is not none %}<span class="wxr">{{ icon('wx_' ~ wx.look) }}{{ wx.temp }}°<span class="vh"> {{ wx.label }}</span></span>{% endif %}
+      {% include "_wall_next.html" %}
+    </div>
+    {% elif show.clock == 'dual' %}
+    <div class="dual">
+      <div class="dz"><span class="dk">Home</span>
+        <div class="dt"><span data-clock="">{{ hm_now }}</span><span class="ap" data-ampm="">{{ ampm }}</span></div>
+        <span class="dd">{{ date_now }}</span></div>
+      <div class="dz far" data-tz="{{ show.zone }}"><span class="dk">{{ zlabel }}</span>
+        <div class="dt"><span data-tz-t="">{{ zt.hm if zt else '' }}</span><span class="ap" data-tz-ap="">{{ zt.ap if zt else '' }}</span></div>
+        <span class="dd" data-tz-day="">{{ ('tomorrow' if zt.day > 0 else 'yesterday' if zt.day < 0 else 'today') if zt else '' }}</span></div>
+    </div>
+    {% include "_wall_next.html" %}
+    {% elif show.clock == 'kidsday' %}
+    <svg class="dayring" viewBox="0 0 200 200" role="img" aria-label="Today from 6 AM to 10 PM, now {{ hm_now }}">
+      {% for p in ring.parts %}<path class="dband {{ p.key }}" d="{{ p.d }}"></path>{% endfor %}
+      {% for e in ring.events %}<path class="dev {{ e.cls }}{{ ' past' if e.past }}" d="{{ e.d }}"><title>{{ e.title }}</title></path>{% endfor %}
+      {% for t in ring.ticks %}<text class="rt" x="100" y="6" text-anchor="middle" transform="rotate({{ t.a }} 100 100)">{{ t.t }}</text>{% endfor %}
+      <text class="moon" x="100" y="22" text-anchor="middle">bed</text>
+      <g class="{{ 'now' if ring.awake else 'now asleep' }}" data-daynow="" transform="rotate({{ ring.now }} 100 100)"><circle cx="100" cy="16" r="7"></circle></g>
+      <text class="ct" x="100" y="102" text-anchor="middle" data-clock="">{{ hm_now }}</text>
+      <text class="cp" x="100" y="124" text-anchor="middle" data-daypart="">{{ ring.part }}</text>
+    </svg>
+    <div class="aside">
+      <div class="day">{{ date_now }}</div>
+      {% include "_wall_next.html" %}
+    </div>
+    {% else %}
+    <div>
+      <div class="timerow"><div class="time" data-clock="">{{ hm_now }}</div>
+        {% if wx and wx.temp is not none %}<span class="wxr">{{ icon('wx_' ~ wx.look) }}{{ wx.temp }}°<span class="vh"> {{ wx.label }}</span></span>{% endif %}</div>
+      <div class="day">{{ date_now }}</div>
+    </div>
+    {% include "_wall_next.html" %}
+    {% endif %}
+  </div>
+  <div class="bottom">
+    {% for k in v.kids %}<span>{{ k.name }}: {% if k.total and k.done == k.total %}all done{% else %}{{ k.total - k.done }} job{{ 's' if k.total - k.done != 1 }} left{% endif %}</span>{% endfor %}
+    {% if v.dinner %}<span>Dinner: {{ v.dinner }}</span>{% endif %}
+  </div>
+  {% endif %}
+  {% if wx and wx.ahead and show.clock != 'led' %}{# every face but the LED clock: today and the next five days #}
+  <div class="wxstrip" aria-label="Weather, today and the next days">
+    {% for d in wx.ahead %}<div class="wxday{{ ' now' if loop.first and d.dow == 'Today' }}"><span class="wd">{{ d.dow }}</span>{{ icon('wx_' ~ d.look, 'i l-' ~ d.look) }}
+      <span class="wt">{% if d.hi is not none %}<b>{{ d.hi }}°</b>{% endif %}{% if d.lo is not none %}<small>{{ d.lo }}°</small>{% endif %}</span>
+      {% if d.chance is not none and d.chance >= 30 %}<span class="wp">{{ d.chance }}%</span>{% endif %}<span class="vh"> {{ d.label }}</span></div>{% endfor %}
+  </div>
+  {% endif %}
+</a>
+<button type="button" class="facebtn" data-face-open="" data-keep-rest="" aria-label="Choose the clock">{{ icon('clock') }}</button>
+<dialog id="wface" class="wface" data-keep-rest="" aria-labelledby="wface-t">
+  <form method="post" action="/wall/face" data-wall="">
+    <header><h2 id="wface-t">Choose the clock</h2><button type="button" class="btn" data-face-close="">Close</button></header>
+    <div class="fgrid">{% for k, label in faces %}<button type="submit" name="clock" value="{{ k }}" class="fopt{{ ' on' if show.clock == k }}">{{ label }}</button>{% endfor %}</div>
+    <p class="muted">For this wall only. The night clock and photos stay as set on the PC.</p>
+  </form>
+</dialog>
+{% if show.night_tone != 'dim' and show.clock != 'led' %}{# the LED clock turns the night colour itself #}
+<a class="nightv"{% if not screen.clock_only %} href="/wall" aria-label="Open Today"{% endif %}>
+  <div class="nt"><span data-clock="">{{ hm_now }}</span><span class="ap" data-ampm="">{{ ampm }}</span></div>
+  <div class="nd">{{ date_now }}</div>
+  <div class="nn">{% if upcoming %}<span>Next: {{ upcoming[0].title }} {{ upcoming[0].time }}</span>{% elif later %}<span>Next: {{ later[0].title }}, {{ later[0].when }} {{ later[0].time }}</span>{% endif %}
+    {% if wx and wx.temp is not none %}<span>{{ wx.temp }}°</span>{% endif %}</div>
+</a>
+{% endif %}
+{% if show.urls %}
+<div class="stage st-{{ show.photo_style }}" id="stage" hidden aria-hidden="true">
+  {% for i in range(2) %}<div class="ly"><img class="bg" alt=""><img class="ph" alt=""><img class="ph c2" alt=""><img class="ph c3" alt=""><span class="cap"></span></div>{% endfor %}
+  <div class="corner"><span data-clock="12">{{ hm_now }}</span>{% if wx and wx.temp is not none %}<span>{{ icon('wx_' ~ wx.look) }}{{ wx.temp }}°</span>{% endif %}</div>
+</div>
+{% endif %}
+{% endblock %}

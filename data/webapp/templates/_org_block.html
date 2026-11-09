@@ -1,0 +1,88 @@
+{% if not m %}
+<p class="muted">{{ flash[1] if flash else 'That person is not on record.' }}</p>
+{% else %}
+{% set base = {"member": m.id} %}
+{% macro picker() %}
+{% if not online %}
+<p class="muted small">Turn on <a href="/family/house">Look things up online</a> to pick a school near home, check a college's name and find its calendar. You can still type the name and import a calendar file.</p>
+{% endif %}
+{% if online and m.role != 'adult' or online and not org %}
+<form class="nform" hx-get="/family/org/schools" hx-target="#org-block" hx-swap="innerHTML" hx-vals='{{ base|tojson }}' hx-disabled-elt="find button">
+  <button class="btn alt" type="submit" {{ 'disabled' if not zip }}>Schools near home{% if zip %} ({{ zip }}){% endif %}</button>
+  {% if not zip %}<span class="muted small">Add the ZIP code in <a href="/family/house">House</a> first.</span>{% endif %}
+</form>
+{% endif %}
+{% if schools %}
+<ul class="plain orgfound">{% for s in schools %}
+  <li><b>{{ s.name }}</b> <small class="muted">{{ s.city }}{% if s.km is not none %} · {{ s.km }} km{% endif %}{% if s.private %} · private{% endif %}{% if s.district %} · {{ s.district }}{% endif %}</small>
+    <form class="inline" hx-post="/family/org" hx-target="#org-block" hx-swap="innerHTML"
+      hx-vals='{{ dict(base, kind="school", name=s.name, ext_id=s.ext_id or "", district=s.district or "", city=s.city or "", state=s.state or "")|tojson }}'>
+      <button class="btn alt sm" type="submit">Pick</button></form></li>
+{% endfor %}</ul>
+{% endif %}
+{% if online %}
+<form class="nform" hx-get="/family/org/college" hx-target="#org-block" hx-swap="innerHTML" hx-vals='{{ base|tojson }}' hx-disabled-elt="find button">
+  <label>College or university<input name="q" maxlength="100" value="{{ college_q or '' }}" placeholder="Rutgers University-Newark"></label>
+  <button class="btn alt" type="submit">Check name</button>
+</form>
+{% endif %}
+{% if college %}
+{% if college.match %}<p class="notice">Found: <b>{{ college.match.name }}</b> ({{ college.match.city }}, {{ college.match.state }}).</p>{% endif %}
+<ul class="plain orgfound">{% for c in ([college.match] if college.match else []) + college.suggest %}{% if c %}
+  <li>{% if not loop.first or not college.match %}Did you mean {% endif %}<b>{{ c.name }}</b> <small class="muted">{{ c.city }}, {{ c.state }}</small>
+    <form class="inline" hx-post="/family/org" hx-target="#org-block" hx-swap="innerHTML"
+      hx-vals='{{ dict(base, kind="college", name=c.name, ext_id=c.ext_id or "", city=c.city or "", state=c.state or "")|tojson }}'>
+      <button class="btn alt sm" type="submit">Use this</button></form></li>
+{% endif %}{% endfor %}</ul>
+{% if not college.match and not college.suggest %}<p class="alert">No college by that name in the US directory. Check the spelling.</p>{% endif %}
+{% endif %}
+<form class="nform" hx-post="/family/org" hx-target="#org-block" hx-swap="innerHTML" hx-vals='{{ base|tojson }}' hx-disabled-elt="find button">
+  <label>Kind<select name="kind">{% for k in ('school', 'college', 'employer') %}<option value="{{ k }}" {{ 'selected' if (k == 'employer' and m.role == 'adult') or (k == 'school' and m.role != 'adult') }}>{{ k|capitalize }}</option>{% endfor %}</select></label>
+  <label>Name (public name only){% if not org %}<input name="name" maxlength="100" required value="{{ m.school or '' }}">{% else %}<input name="name" maxlength="100" required>{% endif %}</label>
+  <label>State (optional)<input name="state" maxlength="2" value="{{ state }}"></label>
+  <button class="btn alt" type="submit">Save</button>
+</form>
+<p class="muted small">Adults: an employer's holiday list (.ics or PDF) can be imported once the employer is saved. With nothing linked, the family calendar shows the federal and state holidays.</p>
+{% endmacro %}
+<h3>School, college or work calendar</h3>
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if org %}
+<p><b>{{ org.name }}</b> <span class="chip">{{ org.kind }}</span>{% if org.district %} · {{ org.district }}{% endif %}{% if org.city %} · {{ org.city }}{% if org.state %}, {{ org.state }}{% endif %}{% endif %}</p>
+<p class="muted small">{% if org.calendar_year %}Calendar {{ org.calendar_year }} read{% if org.checked_at %} {{ org.checked_at[:10] }}{% endif %}. {% endif %}
+  {% if org.waiting %}<a href="/add?view=calendar">{{ org.waiting }} day{{ 's' if org.waiting != 1 }} wait in the Inbox</a>. {% endif %}
+  {% if org.active %}{{ org.active }} day{{ 's' if org.active != 1 }} on the calendar.{% endif %}</p>
+{% if online %}
+<form class="nform" hx-post="/family/org/find" hx-target="#org-block" hx-swap="innerHTML" hx-vals='{{ base|tojson }}' hx-disabled-elt="find button">
+  <button class="btn" type="submit">Find this year's calendar</button>
+  <span class="muted small htmx-indicator">Looking... (up to a minute)</span>
+</form>
+{% if not web_ai %}<p class="muted small">Your AI cannot search the web, so only the last calendar page is checked. Paste the link instead, or set an Anthropic, OpenAI, Gemini or OpenRouter key in Settings.</p>{% endif %}
+{% endif %}
+{% if found and found.candidates %}
+<ul class="plain orgfound">{% for c in found.candidates %}
+  <li><span class="chip">{{ c.kind }}</span> <a href="{{ c.url }}" target="_blank" rel="noopener noreferrer">{{ c.text or c.url }}</a>
+    <small class="muted fp">{{ c.url[:90] }}</small>
+    <form class="inline" hx-post="/family/org/import" hx-target="#org-block" hx-swap="innerHTML" hx-vals='{{ dict(base, url=c.url)|tojson }}' hx-disabled-elt="find button">
+      <button class="btn alt sm" type="submit">Import</button></form></li>
+{% endfor %}</ul>
+<p class="muted small">Open a link to check it is this year's calendar, then Import. The days wait in the Inbox until you add them.</p>
+{% endif %}
+{% if online %}
+<form class="nform" hx-post="/family/org/import" hx-target="#org-block" hx-swap="innerHTML" hx-vals='{{ base|tojson }}' hx-disabled-elt="find button">
+  <label>Calendar link (.ics feed, PDF or the calendar page)<input name="url" type="url" maxlength="2000" required placeholder="https://"></label>
+  <button class="btn alt" type="submit">Import from link</button>
+</form>
+{% endif %}
+<div class="nform">
+  <label>Or a calendar file (.ics or PDF)<input id="orgfile-{{ m.id }}" type="file" accept=".ics,.pdf,text/calendar,application/pdf"></label>
+  <button type="button" class="btn alt" data-upload="#orgfile-{{ m.id }}" data-upload-to="/family/org/file?member={{ m.id }}" data-upload-name="1">Import file</button>
+  <span id="orgfile-{{ m.id }}-said" class="muted small" role="status"></span>
+</div>
+<details class="more-form" {{ 'open' if schools or college }}><summary class="btn alt sm">Change or remove</summary>
+  <form class="nform" hx-post="/family/org" hx-target="#org-block" hx-swap="innerHTML" hx-vals='{{ dict(base, op="clear")|tojson }}'>
+    <button class="btn alt" type="submit">Not linked any more</button></form>
+  {{ picker() }}
+</details>
+{% endif %}
+{% if not org %}{{ picker() }}{% endif %}
+{% endif %}

@@ -1,0 +1,102 @@
+{% extends "base.html" %}
+{% block title %}Routines · {{ brand }}{% endblock %}
+{% macro ico(path) %}<svg class="rico" viewBox="0 0 24 24" aria-hidden="true"><path d="{{ path }}"/></svg>{% endmacro %}
+{% block main %}
+{% import "_ui.html" as ui %}
+<header class="head"><div><h1>Family</h1><p class="sub">Routines: the children's jobs for the Mitra Wall and each child's own page. The allowance pays for jobs done; stars can also be spent on rewards.</p></div></header>
+{{ ui.ftabs(family_tabs, 'routines') }}
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if not walls %}<p class="muted small">No wall is paired yet: add one in <a href="/settings?group=phones">Settings › Phones › Mitra Wall</a>. The jobs show there.</p>{% endif %}
+
+{% if not v.children %}
+<section class="card"><h2>No children in the household</h2>
+  <p class="muted">Routines are for children. Add them in Family › People first.</p></section>
+{% endif %}
+
+{% for k in v.children %}
+<section class="card rtn" aria-label="{{ k.name }}'s jobs">
+  <h2>{{ k.name }} <span class="muted small">· {{ k.n }} job{{ 's' if k.n != 1 }} · {{ k.stars_week }} star{{ 's' if k.stars_week != 1 }} this week{% if v.rate %} = {{ (k.cents_week / 100)|money2 }}{% endif %}</span></h2>
+  {% for p, label, rs in k.parts %}
+  <h3>{{ label }}</h3>
+  {% if rs %}
+  <ul class="checklist">{% for r in rs %}
+    <li>{{ ico(r.path) }}<span class="ctext">{{ r.title }} <span class="muted">· {{ r.stars }} star{{ 's' if r.stars != 1 }} · {{ r.days }}</span></span>
+      <button type="button" class="btn alt sm" hx-post="/family/routines" hx-vals='{{ {"op": "drop", "id": r.id|string}|tojson }}'>Remove</button></li>
+  {% endfor %}</ul>
+  {% else %}<p class="muted small">Nothing yet.</p>{% endif %}
+  {% endfor %}
+  <p class="muted small">★ {{ k.rewards.balance }} star{{ 's' if k.rewards.balance != 1 }} to spend on rewards.</p>
+  <h3>Goal and allowance</h3>
+  {% if k.goal %}
+  <p>{{ k.goal.title }}: <b>{{ k.goal.earned }} of {{ k.goal.stars }} stars</b>{% if k.goal.reached %} · reached{% else %} · {{ k.goal.left }} to go{% endif %}</p>
+  <button type="button" class="btn alt sm" hx-post="/family/routines" hx-vals='{{ {"op": "goal_clear", "member": k.name}|tojson }}'>Clear the goal</button>
+  {% endif %}
+  <form class="nform" hx-post="/family/routines" autocomplete="off">
+    <input type="hidden" name="op" value="goal"><input type="hidden" name="member" value="{{ k.name }}">
+    <label>{{ 'New goal' if k.goal else 'Goal' }}<input name="title" maxlength="40" required placeholder="New bike"></label>
+    <label>Stars it takes<input name="stars" inputmode="numeric" maxlength="5" required placeholder="100"></label>
+    <button class="btn alt" type="submit">Save the goal</button>
+  </form>
+  {% if k.max_week %}
+  <p class="muted small">Every job done: {{ k.max_week }} stars a week{% if v.rate %} = {{ (k.max_week_cents / 100)|money2 }} a week, about {{ k.max_month|money2 }} a month{% endif %}.</p>
+  {% if v.rate %}<button type="button" class="btn alt sm" hx-post="/family/routines" hx-vals='{{ {"op": "allowance", "member": k.name}|tojson }}'>Put it in the budget</button>{% endif %}
+  {% endif %}
+</section>
+{% endfor %}
+
+{% if v.children %}
+<section class="card" id="radd">
+  <h2>Add a job</h2>
+  <form class="nform" hx-post="/family/routines" autocomplete="off">
+    <input type="hidden" name="op" value="add">
+    <label>Child<select name="member">{% for k in v.children %}<option>{{ k.name }}</option>{% endfor %}</select></label>
+    <label>When<select name="part">{% for p, label in parts %}<option value="{{ p }}">{{ label }}</option>{% endfor %}</select></label>
+    <label>Job<input name="title" maxlength="60" required placeholder="Brush teeth"></label>
+    <label>Picture<select name="icon">{% for key, label, _ in icons %}<option value="{{ key }}">{{ label }}</option>{% endfor %}</select></label>
+    <label>Stars<select name="stars">{% for n in range(1, 6) %}<option>{{ n }}</option>{% endfor %}</select></label>
+    <fieldset class="wide rdays"><legend>Days (none ticked = every day)</legend>
+      {% for d, label in days %}<label class="check"><input type="checkbox" name="day" value="{{ d }}"> {{ label }}</label>{% endfor %}
+    </fieldset>
+    <button class="btn" type="submit">Add the job</button>
+  </form>
+</section>
+
+<section class="card" id="rewards">
+  <h2>Rewards</h2>
+  {% if v.requests %}
+  <h3>Asked for</h3>
+  <ul class="checklist">{% for q in v.requests %}
+    <li><span class="ctext"><b>{{ q.member }}</b> asks for {{ q.title }} <span class="muted">· {{ q.stars }} stars</span></span>
+      <button type="button" class="btn sm" hx-post="/family/routines" hx-vals='{{ {"op": "reward_give", "id": q.id|string}|tojson }}'>Give it</button>
+      <button type="button" class="btn alt sm" hx-post="/family/routines" hx-vals='{{ {"op": "reward_no", "id": q.id|string}|tojson }}'>Not now</button></li>
+  {% endfor %}</ul>
+  {% endif %}
+  {% if v.rewards %}
+  <ul class="checklist">{% for r in v.rewards %}
+    <li><span class="ctext">{{ r.title }} <span class="muted">· {{ r.stars }} stars · {{ r.member or 'any child' }}</span></span>
+      <button type="button" class="btn alt sm" hx-post="/family/routines" hx-vals='{{ {"op": "reward_drop", "id": r.id|string}|tojson }}'>Remove</button></li>
+  {% endfor %}</ul>
+  {% else %}<p class="muted small">No rewards yet. Children spend their stars on them: they ask on the wall or their own page, and you answer here.</p>{% endif %}
+  <form class="nform" hx-post="/family/routines" autocomplete="off">
+    <input type="hidden" name="op" value="reward_add">
+    <label>Reward<input name="title" maxlength="60" required placeholder="30 minutes of screen time"></label>
+    <label>Stars it costs<input name="stars" inputmode="numeric" maxlength="3" required placeholder="10"></label>
+    <label>For<select name="member"><option value="">Any child</option>{% for k in v.children %}<option>{{ k.name }}</option>{% endfor %}</select></label>
+    <button class="btn alt" type="submit">Add the reward</button>
+  </form>
+  <p class="muted small">Stars to spend = every star earned, minus rewards asked for or given. A request holds its stars
+    until you answer; Not now gives them back. The allowance is separate and does not use stars up.</p>
+</section>
+
+<section class="card">
+  <h2>What a star is worth</h2>
+  <form class="nform" hx-post="/family/routines" autocomplete="off">
+    <input type="hidden" name="op" value="rate">
+    <label>Cents per star<input name="rate" inputmode="decimal" maxlength="6" value="{{ v.rate }}" required></label>
+    <button class="btn alt" type="submit">Save the rate</button>
+  </form>
+  <p class="muted small">Stars count Monday to Sunday. The total shows on the wall's Money screen (behind an adult's PIN)
+    as the week's allowance; nothing is paid automatically. 0 = stars only, no money.</p>
+</section>
+{% endif %}
+{% endblock %}

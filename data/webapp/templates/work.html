@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Work · {{ brand }}{% endblock %}
+{% block main %}
+{% import "_ui.html" as ui %}
+<header class="head fhead"><div><a class="fback" href="/family">Family</a><h1>{{ w.c.client if w.c else 'Work' }}</h1><p class="sub">{% if w.c and w.c.contract_no %}#{{ w.c.contract_no }} · {% endif %}{% if w.c and w.c.status and w.c.status != 'active' %}{{ w.c.status }} · {% endif %}Jobs, timesheets and paperwork</p></div></header>
+{{ ui.ftabs(family_tabs, 'work') }}
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if not w.on %}
+<div class="card"><p>Jobs, timesheets and the work schedule are part of the work pack. Turn it on in
+  <a href="/settings?group=household">Settings &gt; Household profile &gt; Optional features</a>.</p></div>
+{% else %}
+{% set c = w.c %}
+{% if w.people %}<nav class="fchips" aria-label="Adult">{% for pn in w.people %}<a href="/work?who={{ pn|urlencode }}" {% if pn == w.who %}class="on" aria-current="true"{% endif %}>{{ pn }}</a>{% endfor %}</nav>{% endif %}
+{% if not w.contracts and w.who %}<p class="muted">No jobs for {{ w.who }} yet. Add one below.</p>{% endif %}
+<details class="card addnote" {{ 'open' if not w.contracts }}>
+  <summary><h2>Add a job</h2></summary>
+  <form class="nform" hx-post="/work" hx-vals='{"op": "contract_add"}'>
+    <label>Job or business name<input name="client" maxlength="80" required placeholder="Employer, LLC or client"></label>
+    <label>Kind<select name="kind">{% for k, lbl in w.kinds %}<option value="{{ k }}">{{ lbl }}</option>{% endfor %}</select></label>
+    <label>Who<select name="person"><option value=""></option>{% for p in w.people %}<option value="{{ p }}" {{ 'selected' if p == w.who }}>{{ p }}</option>{% endfor %}</select></label>
+    <label>Primary or secondary<select name="rank"><option value="primary">Primary job</option><option value="secondary">Secondary</option></select></label>
+    <label class="check"><input type="checkbox" name="needs_timesheets" value="1"> Needs timesheets (hours are sent in)</label>
+    <label>Agency or end client (optional)<input name="vendor" maxlength="80"></label>
+    <label>Contract or employee number (optional)<input name="contract_no" maxlength="40"></label>
+    <label>Start date (optional)<input name="start" type="date" min="1990-01-01" max="2100-12-31"></label>
+    <label>End date (optional)<input name="end" type="date" min="1990-01-01" max="2100-12-31"></label>
+    <button class="btn" type="submit">Add job</button>
+  </form>
+</details>
+{% if c %}
+{% if w.contracts|length > 1 %}
+<nav class="fchips" aria-label="Contract">{% for x in w.contracts %}<a href="/work?c={{ x.id }}&tab={{ w.tab }}" {% if x.id == c.id %}class="on" aria-current="true"{% endif %}>{{ x.label }}</a>{% endfor %}</nav>
+{% endif %}
+<nav class="fchips" aria-label="Part">{% for k, lbl in w.tabs %}<a href="/work?c={{ c.id }}&tab={{ k }}" {% if k == w.tab %}class="on" aria-current="true"{% endif %}>{{ lbl }}</a>{% endfor %}</nav>
+{% set base = {"c": c.id|string, "tab": w.tab} %}
+
+{% if w.tab == 'hours' %}{% set h = w.hours %}
+{% if not c.needs_timesheets %}<p class="notice">This job does not need timesheets, so there are no reminders. Hours you save here are kept. Turn on "Needs timesheets" under Details to get reminders.</p>{% endif %}
+<form class="rsearch ffilter" action="/work" method="get"><input type="hidden" name="c" value="{{ c.id }}"><input type="hidden" name="tab" value="hours">
+  <label class="vh" for="wcyc">Timesheet period</label>
+  <select id="wcyc" name="cycle">{% for k, lbl in h.cycles %}<option value="{{ k }}" {{ 'selected' if k == h.cycle }}>{{ lbl }}</option>{% endfor %}</select>
+  <button class="btn" type="submit">Show</button></form>
+<form class="card" hx-post="/work" hx-vals='{{ dict(base, op="hours", cycle=h.cycle)|tojson }}'>
+  <p class="muted small">Hours show what is recorded, or the plan (schedule minus holidays) for past days not entered yet. Change what differs and press Save. Blank clears a day.</p>
+  <div class="tablewrap"><table><thead><tr><th>Date</th><th>Plan</th><th>Holiday</th><th>Hours</th><th>Where</th><th>From</th></tr></thead>
+  <tbody>{% for r in h.rows %}<tr><td>{{ r.day }} {{ r.date|sd }}</td><td>{{ r.plan }}</td><td>{{ r.holiday }}</td>
+    <td>{% if r['from'] == 'planned' %}<input type="hidden" name="e_{{ r.date }}" value="{{ r.hours }}|{{ r.where }}">{% endif %}<input name="h_{{ r.date }}" value="{{ r.hours }}" inputmode="decimal" maxlength="5" size="4" aria-label="Hours on {{ r.date }}"></td>
+    <td><select name="w_{{ r.date }}" aria-label="Where on {{ r.date }}"><option value=""></option><option value="onsite" {{ 'selected' if r.where == 'onsite' }}>Office (on site)</option><option value="offsite" {{ 'selected' if r.where == 'offsite' }}>Remote (off site)</option></select></td>
+    <td>{{ r['from'] }}</td></tr>{% endfor %}</tbody></table></div>
+  <button class="btn" type="submit">Save hours</button>
+</form>
+<details class="card sfold"><summary><h2>Import a timesheet</h2><span class="muted">PDF with text, CSV or TXT</span></summary>
+  <p class="muted small">PDF with text, CSV or TXT. Only dates, hours and office / remote are kept. A timesheet saved as a picture cannot be read: print it with the browser's Save as PDF, export CSV, or type the hours above.</p>
+  <div class="optrow"><input type="file" id="wts" accept=".pdf,.csv,.txt" aria-label="Timesheet file">
+    <button type="button" class="btn alt" data-upload="#wts" data-upload-to="/work/import?kind=timesheet&c={{ c.id }}" data-upload-name="1">Import timesheet</button></div>
+  <p class="muted small" id="wts-said" role="status"></p>
+</details>
+
+{% elif w.tab == 'papers' %}{% set pp = w.papers %}
+<section class="card rblock"><h2>Paperwork for {{ c.client }}</h2>
+  {% if pp.rows %}
+  <div class="tablewrap"><table><thead><tr><th>Paper</th><th>Kind</th><th>Date</th><th></th></tr></thead>
+  <tbody>{% for r in pp.rows %}<tr><td><a href="/records?ref=documents:{{ r.document }}">{{ r.name }}</a></td><td>{{ r.label }}</td><td>{{ r.date|sd }}</td>
+    <td><button type="button" class="btn alt" hx-post="/work" hx-vals='{{ dict(base, op="paper_remove", document=r.document|string)|tojson }}' hx-confirm="Take this paper off the list? It stays filed.">Remove from list</button></td></tr>{% endfor %}</tbody></table></div>
+  {% else %}<p class="muted">Nothing kept with this job yet. Timesheets you import are added by themselves.</p>{% endif %}
+</section>
+<details class="card sfold"><summary><h2>Add a paper</h2><span class="muted">Offer letter, contract, W-2, 1099</span></summary>
+  <p class="muted small">PDF, photo or document. It is filed with your other papers and kept with this job.</p>
+  <div class="optrow"><select id="wpaperkind" aria-label="What kind of paper">{% for k, lbl in pp.kinds %}<option value="{{ k }}">{{ lbl }}</option>{% endfor %}</select>
+    <input type="file" id="wpaper" accept=".pdf,.png,.jpg,.jpeg,.heic,.txt,.doc,.docx" aria-label="Paper file">
+    <button type="button" class="btn alt" data-upload="#wpaper" data-upload-to="/work/import?kind=paper&c={{ c.id }}" data-upload-name="1" data-upload-extra="#wpaperkind">Add paper</button></div>
+  <p class="muted small" id="wpaper-said" role="status"></p>
+</details>
+{% if pp.choices %}<details class="card sfold"><summary><h2>Keep a paper already filed</h2><span class="muted">From Records</span></summary>
+  <form class="nform" hx-post="/work" hx-vals='{{ dict(base, op="paper_attach")|tojson }}'>
+    <label>Paper<select name="document">{% for x in pp.choices %}<option value="{{ x.document }}">{{ x.label }}</option>{% endfor %}</select></label>
+    <label>Kind<select name="kind">{% for k, lbl in pp.kinds %}<option value="{{ k }}">{{ lbl }}</option>{% endfor %}</select></label>
+    <button class="btn alt" type="submit">Keep with this job</button>
+  </form>
+</details>{% endif %}
+
+{% elif w.tab == 'schedule' %}{% set s = w.sched %}
+<form class="card nform" hx-post="/work" hx-vals='{{ dict(base, op="schedule", anchor=s.anchor, keep_anchor=("1" if c.cycle_anchor else "0"))|tojson }}'>
+  <p class="muted small wide">One {{ 'two-week' if s.n == 14 else 'one-week' }} cycle starting {{ s.start }}. Pick each day once; it repeats every cycle. Set the cycle length and its first day under Details.</p>
+  {% for i, lbl, p in s.days %}<label>{{ lbl }}<select name="p_{{ i }}">{% for k, name in s.labels %}<option value="{{ k }}" {{ 'selected' if k == p }}>{{ name }}</option>{% endfor %}</select></label>{% endfor %}
+  <button class="btn" type="submit">Save schedule</button>
+</form>
+
+{% elif w.tab == 'report' %}{% set r = w.report %}
+<nav class="fchips" aria-label="Report">
+  <a href="/work?c={{ c.id }}&tab=report&view=month&ym={{ r.ym }}" {% if r.view == 'month' %}class="on" aria-current="true"{% endif %}>Month</a>
+  <a href="/work?c={{ c.id }}&tab=report&view=year&year={{ r.year }}" {% if r.view == 'year' %}class="on" aria-current="true"{% endif %}>Year</a></nav>
+{% if r.view == 'month' %}
+<form class="rsearch ffilter" action="/work" method="get"><input type="hidden" name="c" value="{{ c.id }}"><input type="hidden" name="tab" value="report"><input type="hidden" name="view" value="month">
+  <label class="vh" for="wrm">Month</label>
+  <select id="wrm" name="ym">{% for k, lbl in r.months %}<option value="{{ k }}" {{ 'selected' if k == r.ym }}>{{ lbl }}</option>{% endfor %}</select>
+  <button class="btn" type="submit">Show</button></form>
+<section class="card rblock"><h2>{{ r.month_label }}</h2>
+  <p><b>{{ r.hours }} hours</b> · {{ r.days }} day{{ '' if r.days == 1 else 's' }} worked · {{ r.onsite }} in the office · {{ r.offsite }} remote</p>
+  {% if r.planned %}<p class="muted small">Not on a timesheet yet: {{ '%g'|format(r.planned) }} planned hours on past days. They are not in the total.</p>{% endif %}
+  <div class="tablewrap"><table class="wmonth"><thead><tr>{% for d in ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'] %}<th>{{ d }}</th>{% endfor %}</tr></thead>
+  <tbody>{% for wk in r.weeks %}<tr>{% for x in wk %}<td{% if x and x.today %} aria-current="date"{% endif %}>{% if x %}<span class="muted small">{{ x.n }}</span><br><b>{{ x.hours }}</b>{% if x.where %}<br><span class="muted small">{{ x.where }}</span>{% elif x.holiday %}<br><span class="muted small">{{ x.holiday }}</span>{% endif %}{% endif %}</td>{% endfor %}</tr>{% endfor %}</tbody></table></div>
+</section>
+{% else %}
+<form class="rsearch ffilter" action="/work" method="get"><input type="hidden" name="c" value="{{ c.id }}"><input type="hidden" name="tab" value="report"><input type="hidden" name="view" value="year">
+  <label class="vh" for="wry">Year</label>
+  <select id="wry" name="year">{% for y in r.years %}<option {{ 'selected' if y == r.year }}>{{ y }}</option>{% endfor %}</select>
+  <button class="btn" type="submit">Show</button></form>
+<section class="card rblock"><h2>{{ r.year }}</h2>
+  <p><b>{{ r.hours }} hours</b> · {{ r.days }} days worked · {{ r.onsite }} in the office · {{ r.offsite }} remote</p>
+  {% if r.planned %}<p class="muted small">Not on a timesheet yet: {{ '%g'|format(r.planned) }} planned hours on past days. They are not in the total.</p>{% endif %}
+  <div class="tablewrap"><table><thead><tr><th>Month</th><th>Hours</th><th>Days worked</th><th>Office</th><th>Remote</th></tr></thead>
+  <tbody>{% for x in r.rows %}<tr><td><a href="/work?c={{ c.id }}&tab=report&view=month&ym={{ x.ym }}">{{ x.month }}</a></td><td>{{ x.hours }}</td><td>{{ x.days }}</td><td>{{ x.onsite }}</td><td>{{ x.offsite }}</td></tr>{% endfor %}</tbody>
+  <tfoot><tr><th>Total</th><th>{{ r.hours }}</th><th>{{ r.days }}</th><th>{{ r.onsite }}</th><th>{{ r.offsite }}</th></tr></tfoot></table></div>
+</section>
+{% endif %}
+
+{% elif w.tab == 'profile' %}{% set p = w.prof %}
+<form class="card nform" hx-post="/work" hx-vals='{{ dict(base, op="profile")|tojson }}'>
+  <label>Job or business name<input name="client" maxlength="80" required value="{{ c.client }}"></label>
+  <label>Kind<select name="kind">{% for k, lbl in w.kinds %}<option value="{{ k }}" {{ 'selected' if k == c.kind }}>{{ lbl }}</option>{% endfor %}</select></label>
+  <label>Who<select name="person"><option value=""></option>{% for pn in w.people %}<option value="{{ pn }}" {{ 'selected' if pn == c.person }}>{{ pn }}</option>{% endfor %}</select></label>
+  <label>Primary or secondary<select name="rank"><option value="primary" {{ 'selected' if c.rank != 'secondary' }}>Primary job</option><option value="secondary" {{ 'selected' if c.rank == 'secondary' }}>Secondary</option></select></label>
+  <label>Needs timesheets<select name="needs_timesheets"><option value="0" {{ 'selected' if not c.needs_timesheets }}>No</option><option value="1" {{ 'selected' if c.needs_timesheets }}>Yes</option></select></label>
+  <label>Show the schedule on the Calendar<select name="show_on_calendar"><option value="0" {{ 'selected' if not c.show_on_calendar }}>No</option><option value="1" {{ 'selected' if c.show_on_calendar }}>Yes: remote and office days, holidays, pay days</option></select></label>
+  <label>Who can see it<select name="visibility"><option value="shared" {{ 'selected' if c.visibility != 'private' }}>Every adult</option><option value="private" {{ 'selected' if c.visibility == 'private' }}>Only its owner</option></select></label>
+  <label>Agency or end client<input name="vendor" maxlength="80" value="{{ c.vendor }}"></label>
+  <label>Contract or employee number<input name="contract_no" maxlength="40" value="{{ c.contract_no }}"></label>
+  <label>Start date<input name="start" type="date" min="1990-01-01" max="2100-12-31" value="{{ c.start_date }}"></label>
+  <label>End date<input name="end" type="date" min="1990-01-01" max="2100-12-31" value="{{ c.end_date }}"></label>
+  <label>Hours per day<input name="hours_per_day" type="number" min="0.25" max="24" step="0.25" value="{{ c.hours_per_day or 8 }}"></label>
+  <label>Timesheet cycle<select name="timesheet_cycle">{% for f in p.cycles %}<option {{ 'selected' if f == (c.timesheet_cycle or 'biweekly') }}>{{ f }}</option>{% endfor %}</select></label>
+  <label>A cycle starts on<input name="anchor" type="date" min="2000-01-01" max="2100-12-31" value="{{ c.cycle_anchor or w.today }}"></label>
+  <label>Pay period starts on<input name="period_start" type="date" min="2000-01-01" max="2100-12-31" value="{{ c.period_start }}"></label>
+  <label>Pay period ends on<input name="period_end" type="date" min="2000-01-01" max="2100-12-31" value="{{ c.period_end }}"></label>
+  <p class="muted small wide">The timesheet periods on the Timesheets tab and the reminder to send a timesheet follow these two days (any 7 to 31 days, repeating). Leave both empty to use the schedule cycle above. The Schedule tab is not changed.</p>
+  <label>Work calendar name<input name="calendar" maxlength="60" list="wcals" value="{{ c.work_calendar }}"><datalist id="wcals">{% for n in p.calendars %}<option value="{{ n }}">{% endfor %}</datalist></label>
+  <label>Status<select name="status">{% for s in p.statuses %}<option {{ 'selected' if s == c.status }}>{{ s }}</option>{% endfor %}</select></label>
+  <button class="btn" type="submit">Save profile</button>
+</form>
+
+{% else %}{% set k = w.cal %}
+<nav class="fchips" aria-label="Year">{% for y in [k.year - 1, k.year, k.year + 1] %}<a href="/work?c={{ c.id }}&tab=calendar&year={{ y }}" {% if y == k.year %}class="on" aria-current="true"{% endif %}>{{ y }}</a>{% endfor %}</nav>
+<section class="card rblock"><h2>{{ k.name or 'No work calendar set' }}</h2>
+  {% if k.days %}
+  <ul class="rlist fl-phone">{% for r in k.days %}<li><div><span class="rl-av t-{{ 'ok' if r.kind == 'payday' else 'warn' if 'holiday' in r.kind else 'n' }}" aria-hidden="true">{{ r.day[:2] }}</span><span class="rl-main"><span class="rl-t">{{ r.name or r.kind }}</span><span class="rl-m">{{ r.kind }}</span></span><span class="rl-r"><b>{{ r.date|sd }}</b></span></div></li>{% endfor %}</ul>
+  <div class="tablewrap fl-wide"><table><thead><tr><th>Date</th><th>Day</th><th>Kind</th><th>Name</th></tr></thead>
+  <tbody>{% for r in k.days %}<tr><td>{{ r.date|sd }}</td><td>{{ r.day }}</td><td>{{ r.kind }}</td><td>{{ r.name }}</td></tr>{% endfor %}</tbody></table></div>
+  {% elif k.name %}<p class="muted">Nothing for {{ k.year }} yet.</p>
+  {% else %}<p class="muted">Import one below and set its name under Details.</p>{% endif %}
+</section>
+<details class="card sfold"><summary><h2>Import a work calendar</h2><span class="muted">Holidays, floating holidays and pay days from a PDF or TXT</span></summary>
+  <p class="muted small">PDF with text or TXT: holidays, floating holidays, pay days.</p>
+  <div class="optrow"><input id="wcalname" maxlength="60" value="{{ k.name }}" placeholder="Calendar name" aria-label="Calendar name">
+    <input type="file" id="wcal" accept=".pdf,.txt" aria-label="Calendar file">
+    <button type="button" class="btn alt" data-upload="#wcal" data-upload-to="/work/import?kind=work_calendar&c={{ c.id }}" data-upload-name="1" data-upload-extra="#wcalname">Import calendar</button></div>
+  <p class="muted small" id="wcal-said" role="status"></p>
+</details>
+<details class="card sfold"><summary><h2>Add one day</h2><span class="muted">A holiday, floating holiday or pay day by hand</span></summary>
+  <form class="nform" hx-post="/work" hx-vals='{{ dict(base, op="cal_add")|tojson }}'>
+    <label>Calendar<input name="calendar" maxlength="60" required value="{{ k.name }}"></label>
+    <label>Date<input name="day" type="date" min="2000-01-01" max="2100-12-31" required value="{{ w.today }}"></label>
+    <label>Kind<select name="kind">{% for x in k.kinds %}<option>{{ x }}</option>{% endfor %}</select></label>
+    <label>Name<input name="title" maxlength="80"></label>
+    <button class="btn alt" type="submit">Add day</button>
+  </form>
+</details>
+<details class="card sfold"><summary><h2>Pay days by rule</h2><span class="muted">Every other Friday, twice a month, monthly</span></summary>
+  <form class="nform" hx-post="/work" hx-vals='{{ dict(base, op="paydays")|tojson }}'>
+    <label>Calendar<input name="calendar" maxlength="60" required value="{{ k.name }}"></label>
+    <label>Rule<select name="rule">{% for v, lbl in k.rules %}<option value="{{ v }}">{{ lbl }}</option>{% endfor %}</select></label>
+    <label>First pay day<input name="first" type="date" min="2000-01-01" max="2100-12-31" required value="{{ w.today }}"></label>
+    <label>Until<input name="last" type="date" min="2000-01-01" max="2100-12-31" required value="{{ k.year }}-12-31"></label>
+    <label>Day of month (monthly rule; 31 = last day)<input name="dom" type="number" min="1" max="31" value="1"></label>
+    <button class="btn alt" type="submit">Add pay days</button>
+  </form>
+</details>
+{% endif %}
+{% endif %}
+{% endif %}
+{% endblock %}

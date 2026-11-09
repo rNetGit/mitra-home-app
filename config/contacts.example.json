@@ -1,0 +1,12 @@
+{
+  "contacts": [
+    {"role": "Pediatrician / family doctor", "name": "", "phone": "", "notes": ""},
+    {"role": "Dentist", "name": "", "phone": "", "notes": ""},
+    {"role": "School office", "name": "", "phone": "", "notes": ""},
+    {"role": "Trusted neighbour", "name": "", "phone": "", "notes": ""},
+    {"role": "Out-of-town relative", "name": "", "phone": "", "notes": ""},
+    {"role": "Home insurance claims line", "name": "", "phone": "", "notes": ""},
+    {"role": "Auto insurance claims line", "name": "", "phone": "", "notes": ""},
+    {"role": "Water shut-off / utility emergency", "name": "", "phone": "", "notes": ""}
+  ]
+}

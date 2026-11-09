@@ -1,0 +1,104 @@
+{
+  "key": "australia_nz",
+  "title": "Australia / New Zealand (southern hemisphere)",
+  "kind": "base",
+  "description": "Seasons are reversed: winter is Jun-Aug, summer Dec-Feb. Add the bushfire overlay if you live in a fire-prone area.",
+  "tasks": [
+    {
+      "name": "Flu vaccination",
+      "category": "Health",
+      "start": "03-15",
+      "end": "05-31",
+      "lead_days": 21,
+      "notes": "Before winter."
+    },
+    {
+      "name": "Heater service and chimney check",
+      "category": "Home",
+      "start": "03-15",
+      "end": "05-15",
+      "lead_days": 21,
+      "notes": ""
+    },
+    {
+      "name": "Clean gutters before winter rain",
+      "category": "Home",
+      "start": "03-15",
+      "end": "04-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Smoke alarm test (end of daylight saving)",
+      "category": "Safety",
+      "start": "04-01",
+      "end": "04-14",
+      "lead_days": 7,
+      "notes": ""
+    },
+    {
+      "name": "Smoke alarm test (start of daylight saving)",
+      "category": "Safety",
+      "start": "10-01",
+      "end": "10-14",
+      "lead_days": 7,
+      "notes": ""
+    },
+    {
+      "name": "Air-conditioner service before summer",
+      "category": "Home",
+      "start": "10-15",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Car summer prep: coolant, battery, tyres",
+      "category": "Car",
+      "start": "10-15",
+      "end": "11-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Lawn: spring fertiliser",
+      "category": "Lawn",
+      "start": "09-15",
+      "end": "10-31",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Lawn: autumn feed",
+      "category": "Lawn",
+      "start": "03-15",
+      "end": "04-30",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Termite inspection",
+      "category": "Home",
+      "start": "02-01",
+      "end": "03-31",
+      "lead_days": 14,
+      "notes": "Annual in most areas."
+    },
+    {
+      "name": "Sun safety: sunscreen, hats, shade for kids",
+      "category": "Health",
+      "start": "09-15",
+      "end": "11-15",
+      "lead_days": 14,
+      "notes": ""
+    },
+    {
+      "name": "Check home contents and building cover before summer",
+      "category": "Safety",
+      "start": "09-01",
+      "end": "10-31",
+      "lead_days": 14,
+      "notes": ""
+    }
+  ]
+}

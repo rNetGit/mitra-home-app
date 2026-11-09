@@ -1,0 +1,39 @@
+<div class="chatlog" id="chatlog" aria-live="polite">
+  {% for m in lines %}
+  <div class="msg {{ m.who }}">
+    {% if m.who == 'assistant' %}<div class="doc">{{ m.html|safe }}</div>{% else %}<p>{{ m.text }}</p>{% endif %}
+    {% if m.refs %}<p class="cites">{% for r in m.refs %}<a href="{{ r.url }}">From: {{ r.label }}</a>{% endfor %}</p>{% endif %}
+  </div>
+  {% endfor %}
+  {% if not lines and not ready %}
+  <p class="muted">Without an AI I can still answer the questions below, log things for you and search your papers.
+    To ask anything in your own words, <a href="{{ settings_url }}">connect an AI in Settings</a>.</p>
+  {% endif %}
+</div>
+{% if card %}
+<article class="card confirm">
+  {% if card.lines|length == 1 %}<p><b>Save:</b> {{ card.lines[0] }}</p>
+  {% else %}<p><b>Save these changes?</b></p><ul>{% for x in card.lines %}<li>{{ x }}</li>{% endfor %}</ul>{% endif %}
+  <div class="optrow">
+    <button type="button" class="btn" hx-post="/chat/answer" hx-target="#chat" hx-swap="innerHTML" hx-disabled-elt="this"
+      hx-vals='{{ {"nonce": card.nonce, "yes": "1"}|tojson }}'>Yes, save it</button>
+    <button type="button" class="btn alt" hx-post="/chat/answer" hx-target="#chat" hx-swap="innerHTML"
+      hx-vals='{{ {"nonce": card.nonce, "yes": "0"}|tojson }}'>No</button>
+  </div>
+</article>
+{% endif %}
+<div class="chips">
+  {% for key, text in chips %}
+  {% if key == 'connect' %}<a class="btn alt" href="{{ settings_url }}">{{ text }}</a>
+  {% else %}<button type="button" class="btn alt" hx-post="/chat/chip" hx-target="#chat" hx-swap="innerHTML"
+    hx-disabled-elt="this" hx-vals='{{ {"key": key}|tojson }}'>{{ text }}</button>{% endif %}
+  {% endfor %}
+</div>
+<form class="composer" hx-post="/chat/say" hx-target="#chat" hx-swap="innerHTML" hx-disabled-elt="find button">
+  <input name="text" maxlength="{{ text_max }}" autocomplete="off" required aria-label="Ask or tell me something"
+    placeholder="{{ 'Ask or tell me something' if ready else 'Search your records' }}">
+  <button class="btn" type="submit">Send</button>
+  <span class="thinking muted">Thinking...</span>
+</form>
+<p class="muted small">Add bills, statements and photos in the <a href="/add">Inbox</a>.
+  {% if lines %}<button type="button" class="linkbtn" hx-post="/chat/clear" hx-target="#chat" hx-swap="innerHTML">Clear this chat</button>{% endif %}</p>

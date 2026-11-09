@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}Hello · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Hello{% if user and user.name %}, {{ user.name }}{% endif %}</h1></div></header>
+<div class="card">
+  <p>This page is for adults.</p>
+  <p><a class="btn" href="/">Back to my page</a></p>
+</div>
+{% endblock %}

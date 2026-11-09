@@ -1,0 +1,152 @@
+{
+  "country": "US",
+  "title": "US federal holidays",
+  "observed": "us",
+  "holidays": [
+    {"name": "New Year's Day", "date": "01-01"},
+    {"name": "Martin Luther King Jr. Day", "month": 1, "weekday": "MO", "nth": 3},
+    {"name": "Presidents' Day", "month": 2, "weekday": "MO", "nth": 3},
+    {"name": "Memorial Day", "month": 5, "weekday": "MO", "nth": -1},
+    {"name": "Juneteenth", "date": "06-19", "since": 2021},
+    {"name": "Independence Day", "date": "07-04"},
+    {"name": "Labor Day", "month": 9, "weekday": "MO", "nth": 1},
+    {"name": "Columbus Day / Indigenous Peoples' Day", "month": 10, "weekday": "MO", "nth": 2},
+    {"name": "Veterans Day", "date": "11-11"},
+    {"name": "Thanksgiving", "month": 11, "weekday": "TH", "nth": 4},
+    {"name": "Christmas Day", "date": "12-25"}
+  ],
+  "observances": [
+    {"name": "Daylight saving time starts: clocks go forward 1 hour", "month": 3, "weekday": "SU", "nth": 2, "since": 2007},
+    {"name": "Daylight saving time ends: clocks go back 1 hour", "month": 11, "weekday": "SU", "nth": 1, "since": 2007}
+  ],
+  "regions": {
+    "AK": {"name": "Alaska", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Seward's Day", "month": 3, "weekday": "MO", "nth": -1},
+      {"name": "Alaska Day", "date": "10-18"}]},
+    "AL": {"name": "Alabama", "holidays": [
+      {"name": "Confederate Memorial Day", "month": 4, "weekday": "MO", "nth": 4},
+      {"name": "Jefferson Davis' Birthday", "month": 6, "weekday": "MO", "nth": 1}]},
+    "AR": {"name": "Arkansas", "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Christmas Eve", "date": "12-24"}]},
+    "AZ": {"name": "Arizona", "no_observances": true, "drop": ["Juneteenth"], "holidays": []},
+    "CA": {"name": "California", "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Cesar Chavez Day", "date": "03-31"},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "CO": {"name": "Colorado", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Frances Xavier Cabrini Day", "month": 10, "weekday": "MO", "nth": 1, "since": 2020}]},
+    "CT": {"name": "Connecticut", "holidays": [
+      {"name": "Lincoln's Birthday", "date": "02-12"},
+      {"name": "Good Friday", "easter": -2}]},
+    "DC": {"name": "District of Columbia", "holidays": [
+      {"name": "D.C. Emancipation Day", "date": "04-16"}]},
+    "DE": {"name": "Delaware", "drop": ["Presidents' Day", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Good Friday", "easter": -2},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "FL": {"name": "Florida", "drop": ["Presidents' Day", "Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "GA": {"name": "Georgia", "drop": ["Presidents' Day"], "holidays": []},
+    "HI": {"name": "Hawaii", "no_observances": true, "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Prince Kuhio Day", "date": "03-26"},
+      {"name": "Good Friday", "easter": -2},
+      {"name": "King Kamehameha I Day", "date": "06-11"},
+      {"name": "Statehood Day", "month": 8, "weekday": "FR", "nth": 3}]},
+    "IA": {"name": "Iowa", "drop": ["Presidents' Day", "Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "ID": {"name": "Idaho", "holidays": []},
+    "IL": {"name": "Illinois", "holidays": [
+      {"name": "Lincoln's Birthday", "date": "02-12"},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "IN": {"name": "Indiana", "drop": ["Presidents' Day", "Juneteenth"], "holidays": [
+      {"name": "Good Friday", "easter": -2},
+      {"name": "Lincoln's Birthday", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "KS": {"name": "Kansas", "drop": ["Presidents' Day", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "KY": {"name": "Kentucky", "drop": ["Presidents' Day", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "LA": {"name": "Louisiana", "drop": ["Presidents' Day", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Mardi Gras", "easter": -47},
+      {"name": "Good Friday", "easter": -2}]},
+    "MA": {"name": "Massachusetts", "holidays": [
+      {"name": "Patriots' Day", "month": 4, "weekday": "MO", "nth": 3}]},
+    "MD": {"name": "Maryland", "holidays": [
+      {"name": "American Indian Heritage Day", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "ME": {"name": "Maine", "holidays": [
+      {"name": "Patriots' Day", "month": 4, "weekday": "MO", "nth": 3},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "MI": {"name": "Michigan", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1},
+      {"name": "Christmas Eve", "date": "12-24"},
+      {"name": "New Year's Eve", "date": "12-31"}]},
+    "MN": {"name": "Minnesota", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "MO": {"name": "Missouri", "holidays": [
+      {"name": "Lincoln's Birthday", "date": "02-12"},
+      {"name": "Truman Day", "date": "05-08"}]},
+    "MS": {"name": "Mississippi", "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Confederate Memorial Day", "month": 4, "weekday": "MO", "nth": -1}]},
+    "MT": {"name": "Montana", "drop": ["Juneteenth"], "holidays": []},
+    "NC": {"name": "North Carolina", "drop": ["Presidents' Day", "Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Good Friday", "easter": -2},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "ND": {"name": "North Dakota", "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Good Friday", "easter": -2}]},
+    "NE": {"name": "Nebraska", "holidays": [
+      {"name": "Arbor Day", "month": 4, "weekday": "FR", "nth": -1},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "NH": {"name": "New Hampshire", "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "NJ": {"name": "New Jersey", "drop": ["Juneteenth"], "holidays": [
+      {"name": "Good Friday", "easter": -2},
+      {"name": "Juneteenth", "month": 6, "weekday": "FR", "nth": 3},
+      {"name": "Election Day", "month": 11, "weekday": "TU", "before": 9}]},
+    "NM": {"name": "New Mexico", "drop": ["Presidents' Day"], "holidays": [
+      {"name": "Presidents' Day (day after Thanksgiving)", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "NV": {"name": "Nevada", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Nevada Day", "month": 10, "weekday": "FR", "nth": -1},
+      {"name": "Family Day", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "NY": {"name": "New York", "holidays": []},
+    "OH": {"name": "Ohio", "holidays": []},
+    "OK": {"name": "Oklahoma", "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "OR": {"name": "Oregon", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "PA": {"name": "Pennsylvania", "holidays": [
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "RI": {"name": "Rhode Island", "drop": ["Presidents' Day"], "holidays": [
+      {"name": "Victory Day", "month": 8, "weekday": "MO", "nth": 2}]},
+    "SC": {"name": "South Carolina", "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Confederate Memorial Day", "date": "05-10"},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1},
+      {"name": "Christmas Eve", "date": "12-24"},
+      {"name": "Day after Christmas", "date": "12-26"}]},
+    "SD": {"name": "South Dakota", "holidays": []},
+    "TN": {"name": "Tennessee", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Good Friday", "easter": -2},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "TX": {"name": "Texas", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Confederate Heroes Day", "date": "01-19"},
+      {"name": "Texas Independence Day", "date": "03-02"},
+      {"name": "San Jacinto Day", "date": "04-21"},
+      {"name": "Lyndon Baines Johnson Day", "date": "08-27"},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1},
+      {"name": "Christmas Eve", "date": "12-24"},
+      {"name": "Day after Christmas", "date": "12-26"}]},
+    "UT": {"name": "Utah", "holidays": [
+      {"name": "Pioneer Day", "date": "07-24"}]},
+    "VA": {"name": "Virginia", "holidays": [
+      {"name": "Election Day", "month": 11, "weekday": "TU", "before": 9},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "VT": {"name": "Vermont", "holidays": [
+      {"name": "Town Meeting Day", "month": 3, "weekday": "TU", "nth": 1},
+      {"name": "Day after Thanksgiving", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "WA": {"name": "Washington", "drop": ["Columbus Day / Indigenous Peoples' Day"], "holidays": [
+      {"name": "Native American Heritage Day", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "WI": {"name": "Wisconsin", "drop": ["Presidents' Day", "Juneteenth", "Columbus Day / Indigenous Peoples' Day", "Veterans Day"], "holidays": [
+      {"name": "Christmas Eve", "date": "12-24"},
+      {"name": "New Year's Eve", "date": "12-31"}]},
+    "WV": {"name": "West Virginia", "drop": ["Juneteenth"], "holidays": [
+      {"name": "West Virginia Day", "date": "06-20"},
+      {"name": "Lincoln's Day", "month": 11, "weekday": "TH", "nth": 4, "shift": 1}]},
+    "WY": {"name": "Wyoming", "drop": ["Juneteenth", "Columbus Day / Indigenous Peoples' Day"], "holidays": []}
+  }
+}

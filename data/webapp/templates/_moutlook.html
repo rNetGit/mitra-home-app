@@ -1,0 +1,62 @@
+{# Money > Spending / Bills / Regular: the simple outlook, built by data/wall_money.py (the same figures as the Mitra
+   Wall's Money pages and the phones). Needs `part` and `mo` (that part's view). Bars are SVG: no inline styles (CSP). #}
+{% macro bar(cls, w) %}<svg class="mo-bar {{ cls }}" viewBox="0 0 100 5" preserveAspectRatio="none" aria-hidden="true"><rect class="bg" width="100" height="5" rx="2.5"/><rect class="fill" width="{{ [w, 0.5]|max }}" height="5" rx="2.5"/></svg>{% endmacro %}
+{% if part == 'spending' %}{% set s = mo %}
+<div class="mo-top">
+  <div class="card"><span class="muted">{{ s.names.now }} so far</span><b>{{ s.totals.now|money if s.totals.now is not none else '—' }}</b>
+    <small class="muted">{% if s.through %}Statements up to {{ s.through }} · day {{ s.day }} of {{ s.days }}{% else %}No statements for this month yet.{% endif %}</small></div>
+  <div class="card"><span class="muted">{{ s.names.prev }}</span><b>{{ s.totals.prev|money if s.totals.prev is not none else '—' }}</b>
+    <small class="muted">The whole month.</small></div>
+  <div class="card"><span class="muted">{{ s.names.ly }}</span><b>{{ s.totals.ly|money if s.totals.ly is not none else '—' }}</b>
+    <small class="muted">{% if s.have.ly %}The same month a year ago.{% else %}No statements that far back yet.{% endif %}</small></div>
+</div>
+<section class="card" aria-label="Spending by category">
+  <div class="mo-g mo-h"><span>Category</span><span class="num now">{{ s.names.now }}</span><span class="num">{{ s.names.prev }}</span><span class="num">{{ s.names.ly }}</span></div>
+  {% for r in s.rows %}
+  <div class="mo-g"><div class="mo-cat"><b>{{ r.label }}</b>{{ bar('now', r.now_w) }}{{ bar('prev', r.prev_w) }}</div>
+    <span class="num now"><b>{{ r.now_text }}</b></span><span class="num">{{ r.prev_text }}</span><span class="num">{{ r.ly_text }}</span></div>
+  {% else %}<p class="muted">No spending in the statements for these months yet.</p>{% endfor %}
+  <p class="muted small">Spending as in the Ledger: transfers, card payments, investing and tax are not counted, a refund comes off and a card charge counts once. <a href="{{ furl('ledger') }}">Open the Ledger</a>.</p>
+</section>
+{% elif part == 'paid' %}{% set b = mo %}
+<div class="mo-top">
+  <div class="card"><span class="muted">Paid in {{ b.names.now }}</span><b>{{ b.now_total }}</b><small class="muted">{{ b.now_n }} bill{{ 's' if b.now_n != 1 }} so far.</small></div>
+  <div class="card"><span class="muted">Paid in {{ b.names.prev }}</span><b>{{ b.prev_total }}</b><small class="muted">{{ b.prev_n }} bill{{ 's' if b.prev_n != 1 }}.</small></div>
+  <div class="card{{ ' mo-warn' if b.wait_n }}"><span class="muted">Still to come</span><b>{{ b.wait_total if b.wait_n else '—' }}</b>
+    <small class="muted">{% if b.wait_n %}{{ b.wait_n }} paid in {{ b.names.prev }}, not seen yet this month.{% else %}Everything paid last month is paid again.{% endif %}</small></div>
+</div>
+<div class="mo-pair">
+  <section class="card" aria-label="Bills, {{ b.names.prev }} and {{ b.names.now }}">
+    <div class="mo-b mo-h"><span>Bill</span><span class="num">{{ b.names.prev }}</span><span class="num now">{{ b.names.now }}</span></div>
+    {% for r in b.rows %}
+    <div class="mo-b {{ r.state }}"><div><b>{{ r.name }}</b>{% if r.note %}<small class="mo-note">{{ r.note }}</small>{% endif %}</div>
+      <span class="num">{% if r.prev_text %}{{ r.prev_text }}<small>{{ r.prev_on }}</small>{% else %}<small>—</small>{% endif %}</span>
+      <span class="num">{% if r.now_text %}<b>{{ r.now_text }}</b><small>{{ r.now_on }}</small>{% else %}<span class="chip-s t-warn">Not yet</span>{% endif %}</span></div>
+    {% else %}<p class="muted">No bills in the statements for these two months yet.</p>{% endfor %}
+  </section>
+  <section class="card" aria-label="Open on the bill list">
+    <h2>Open on the bill list</h2>
+    <ul class="rlist">{% for l in b.listed %}
+      <li><div><span class="rl-main"><span class="rl-t">{{ l.name }}</span><span class="rl-m{{ ' bad' if l.late }}">{{ 'Was due' if l.late else 'Due' }} {{ l.due }}</span></span><span class="rl-r"><b>{{ l.amount }}</b></span></div></li>
+    {% else %}<li><div class="muted">Nothing open on the bill list this month.</div></li>{% endfor %}</ul>
+    <p class="muted small">Bills are utilities, phone, internet, insurance, rent or mortgage and loan payments, as in the Ledger's Bills paid. <a href="{{ furl('bills') }}">Mark one paid on the bill list</a>.</p>
+  </section>
+</div>
+{% elif part == 'regular' %}{% set g = mo %}
+<div class="mo-top mo-reg">
+  <div class="card"><span class="muted">Every month</span><b>{{ g.month }}</b><small class="muted">{{ g.n }} regular bill{{ 's' if g.n != 1 }} and subscription{{ 's' if g.n != 1 }} · about {{ g.year }} a year.</small></div>
+  <div class="card"><span class="muted">Subscriptions</span><b>{{ g.subs_month }}</b><small class="muted">{{ g.subs_n }} running, a month.</small></div>
+  <div class="card mo-next"><span class="muted">Next 7 days</span>{% if g.soon %}<span class="mo-soon">{% for x in g.soon %}<span class="chip-s t-n"><b>{{ x.on }}</b> {{ x.name }}</span>{% endfor %}</span>{% else %}<small class="muted">Nothing regular due this week.</small>{% endif %}</div>
+</div>
+<div class="mo-groups">
+  {% for grp in g.groups %}
+  <section class="card" aria-label="{{ grp.title }}">
+    <h2>{{ grp.title }}</h2><p class="muted small">{{ grp.total }} a month</p>
+    <ul class="rlist">{% for r in grp.rows %}
+      <li><div><span class="rl-main"><span class="rl-t">{{ r.name }}</span><span class="rl-m">{% if r.next %}<span class="{{ 'bad' if r.next_late }}">{{ 'Expected' if r.next_late else 'Next' }} {{ r.next }}</span>{% endif %}{% if r.freq %} · {{ r.freq }}{% endif %}{% for f in r.flags %} · <span class="warn">{{ f }}</span>{% endfor %}</span></span><span class="rl-r"><b>{{ r.amount }}</b></span></div></li>
+    {% else %}<li><div class="muted">None found yet.</div></li>{% endfor %}</ul>
+  </section>
+  {% endfor %}
+</div>
+<p class="muted small">Found in the statements (paid in two of the last four months), your subscriptions and the bill list. <a href="{{ furl('subs') }}">Change or cancel a subscription</a>.</p>
+{% endif %}

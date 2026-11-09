@@ -1,0 +1,118 @@
+<details class="card sfold"><summary><h2>Back up and export</h2><span class="muted">Back up now or export every table</span></summary>
+<div id="data-backup">
+  <div class="optrow">
+    <button type="button" class="btn" hx-post="/settings/backup" hx-disabled-elt="this" hx-indicator="#bk-wait">Back up now</button>
+    <button type="button" class="btn alt" hx-post="/settings/export" hx-disabled-elt="this" hx-indicator="#bk-wait">Export all my data</button>
+    <span id="bk-wait" class="setting-up muted" role="status">Working... this can take a minute.</span>
+  </div>
+  {% if export_name %}<p><a class="btn alt" href="/settings/export/{{ export_name|urlencode }}" download>Download the export ({{ export_name }})</a></p>{% endif %}
+  <p class="muted small">A backup also runs every week by itself once it runs on its own (below). An export is every table as
+    CSV files in one zip, for you to keep or open in a spreadsheet.</p>
+</div>
+</details>
+
+<details class="card sfold"><summary><h2>Restore from backup</h2><span class="muted">Put the records back as they were</span></summary>
+<div id="data-restore">
+  {% if last_restore %}<p class="{{ 'notice' if last_restore.ok else 'alert' }}">{{ last_restore.when }}: {{ last_restore.message }}{% if last_restore.ok and last_restore.kept %} A copy of the data from just before is kept with your backups.{% endif %}</p>{% endif %}
+  {% if restoring %}
+  <p class="notice" data-wait-back="/settings?group=data" role="status">{{ restoring }}</p>
+  {% elif snaps %}
+  <p class="muted">Puts the household's records back as they were at the time of a backup. Everything entered since then is
+    replaced; a copy of today's data is kept first. Filed papers and settings are not overwritten, only ones that went
+    missing come back. To undo a restore, pick the copy from just before it.</p>
+  <form class="nform" hx-post="/settings/backup/restore" hx-vals='{"op": "check"}' hx-disabled-elt="find button">
+    <label class="wide">Backup<select name="snap">{% for s in snaps %}<option value="{{ s.i }}">{{ s.label }}</option>{% endfor %}</select></label>
+    {% if snaps|selectattr('need_pass')|list %}<label>Backup passphrase (locked backups only)<input name="passphrase" type="password" maxlength="200" autocomplete="off"></label>{% endif %}
+    <label class="check wide"><input type="checkbox" name="sure" value="1"> I understand that everything entered after this backup is replaced</label>
+    <div class="optrow wide">
+      <button class="btn alt" type="submit">Check this backup</button>
+      {% if local %}<button type="button" class="btn" hx-post="/settings/backup/restore" hx-include="closest form" hx-vals='{"op": "start"}' hx-target="#data-restore" hx-swap="innerHTML" hx-disabled-elt="this">Restore from backup</button>{% endif %}
+    </div>
+  </form>
+  <p class="muted small">{% if local %}The phone bot pauses during the restore and starts again afterwards. This page closes for about a minute.{% else %}A backup can be checked here; restoring it is done on the PC itself, because the app closes and starts again.{% endif %}</p>
+  {% else %}
+  <p class="muted">No backups yet. Back up now makes the first one.</p>
+  {% endif %}
+</div>
+</details>
+
+<details class="card sfold"><summary><h2>Runs on its own</h2><span class="muted">Daily brief, weekly digest, backups, inbox check</span></summary>
+<div id="data-run">
+  <p class="muted">This PC makes the Brief, the weekly digest and the backups at set times, with nothing to keep open.
+    Switch each one on or off, change when it runs, and see when it last ran. The PC must be on and you signed in.</p>
+  {% for j in tasks.jobs %}
+  <div class="job" id="job-{{ j.job }}">
+    <div class="job-head">
+      <h3>{{ j.label }} <span class="chip {{ 'ok' if j.state == 'on' else 'warn' if j.state in ('paused', 'elsewhere') else '' }}">{{ j.state_text }}</span></h3>
+      <form hx-post="/settings/tasks/job" hx-trigger="change" hx-vals='{"job": "{{ j.job }}"}' hx-disabled-elt="find input">
+        <label class="switch"><input type="checkbox" role="switch" name="on" value="1" {{ 'checked' if j.on }}
+          aria-label="{{ j.label }} runs on its own"><span aria-hidden="true"></span></label>
+      </form>
+    </div>
+    <p class="muted small">{{ j.when }} &middot; Last run:
+      {% if j.last %}{{ j.last.text }} {% if j.last.ok %}<span class="chip ok">done</span>{% else %}<span class="chip warn">failed</span>{% if j.last.note %} {{ j.last.note }}{% endif %}{% endif %}
+      {% else %}not yet{% endif %}</p>
+    {% if j.state == 'elsewhere' %}<p class="alert small">This task runs another copy of the app: <span class="fp">{{ j.where }}</span>.
+      Switching it on here moves it to this copy.</p>{% endif %}
+    {% if j.time %}
+    <details class="more-form"><summary class="btn alt sm">Change time</summary>
+      <form class="nform" hx-post="/settings/tasks/time" hx-vals='{"job": "{{ j.job }}"}' hx-disabled-elt="find button">
+        {% if j.day %}<label>Day<select name="day">{% for d, lbl in tasks.days %}<option value="{{ d }}" {{ 'selected' if j.day == d }}>{{ lbl }}</option>{% endfor %}</select></label>{% endif %}
+        <label>Time<input type="time" name="time" value="{{ j.time }}" required></label>
+        <button class="btn" type="submit">Save{{ ' and update this PC' if j.on }}</button>
+      </form>
+    </details>
+    {% endif %}
+  </div>
+  {% endfor %}
+  {% if not tasks.registered %}
+  <form class="nform" hx-post="/settings/tasks" hx-disabled-elt="find button">
+    <label class="check wide"><input type="checkbox" name="inbox" value="1" {{ 'checked' if tasks.inbox_cycle }}> Also check the inbox every two hours (the AI is used only when files are waiting)</label>
+    <button class="btn alt" type="submit">Switch them all on</button>
+  </form>
+  {% endif %}
+</div>
+</details>
+
+<details class="card sfold"><summary><h2>About {{ brand }}</h2><span class="muted">Version, website, source and licence</span></summary>
+<div id="data-about">
+  <p class="muted">{{ brand }} {{ upd.current }}. Free to use, no account, no subscription. Your records stay on this PC.</p>
+  <p class="optrow">
+    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/" target="_blank" rel="noopener noreferrer">{{ brand }} website</a>
+    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/install.html" target="_blank" rel="noopener noreferrer">Download the latest version</a>
+    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/source.html" target="_blank" rel="noopener noreferrer">Source code</a>
+  </p>
+  <p class="muted small">Licence: GNU AGPL-3.0-or-later (the file LICENSE in the app folder). Records and checklists only, not financial, tax, legal, insurance or medical advice.</p>
+</div>
+</details>
+
+<details class="card sfold"><summary><h2>Updates</h2><span class="muted">Check for and install new versions</span></summary>
+<div id="data-update">
+  <p class="muted">This is {{ brand }} {{ upd.current }}.{% if upd.error %} {{ upd.error }}{% elif upd.newer %} Version {{ upd.newer }} is available.{% elif upd.checked %} Up to date.{% endif %}</p>
+  <div class="optrow">
+    <button type="button" class="btn alt" hx-post="/settings/update" hx-vals='{"op": "check"}' hx-disabled-elt="this">Check for updates</button>
+    {% if upd.newer and upd.site %}<a class="btn" href="{{ upd.site }}" target="_blank" rel="noopener noreferrer">Open the download page for {{ upd.newer }}</a>
+    {% elif upd.newer %}<button type="button" class="btn" hx-post="/settings/update" hx-vals='{"op": "go"}' hx-disabled-elt="this" hx-indicator="#upd-wait">Update to {{ upd.newer }}</button>
+    <span id="upd-wait" class="setting-up muted" role="status">Updating (signed; your data is not touched, the database is backed up first)...</span>{% endif %}
+  </div>
+  <div class="job" id="upd-daily">
+    <div class="job-head">
+      <h3>Check for new versions every day</h3>
+      <form hx-post="/settings/update" hx-trigger="change" hx-vals='{"op": "daily"}' hx-disabled-elt="find input">
+        <label class="switch"><input type="checkbox" role="switch" name="on" value="1" {{ 'checked' if upd.daily.on }}
+          aria-label="Check for new versions every day"><span aria-hidden="true"></span></label>
+      </form>
+    </div>
+    <p class="muted small">Once a day the morning task asks {{ upd.daily.host }} for the latest release number and its notes. Only that address is contacted and nothing about your family is sent. A new version shows up in the Inbox; it is never installed without you. Off: no network call at all.{% if upd.daily.on and upd.daily.checked %} Last look: {{ upd.daily.checked }}.{% endif %}</p>
+  </div>
+</div>
+</details>
+
+<details class="card sfold"><summary><h2>Check everything</h2><span class="muted">Every task on this PC and the AI</span></summary>
+<div id="data-check">
+  <p class="muted">Also checks every scheduled task on this PC (not only this household's), and asks the AI a short question, so it uses a little of your AI plan (about a minute).</p>
+  <button type="button" class="btn alt" hx-post="/settings/doctor" hx-target="#doctor-out" hx-swap="innerHTML" hx-disabled-elt="this" hx-indicator="#doc-wait">Run full check</button>
+  <span id="doc-wait" class="setting-up muted" role="status">Checking...</span>
+  <div id="doctor-out"></div>
+</div>
+</details>

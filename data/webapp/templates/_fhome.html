@@ -1,0 +1,30 @@
+{% from "_ui.html" import tile %}
+{% macro icon(name) %}<svg viewBox="0 0 24 24" aria-hidden="true">{% if name == 'i-pay' %}<path d="M5 21V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16l-3-2-2 2-2-2-2 2-2-2-3 2"/><path d="M14 8h-2.5a1.5 1.5 0 0 0 0 3h1a1.5 1.5 0 0 1 0 3H10M12 14v1.5M12 6.5V8"/>
+{% elif name == 'i-keep' %}<path d="M3 21h18M3 10h18M5 6l7-3 7 3"/><path d="M4 10v11M20 10v11M8 14v3M12 14v3M16 14v3"/>
+{% else %}<path d="M4 19h16"/><path d="M4 15l4-6 4 2 4-5 4 4"/>{% endif %}</svg>{% endmacro %}
+{# Money > Overview, Advanced view: this month's story card (trends.month_summary + today_data.month_view), Needs a look,
+   then the three lanes, each with its parts. The Standard view has _fhome_simple.html instead. #}
+{% set m = v.summary if v else o.month %}
+{% if o.as_of %}<p class="muted asof"{% if o.as_of.behind %} data-behind="{{ o.as_of.behind }}"{% endif %}>Data as of: {{ o.as_of.text }}{% if o.as_of.behind %} · <a href="/money?part=accounts">see accounts</a>{% endif %}</p>{% endif %}
+<div class="fhome-top">
+{% if m %}
+<div>{% set story_only = true %}{% include "_month_card.html" %}
+<p class="optrow"><a class="btn alt" href="/money?part=month">All categories, {{ m.label }}</a></p></div>
+{% else %}
+<div class="card"><h2>No statements yet</h2><p class="muted">Drop a bank or card statement in the <a href="/add">Inbox</a> and this page fills in.</p></div>
+{% endif %}
+{% include "_fneeds.html" %}
+</div>
+<div class="flanes">
+{% for l in o.lanes %}
+  <section class="flane-box" aria-label="{{ l.group }}">
+    <a class="flane" href="/money?part={{ l.first }}">
+      <span class="flane-ico {{ l.g }}">{{ icon(l.icon) }}</span>
+      <span class="flane-t"><b>{{ l.group }}</b><span class="muted">{{ l.sub }}</span></span>
+      <span class="flane-n"><b class="{{ l.tone }}">{{ l.big }}</b><small class="muted">{{ l.big_label }}</small></span>
+      <span class="flane-go" aria-hidden="true">›</span>
+    </a>
+    <nav class="fchips wrap" aria-label="{{ l.group }} parts">{% for k, lbl in l.parts %}<a href="{{ furl(k) }}">{{ lbl }}</a>{% endfor %}</nav>
+  </section>
+{% endfor %}
+</div>
