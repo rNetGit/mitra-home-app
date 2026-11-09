@@ -1,7 +1,7 @@
 name: CI
 
-# Cost rules (RELEASING.md "Keeping CI cheap"): the repository is private, so every minute is billed, Windows at 2x and
-# macOS at 10x Linux. Pushes to main and pull requests run Ubuntu + Python 3.13 only. A release tag runs nothing here:
+# Cost rules (RELEASING.md "Keeping CI cheap"): the repository is public, so standard runners are free, but the Mac
+# runner is the maintainer's own Mac and Windows / macOS minutes are slow. (While it was private: Windows 2x, macOS 10x Linux.) Pushes to main and pull requests run Ubuntu + Python 3.13 only. A release tag runs nothing here:
 # it points at the merge commit main already tested, and the full suite runs locally before every release. The full
 # OS / Python matrix is a manual run (Actions > CI > Run workflow, "full"), for changes to the installers, launch.py,
 # paths or anything else that differs between Windows, macOS and Linux. Docs-only changes do not run CI, and a newer
