@@ -26,6 +26,24 @@ Settings pages that change the PC itself stay PC-only and are not reachable here
   inbox check). `crontab` inside the image is a shim that keeps the lines in `/data/config/crontab.txt`, so
   `onboard.py` and Settings work unchanged. The AI steps need an API-key provider; the Claude CLI is not in the image.
 
+## Timezone
+
+The container clock is UTC unless you set `TZ`, so the 7:00 daily brief would run at 7:00 UTC. Set your zone before
+`up`: `TZ=America/New_York docker compose up -d` (or put `TZ=...` in a `.env` file next to `docker-compose.yml`).
+
+## Notes on what you see in the logs
+
+The start-up text was written for a PC. Inside the container, ignore "on this PC", the Windows Firewall lines and the
+container address it prints (172.x.x.x). Use your server's own address: `https://<server-ip>:8701`. Setup and pairing
+steps that say "Settings > Phones on this PC" are done from a phone's browser or the app on the home Wi-Fi.
+
+## Changing a job time
+
+The jobs are lines in `/data/config/crontab.txt` (the standard five time fields, then the command). Settings and
+`onboard.py` write it for you. To see or edit by hand:
+`docker compose exec mitra crontab -l`, for example the daily brief at 7:00:
+`0 7 * * * cd '/app' && '/opt/venv/bin/python' tasks/run_task.py daily_digest`
+
 ## Your data
 
 Everything (database, papers, settings, certificate) is in the `mitra-data` volume mounted at `/data`; weekly backups go to the
