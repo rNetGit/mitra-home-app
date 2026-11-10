@@ -33,9 +33,10 @@ The container clock is UTC unless you set `TZ`, so the 7:00 daily brief would ru
 
 ## Notes on what you see in the logs
 
-The start-up text was written for a PC. Inside the container, ignore "on this PC", the Windows Firewall lines and the
-container address it prints (172.x.x.x). Use your server's own address: `https://<server-ip>:8701`. Setup and pairing
-steps that say "Settings > Phones on this PC" are done from a phone's browser or the app on the home Wi-Fi.
+The image sets `MITRAHOME_CONTAINER=1`, so the start-up text talks about the server: it prints `https://<server-address>:8701`
+(use your server's own address, not the container address 172.x.x.x) and leaves out the Windows Firewall lines. The setup
+wizard (`docker compose run --rm mitra setup`) still has some PC wording; pairing steps that say "Settings > Phones" are done
+from a phone's browser or the app on the home Wi-Fi.
 
 ## Changing a job time
 

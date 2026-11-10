@@ -5,6 +5,7 @@ FROM python:3.13-slim
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
     MITRAHOME_VENV=/opt/venv \
+    MITRAHOME_CONTAINER=1 \
     PATH=/opt/venv/bin:$PATH
 
 RUN useradd --create-home --uid 1000 mitra && mkdir /data /Mitra-Home-Backup && chown mitra /data /Mitra-Home-Backup
