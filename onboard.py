@@ -30,6 +30,7 @@ ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "data"))
 CONTAINER = os.environ.get("MITRAHOME_CONTAINER") == "1"  # the Docker image sets it: say "server", not "PC"
 HERE = "this server" if CONTAINER else "this PC"
+DEFAULT_AI = "none" if CONTAINER else "claude_code"  # the image has no Claude Code or other CLI
 try:
     import paths  # noqa: E402
 except ImportError:  # onboard.py copied on its own (help only): the layout inside the app folder
@@ -730,7 +731,7 @@ def register_chat_task(kind):
 
 
 AI_CHOICES = [
-    ("claude_code", "Claude Code agents under YOUR OWN Claude login (default). Best accuracy for statements. Uses your plan's limits. ~$20/mo plan"),
+    ("claude_code", "Claude Code agents under YOUR OWN Claude login" + ("" if CONTAINER else " (default)") + ". Best accuracy for statements. Uses your plan's limits. ~$20/mo plan"),
     ("claude_cli", "Your signed-in Claude (Pro etc.) as a cheap text-only model, Haiku. Inbox filing + chat; no statements/brief. ~$20/mo plan"),
     ("codex_cli", "Your signed-in OpenAI Codex CLI (ChatGPT plan). Inbox filing + chat; text only; it CAN READ files on " + HERE),
     ("gemini_cli", "Your signed-in Gemini CLI. Inbox filing + chat. Free tier trains on your prompts: avoid for family papers"),
@@ -753,12 +754,13 @@ def step_ai(cfg, st):
     print("  Which AI should read the documents you drop in inbox/? (COMPLIANCE.md has the rules)")
     if CONTAINER:
         print("  In Docker: the signed-in options (claude_code, claude_cli, codex_cli, gemini_cli) need a CLI that is not in the image.")
-        print("  Pick an API key option (anthropic, openai, gemini, openrouter), ollama on another machine, or none.")
+        print("  Pick an API key option (anthropic, openai, gemini, openrouter), ollama on another machine, or none (Enter = none).")
     for i, (k, d) in enumerate(AI_CHOICES, 1):
         print(f"   {i}. {k:<12} {d}")
-    cur = (cfg.get("ai") or {}).get("provider", "claude_code")
-    pick = ask("Number", str([k for k, _ in AI_CHOICES].index(cur) + 1 if cur in dict(AI_CHOICES) else 1))
-    provider = AI_CHOICES[int(pick) - 1][0] if pick.isdigit() and 1 <= int(pick) <= len(AI_CHOICES) else "claude_code"
+    cur = (cfg.get("ai") or {}).get("provider", DEFAULT_AI)
+    keys = [k for k, _ in AI_CHOICES]
+    pick = ask("Number", str(keys.index(cur if cur in keys else DEFAULT_AI) + 1))
+    provider = AI_CHOICES[int(pick) - 1][0] if pick.isdigit() and 1 <= int(pick) <= len(AI_CHOICES) else DEFAULT_AI
     ai = dict(cfg.get("ai") or {})
     ai["provider"] = provider
     if provider in ("gemini", "gemini_cli"):

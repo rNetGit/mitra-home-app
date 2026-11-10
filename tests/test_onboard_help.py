@@ -51,3 +51,12 @@ def test_wizard_says_server_inside_the_container_and_pc_elsewhere():
     assert (here, container) == ("this server", "True") and "this PC" not in ai and "nothing leaves this server" in ai
     here, container, ai = _wording("")
     assert (here, container) == ("this PC", "False") and "nothing leaves this PC" in ai
+
+
+def test_the_ai_default_is_none_in_the_container_and_claude_code_elsewhere():
+    import os
+    code = "import onboard; print(onboard.DEFAULT_AI)"
+    for flag, want in (("1", "none"), ("", "claude_code")):
+        r = subprocess.run([sys.executable, "-c", code], cwd=SRC, env={**os.environ, "MITRAHOME_CONTAINER": flag},
+                           capture_output=True, text=True, timeout=60)
+        assert r.stdout.strip() == want, r.stderr
