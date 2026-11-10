@@ -1,0 +1,13 @@
+services:
+  mitra:
+    build: .
+    image: mitra-home:local
+    restart: unless-stopped
+    ports:
+      - "8701:8701"        # HTTPS for phones and walls (app port 8601 + 100)
+    volumes:
+      - mitra-data:/data   # papers, settings, database: back this volume up
+    stdin_open: true
+    tty: true
+volumes:
+  mitra-data:

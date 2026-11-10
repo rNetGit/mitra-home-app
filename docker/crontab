@@ -1,0 +1,9 @@
+#!/bin/sh
+# Container stand-in for crontab(1): the lines live in /data/config/crontab.txt and docker/scheduler.py runs them.
+F=/data/config/crontab.txt
+case "$1" in
+  -l) [ -f "$F" ] && cat "$F" || { echo "no crontab" >&2; exit 1; } ;;
+  -)  cat > "$F" ;;
+  -r) rm -f "$F" ;;
+  *)  echo "usage: crontab -l | - | -r" >&2; exit 2 ;;
+esac
