@@ -34,3 +34,20 @@ def test_intake_agent_runs_the_duplicate_check_first_and_may_run_it():
     assert any(fnmatch.fnmatchcase(cmd, p[5:-1]) for p in perms["allow"] if p.startswith("Bash(")), "allowed to run"
     assert not any(fnmatch.fnmatchcase(cmd, p[5:-1]) for p in perms["deny"] if p.startswith("Bash(")), "not denied"
     assert (SRC / "data" / "ai_intake.py").read_text(encoding="utf-8").count('"duplicates"') >= 1, "subcommand exists"
+
+
+def _wording(env_value):
+    """The AI list and the quick-start words as a fresh `import onboard` sees them (the words are fixed at import)."""
+    import os
+    code = "import onboard; print(onboard.HERE); print(onboard.CONTAINER); print(' '.join(d for _, d in onboard.AI_CHOICES))"
+    env = {**os.environ, "MITRAHOME_CONTAINER": env_value}
+    r = subprocess.run([sys.executable, "-c", code], cwd=SRC, env=env, capture_output=True, text=True, timeout=60)
+    assert r.returncode == 0, r.stderr
+    return r.stdout.splitlines()
+
+
+def test_wizard_says_server_inside_the_container_and_pc_elsewhere():
+    here, container, ai = _wording("1")
+    assert (here, container) == ("this server", "True") and "this PC" not in ai and "nothing leaves this server" in ai
+    here, container, ai = _wording("")
+    assert (here, container) == ("this PC", "False") and "nothing leaves this PC" in ai

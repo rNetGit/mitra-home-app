@@ -28,6 +28,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT / "data"))
+CONTAINER = os.environ.get("MITRAHOME_CONTAINER") == "1"  # the Docker image sets it: say "server", not "PC"
+HERE = "this server" if CONTAINER else "this PC"
 try:
     import paths  # noqa: E402
 except ImportError:  # onboard.py copied on its own (help only): the layout inside the app folder
@@ -730,13 +732,13 @@ def register_chat_task(kind):
 AI_CHOICES = [
     ("claude_code", "Claude Code agents under YOUR OWN Claude login (default). Best accuracy for statements. Uses your plan's limits. ~$20/mo plan"),
     ("claude_cli", "Your signed-in Claude (Pro etc.) as a cheap text-only model, Haiku. Inbox filing + chat; no statements/brief. ~$20/mo plan"),
-    ("codex_cli", "Your signed-in OpenAI Codex CLI (ChatGPT plan). Inbox filing + chat; text only; it CAN READ files on this PC"),
+    ("codex_cli", "Your signed-in OpenAI Codex CLI (ChatGPT plan). Inbox filing + chat; text only; it CAN READ files on " + HERE),
     ("gemini_cli", "Your signed-in Gemini CLI. Inbox filing + chat. Free tier trains on your prompts: avoid for family papers"),
     ("anthropic", "Anthropic API key, pay per use (about $1/month for a family) for inbox filing + chat"),
     ("openai", "OpenAI API key, pay per use (about $0.20/month): cheapest hosted option"),
     ("gemini", "Google Gemini API key, pay per use (about $0.40/month); use the paid tier"),
     ("openrouter", "OpenRouter API key: one key, many models (Gemini, GPT, Claude, Llama...), pay per use, cents/month"),
-    ("ollama", "Local model on this PC via Ollama. Free, nothing leaves the PC; lower accuracy"),
+    ("ollama", f"Local model on {HERE} via Ollama. Free, nothing leaves {HERE}; lower accuracy"),
     ("none", "No AI in the Python pipeline. You process the inbox yourself or with Claude Code by hand"),
 ]
 
@@ -749,6 +751,9 @@ TEXT_PROVS = KEYED_PROVS + ("ollama",) + TEXT_CLIS
 def step_ai(cfg, st):
     """Choose which AI reads your documents, with plain consent. API keys only; never a subscription login token."""
     print("  Which AI should read the documents you drop in inbox/? (COMPLIANCE.md has the rules)")
+    if CONTAINER:
+        print("  In Docker: the signed-in options (claude_code, claude_cli, codex_cli, gemini_cli) need a CLI that is not in the image.")
+        print("  Pick an API key option (anthropic, openai, gemini, openrouter), ollama on another machine, or none.")
     for i, (k, d) in enumerate(AI_CHOICES, 1):
         print(f"   {i}. {k:<12} {d}")
     cur = (cfg.get("ai") or {}).get("provider", "claude_code")
@@ -834,10 +839,12 @@ def step_safety(cfg, st):
     print("   * Never paste a Claude login token into any tool. Other tools need an API key, not your subscription.")
     print("   * Check your Claude privacy setting about using chats to improve models; opt out if you prefer.")
     print("   * Answers are AI-assisted records, not tax/legal/medical/insurance advice.")
-    print("  Privacy, plainly: the database, archive and backups stay on this PC. But when an AI agent")
+    print(f"  Privacy, plainly: the database, archive and backups stay on {HERE}. But when an AI agent")
     print("  reads a statement or email, that content is sent to your Claude account (Anthropic) to be read.")
     print("  Phone briefs copied to Google Drive contain vendor names and amounts. Back up to an encrypted drive")
     print("  (BitLocker / FileVault / VeraCrypt): backups contain your full financial database.")
+    if CONTAINER:
+        print("  In Docker: keep the Mitra-Home-Backup volume on an encrypted disk and copy it off the server too.")
     ok = yes("I understand and accept these rules", True)
     return ok, ""
 
@@ -964,7 +971,9 @@ def step_tasks(cfg, st):
     if DRY:
         print("  Dry-run: skipped.")
         return True, "skipped"
-    bd = ask("Backup folder on a DIFFERENT drive/device, ideally encrypted (e.g. D:\\MitraHome_backups)", cfg.get("backup_dest", ""))
+    bd = ask("Second backup folder on a DIFFERENT drive/device, ideally encrypted (weekly backups already go to the Mitra-Home-Backup volume; blank = none)"
+             if CONTAINER else
+             "Backup folder on a DIFFERENT drive/device, ideally encrypted (e.g. D:\\MitraHome_backups)", cfg.get("backup_dest", ""))
     cfg["backup_dest"] = bd
     if yes("Encrypt backups (recommended: the backup drive may be lost or stolen)?", cfg.get("backup_encrypt", True)):
         sys.path.insert(0, str(ROOT / "data"))
@@ -979,7 +988,7 @@ def step_tasks(cfg, st):
             crypto_box.available()
             if not crypto_box.load_passphrase():
                 import getpass
-                pw = getpass.getpass("  Choose a backup passphrase (12+ characters; write it down and keep a copy OFF this PC): ")
+                pw = getpass.getpass("  Choose a backup passphrase (12+ characters; write it down and keep a copy OFF " + HERE + "): ")
                 if len(pw) >= 12 and pw == getpass.getpass("  Repeat it: "):
                     crypto_box.store_passphrase(pw)
                     print("  Saved to config/secrets.env (git-ignored, never backed up). Without this passphrase the backups cannot be restored.")
@@ -1019,7 +1028,7 @@ def step_first_data(cfg, st):
         print("  Then file them: open the app (Start Mitra Home) > Inbox > File them now, or run: python data/ai_intake.py")
     else:
         print("  Then open Claude Code in this folder and say: process inbox")
-    print("  (No Google account needed: everything works on this PC. Add Gmail/Calendar/Drive later: python onboard.py add google)")
+    print(f"  (No Google account needed: everything works on {HERE}. Add Gmail/Calendar/Drive later: python onboard.py add google)")
     return confirm_manual("Understood (you can drop files any time)."), ""
 
 
@@ -1343,11 +1352,11 @@ def main():
         print(f"  -> {'done' if ok else 'not complete' + (': ' + note if note else '')}")
         return
     if cmd == "run" and not st["done"] and "mode" not in st:
-        st["mode"] = "easy" if yes("Quick start (laptop only, about 5 minutes, no Google needed) instead of the full setup?", True) else "full"
+        st["mode"] = "easy" if yes(f"Quick start ({'this server only' if CONTAINER else 'laptop only'}, about 5 minutes, no Google needed) instead of the full setup?", True) else "full"
         save_json(STATE, st)
     easy = cmd == "easy" or st.get("mode") == "easy"
     if easy:
-        print("\nQuick start: laptop only. Gmail, Calendar, Drive, taxes, packs and logins can be added later (python onboard.py add ...).\n")
+        print(f"\nQuick start: {'this server only' if CONTAINER else 'laptop only'}. Gmail, Calendar, Drive, taxes, packs and logins can be added later (python onboard.py add ...).\n")
     else:
         show(st)
     for i, (key, title, fn) in enumerate(STEPS, 1):
