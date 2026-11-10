@@ -8,6 +8,8 @@ services:
     volumes:
       - mitra-data:/data   # papers, settings, database
       - mitra-backup:/Mitra-Home-Backup   # weekly backups; copy this off the server too
+    environment:
+      TZ: ${TZ:-UTC}       # your timezone, e.g. America/New_York: the 7:00 brief runs on this clock
     stdin_open: true
     tty: true
 volumes:
