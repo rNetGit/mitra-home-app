@@ -195,10 +195,28 @@ def want_lan(argv, root=ROOT):
     return phones_on(root), False
 
 
+def in_container():
+    """True inside the Docker image (it sets MITRAHOME_CONTAINER=1): the start-up text then talks about the server,
+    not about a PC, and leaves out the Windows Firewall lines."""
+    return os.environ.get("MITRAHOME_CONTAINER") == "1"
+
+
 def lan_help(ip, port, fp=None):
     """What to tell the family once the app runs for phones. `port` = the app's port; phones use HTTPS on port + 100."""
     phone = lan_tls.lan_port(port)
     fp = fp if fp is not None else lan_tls.fingerprint()
+    if in_container():
+        return [
+            "",
+            "  Phones on your home Wi-Fi can open (encrypted with this server's own certificate):",
+            f"      https://<server-address>:{phone}   (use the address of the machine that runs Docker, not {ip or 'the container address'})",
+            "  Pair the phone app from a phone's browser or the app on the home Wi-Fi: Settings > Phones. A phone's browser warns about the certificate the first time:",
+            f"  continue only when its SHA-256 fingerprint starts {lan_tls.pretty(fp)[:23]}" if fp else
+            "  check the fingerprint in Settings > Phones before you continue.",
+            "  Use your own Wi-Fi, never a guest network or a public one. Publish the port in docker-compose.yml (8701:8701).",
+            "  Tip: give the server a fixed address in your router (DHCP reservation) so the link does not change.",
+            "",
+        ]
     return [
         "",
         "  Phones on this home Wi-Fi can open (encrypted with this PC's own certificate):",

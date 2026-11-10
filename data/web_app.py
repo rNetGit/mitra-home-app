@@ -98,7 +98,8 @@ def main(argv=None):
         if not start_phone_server(phone_server(uvicorn, port, lan_tls.cert_path(), lan_tls.key_path())):
             print(f"Phones: could not listen on port {port} (another program uses it?). Close it and start again.")
             return 2
-        ip = lan_tls.lan_ip() or "<this PC's address>"
+        in_box = os.environ.get("MITRAHOME_CONTAINER") == "1"
+        ip = "<server-address>" if in_box else (lan_tls.lan_ip() or "<this PC's address>")
         print(f"Phones on this Wi-Fi: https://{ip}:{port}  (certificate {'just made' if change == 'made' else 'renewed, same key' if change else 'kept'}, "
               f"fingerprint starts {lan_tls.pretty(fp)[:23]})")
         remote = lan_tls.remote_ip()

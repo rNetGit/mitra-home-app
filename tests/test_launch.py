@@ -240,6 +240,13 @@ def test_lan_help_names_the_https_phone_url_and_the_private_firewall_rule(launch
     assert "http://192.168.1.20" not in text and "AB:AB:AB" in text
 
 
+def test_lan_help_in_a_container_names_the_server_and_has_no_windows_lines(launch, monkeypatch):
+    monkeypatch.setenv("MITRAHOME_CONTAINER", "1")
+    text = " ".join(launch.lan_help("172.18.0.2", 8601, fp="ab" * 32))
+    assert "https://<server-address>:8701" in text and "AB:AB:AB" in text
+    assert "Windows" not in text and "netsh" not in text and "this PC" not in text
+
+
 def test_phone_starters_pass_lan():
     assert b"launch.py --lan" in (SRC / "Start Mitra Home for phones.bat").read_bytes()
     assert b"launch.py --lan" in (SRC / "Start Mitra Home for phones.command").read_bytes()
