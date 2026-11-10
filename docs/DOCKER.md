@@ -35,8 +35,7 @@ The container clock is UTC unless you set `TZ`, so the 7:00 daily brief would ru
 
 The image sets `MITRAHOME_CONTAINER=1`, so the start-up text talks about the server: it prints `https://<server-address>:8701`
 (use your server's own address, not the container address 172.x.x.x) and leaves out the Windows Firewall lines. The setup
-wizard (`docker compose run --rm mitra setup`) still has some PC wording; pairing steps that say "Settings > Phones" are done
-from a phone's browser or the app on the home Wi-Fi.
+wizard (`docker compose run --rm mitra setup`) says "this server" too and notes that the signed-in AI options (Claude Code and the other CLIs) are not in the image, so pick an API key option or none. Pairing steps that say "Settings > Phones" are done from a phone's browser or the app on the home Wi-Fi.
 
 ## Changing a job time
 
