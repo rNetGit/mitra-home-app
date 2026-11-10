@@ -6,8 +6,10 @@ services:
     ports:
       - "8701:8701"        # HTTPS for phones and walls (app port 8601 + 100)
     volumes:
-      - mitra-data:/data   # papers, settings, database: back this volume up
+      - mitra-data:/data   # papers, settings, database
+      - mitra-backup:/Mitra-Home-Backup   # weekly backups; copy this off the server too
     stdin_open: true
     tty: true
 volumes:
   mitra-data:
+  mitra-backup:

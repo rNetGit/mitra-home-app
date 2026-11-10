@@ -7,7 +7,7 @@ ENV PYTHONUNBUFFERED=1 \
     MITRAHOME_VENV=/opt/venv \
     PATH=/opt/venv/bin:$PATH
 
-RUN useradd --create-home --uid 1000 mitra && mkdir /data && chown mitra /data
+RUN useradd --create-home --uid 1000 mitra && mkdir /data /Mitra-Home-Backup && chown mitra /data /Mitra-Home-Backup
 WORKDIR /app
 COPY --chown=mitra:mitra . /app
 # household folder lives in the /data volume: the marker in the app folder points there
@@ -17,7 +17,7 @@ RUN echo /data > /app/mitrahome_home.txt && chown mitra /app/mitrahome_home.txt 
     && chown -R mitra /opt/venv /app
 
 USER mitra
-VOLUME /data
+VOLUME ["/data", "/Mitra-Home-Backup"]
 # phones: HTTPS on the app port + 100 (the plain-http port stays inside the container)
 EXPOSE 8701
 ENTRYPOINT ["/app/docker/entrypoint.sh"]

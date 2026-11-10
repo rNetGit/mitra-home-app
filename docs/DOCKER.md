@@ -28,8 +28,9 @@ Settings pages that change the PC itself stay PC-only and are not reachable here
 
 ## Your data
 
-Everything (database, papers, settings, certificate) is in the `mitra-data` volume mounted at `/data`. Back that
-volume up. Never publish port 8701 to the internet; use Tailscale (docs/REMOTE_ACCESS.md) for away-from-home access.
+Everything (database, papers, settings, certificate) is in the `mitra-data` volume mounted at `/data`; weekly backups go to the
+`mitra-backup` volume (`/Mitra-Home-Backup`). Back both up, and copy the backups off the server too.
+Never publish port 8701 to the internet; use Tailscale (docs/REMOTE_ACCESS.md) for away-from-home access.
 
 ## Update
 
