@@ -438,7 +438,11 @@ def main(argv):
         stop_note().unlink(missing_ok=True)
     lan, asked = want_lan(argv)
     if lan and not pins_set():
-        if asked:
+        if in_container():
+            say("  Phone access needs a PIN first, so strangers on the Wi-Fi cannot open your papers.")
+            say("  Set one for each adult:  docker compose run --rm mitra pin NAME adult   then start the container again.")
+            say("  Until then nothing can reach the app from outside the container.")
+        elif asked:
             say("  Phone access needs a PIN first, so strangers on the Wi-Fi cannot open your papers.")
             say("  Starting for this PC only: set a PIN for each adult in the setup, then close this and start for phones again.")
         else:
@@ -471,7 +475,8 @@ def main(argv):
         make_household_folder(home_arg(argv))
     elif not finish_update(py):
         return 1
-    say(f"  Starting on {url(port)}{' (and on the home Wi-Fi)' if lan else ''} ...")
+    say("  Starting (phones and walls connect over HTTPS) ..." if in_container() and lan else
+        f"  Starting on {url(port)}{' (and on the home Wi-Fi)' if lan else ''} ...")
     dashboard_record.forget(ROOT, name=name)
     proc = subprocess.Popen(web_cmd(py, port, lan=lan), cwd=ROOT, env=dict(os.environ), **app_opts())
     dashboard_record.write(port, ROOT, pid=proc.pid, lan=lan, name=name)
@@ -490,8 +495,11 @@ def main(argv):
     if QUIET:
         say("  Running with no window. Stop it in Settings > Data > Stop Mitra Home.")
         return 0
-    say("\n  Mitra Home is running. Keep this window open: closing it stops it.")
-    say("  (Press Ctrl+C here to stop it.)\n")
+    if in_container():
+        say("\n  Mitra Home is running. Stop it with: docker compose stop   (logs: docker compose logs mitra)\n")
+    else:
+        say("\n  Mitra Home is running. Keep this window open: closing it stops it.")
+        say("  (Press Ctrl+C here to stop it.)\n")
     try:
         return proc.wait()
     except KeyboardInterrupt:

@@ -210,6 +210,50 @@ def test_the_setting_without_a_pin_starts_for_this_pc_and_says_why(launch, tmp_p
     assert seen == [False] and "once an adult has a PIN" in out
 
 
+def test_a_container_without_a_pin_says_how_to_set_one(launch, tmp_path, monkeypatch, capsys):
+    monkeypatch.setenv("MITRAHOME_CONTAINER", "1")
+    monkeypatch.setattr(launch, "want_lan", lambda argv, root=None: (True, True))
+    monkeypatch.setattr(launch, "pins_set", lambda root=None: False)
+    monkeypatch.setattr(launch, "pick_port", lambda *a, **k: (8601, False))
+    monkeypatch.setattr(launch, "ensure_venv", lambda: tmp_path / "py")
+    monkeypatch.setattr(launch, "is_fresh_install", lambda: False)
+
+    def stop(py, port, root=None, lan=False):
+        raise RuntimeError("stop before starting")
+    monkeypatch.setattr(launch, "web_cmd", stop)
+    with pytest.raises(RuntimeError):
+        launch.main([])
+    out = capsys.readouterr().out
+    assert "docker compose run --rm mitra pin NAME adult" in out
+    assert "this PC" not in out and "close this" not in out
+
+
+def test_a_running_container_says_how_to_stop_it(launch, tmp_path, monkeypatch, capsys):
+    class Proc:
+        pid = 1
+        returncode = 0
+        def poll(self): return None
+        def wait(self): return 0
+    monkeypatch.setenv("MITRAHOME_CONTAINER", "1")
+    monkeypatch.setattr(launch, "want_lan", lambda argv, root=None: (True, True))
+    monkeypatch.setattr(launch, "pins_set", lambda root=None: True)
+    monkeypatch.setattr(launch.dashboard_record, "read", lambda *a, **k: None)
+    monkeypatch.setattr(launch.dashboard_record, "write", lambda *a, **k: None)
+    monkeypatch.setattr(launch.dashboard_record, "forget", lambda *a, **k: None)
+    monkeypatch.setattr(launch, "pick_port", lambda *a, **k: (8601, False))
+    monkeypatch.setattr(launch, "ensure_venv", lambda: tmp_path / "py")
+    monkeypatch.setattr(launch, "is_fresh_install", lambda: False)
+    monkeypatch.setattr(launch, "finish_update", lambda py: True)
+    monkeypatch.setattr(launch, "healthy", lambda port: True)
+    monkeypatch.setattr(launch, "web_cmd", lambda *a, **k: ["x"])
+    monkeypatch.setattr(launch.subprocess, "Popen", lambda *a, **k: Proc())
+    monkeypatch.setattr(launch, "lan_ip", lambda: "172.17.0.2")
+    assert launch.main(["--no-browser"]) == 0
+    out = capsys.readouterr().out
+    assert "docker compose stop" in out and "Keep this window open" not in out and "Ctrl+C" not in out
+    assert "127.0.0.1:8601" not in out.split("Starting")[1].splitlines()[0]
+
+
 def test_a_running_pc_only_app_is_reopened_and_points_at_restart(launch, monkeypatch, capsys):
     """The 5-minute start task and a double-click no longer fail when the app runs for this PC only and the setting
     wants phones: they open it and say where to restart it."""
