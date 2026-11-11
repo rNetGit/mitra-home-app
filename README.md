@@ -21,7 +21,7 @@ Website, screenshots and a click-through demo of an invented family: https://rne
    AI helper (your key or plan, or a local model) · SimpleFIN bank sync · Google Calendar / Gmail / Drive
    · Telegram / Discord · online look-ups (ZIP code only) · daily update check (GitHub)
 ```
-No telemetry, no analytics, no server of ours. The phone app's code: https://github.com/rNetGit/mitra-home-companion
+No telemetry, no analytics, no server of ours. The phone apps are free on Google Play and the App Store; their source is not published.
 
 ## Get started in 3 steps
 1. **Download** from [Releases](https://github.com/rNetGit/mitra-home-app/releases/latest):
@@ -59,7 +59,9 @@ tasks, Drive folder, Gmail label and saved keys are still recognised, and `pytho
 scheduled tasks to the new names._
 
 ## Project status
-Public beta, built by a small independent team (CLOUDWARE EDGE LLC). Windows is tested most, Mac less, Linux not yet.
+Public beta, built by a small independent team (CLOUDWARE EDGE LLC). Windows is tested most, Mac less. Linux: a Docker
+image for phones and wall tablets is new and lightly tested (x86 and Apple silicon, not yet Raspberry Pi or NAS hardware):
+see [docs/DOCKER.md](docs/DOCKER.md).
 The United States country profile is the most complete; amounts work in any currency. Questions and ideas: GitHub
 Issues and Discussions. Security problems: `SECURITY.md` (privately, please).
 
