@@ -1,7 +1,7 @@
 # Security policy
 
 Mitra Home holds a household's financial and personal records on one PC, with companion phone apps (Android and
-iPhone, repository `rNetGit/mitra-home-companion`) and Mitra Wall tablets that talk only to that PC. Treat any way
+iPhone, closed source) and Mitra Wall tablets that talk only to that PC. Treat any way
 to read, change or leak that data as a security issue.
 
 ## Reporting a vulnerability
