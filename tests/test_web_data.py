@@ -175,3 +175,34 @@ def test_relaunch_waits_for_the_old_app_then_starts_the_new_one(modules, monkeyp
     monkeypatch.setattr(rb, "_alive", lambda pid: True)
     monkeypatch.setattr(rb, "_wait", lambda pred, seconds, step=0.5: False)
     assert not rb.relaunch_after("123", "8601") and len(started) == 1, "never two apps on one port"
+
+
+def test_a_container_never_installs_an_update_from_inside(data, modules, monkeypatch):
+    c, t, md = data
+    aa = modules("admin_actions")
+    monkeypatch.setenv("MITRAHOME_CONTAINER", "1")
+    upd = modules("updater")
+    monkeypatch.setattr(upd, "check", lambda quiet=True: ("0.1", {"version": "9.9.9"}, True))
+    _post(c, "/settings/update", t, op="check")
+    page = _page(c)
+    assert "9.9.9 is available" in page and "Update to 9.9.9" not in page
+    assert "docker compose build" in page and "replacing the image" in page
+
+    def boom(*a, **k):
+        raise AssertionError("an update must not run inside a container")
+    monkeypatch.setattr(aa.subprocess, "run", boom)
+    again = []
+    monkeypatch.setattr(modules("restore_backup"), "start_relaunch", lambda port, lan=False: again.append(port))
+    _post(c, "/settings/update", t, op="go")
+    assert "did not finish" in _page(c) and "docker compose build" in _page(c) and not again
+
+
+def test_onboard_update_refuses_in_a_container():
+    import os
+    import subprocess
+    import sys
+    from pathlib import Path
+    root = Path(__file__).resolve().parent.parent
+    r = subprocess.run([sys.executable, str(root / "onboard.py"), "update", "--yes"], cwd=root, capture_output=True, text=True,
+                       timeout=60, stdin=subprocess.DEVNULL, env={**os.environ, "MITRAHOME_CONTAINER": "1"})
+    assert r.returncode == 1 and "docker compose build" in r.stdout

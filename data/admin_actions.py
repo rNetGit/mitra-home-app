@@ -965,10 +965,22 @@ def export_now(user):
     return True, (r.stdout.strip().splitlines() or ["Exported."])[0], (zips[-1] if zips else None)
 
 
+def in_container():
+    """True inside the Docker image (it sets MITRAHOME_CONTAINER=1)."""
+    return os.environ.get("MITRAHOME_CONTAINER") == "1"
+
+
+CONTAINER_UPDATE = ("This copy runs in a container, so it is updated by replacing the image, not from inside. On the server run: "
+                    "git pull && docker compose build && docker compose up -d. Your data stays in the volumes, and the database "
+                    "is backed up before it changes.")
+
+
 def update_now(user):
     """Run the signed update. -> (ok, output tail). The dashboard must be restarted afterwards."""
     if not _is_adult(user):
         return False, "Only adults can update."
+    if in_container():  # files changed inside the container are lost when it is recreated: never install from here
+        return False, CONTAINER_UPDATE
     r = subprocess.run([sys.executable, str(ROOT / "onboard.py"), "update", "--yes"], cwd=ROOT, capture_output=True, text=True,
                        timeout=1800, stdin=subprocess.DEVNULL)
     _audit(user, "update", f"rc={r.returncode}")

@@ -92,9 +92,10 @@
   <div class="optrow">
     <button type="button" class="btn alt" hx-post="/settings/update" hx-vals='{"op": "check"}' hx-disabled-elt="this">Check for updates</button>
     {% if upd.newer and upd.site %}<a class="btn" href="{{ upd.site }}" target="_blank" rel="noopener noreferrer">Open the download page for {{ upd.newer }}</a>
-    {% elif upd.newer %}<button type="button" class="btn" hx-post="/settings/update" hx-vals='{"op": "go"}' hx-disabled-elt="this" hx-indicator="#upd-wait">Update to {{ upd.newer }}</button>
+    {% elif upd.newer and not upd.container %}<button type="button" class="btn" hx-post="/settings/update" hx-vals='{"op": "go"}' hx-disabled-elt="this" hx-indicator="#upd-wait">Update to {{ upd.newer }}</button>
     <span id="upd-wait" class="setting-up muted" role="status">Updating (signed; your data is not touched, the database is backed up first)...</span>{% endif %}
   </div>
+  {% if upd.container %}<p class="muted small">{{ upd.container }}</p>{% endif %}
   <div class="job" id="upd-daily">
     <div class="job-head">
       <h3>Check for new versions every day</h3>
