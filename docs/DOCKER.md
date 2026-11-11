@@ -15,9 +15,25 @@ docker compose up -d
 `serve` refuses to start until `setup` has made a household, and phone access starts only once an adult has a PIN.
 
 Then open Settings > Phones from a phone on the same Wi-Fi at `https://<server-ip>:8701` (the first visit shows a
-certificate warning: check that the fingerprint printed by `docker compose logs mitra` matches), or pair the phone app.
+certificate warning: check that the fingerprint printed by `docker compose logs mitra` matches).
 Settings pages that change the PC itself stay PC-only and are not reachable here; use the terminal
 (`docker compose run --rm mitra shell`).
+
+## Pairing the phone app or a wall
+
+Settings > Phones shows its pairing code only on the PC itself, and a container has no PC screen. Make the code in the
+terminal instead. Start the container once first (the certificate is made then), and give the address your phone uses
+for the server (not the container's 172.x address):
+
+```bash
+docker compose run --rm mitra pair phone Anna "Anna's phone" --host 192.168.1.20
+docker compose run --rm mitra pair wall "Kitchen wall" --host 192.168.1.20
+```
+
+A QR code is drawn in the terminal (`--invert` on a light terminal, `--no-qr` for text only); scan it with the app, or
+paste the text line under it. Use `--port` if you publish a different port, or set `MITRAHOME_PUBLIC_HOST` and
+`MITRAHOME_PUBLIC_PORT` in a `.env` file next to `docker-compose.yml` to leave `--host` out. The code works once and
+for a few minutes. Show it only to the phone that scans it: it is a key to the household. A person needs a PIN first.
 
 ## What runs inside
 

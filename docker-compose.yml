@@ -10,6 +10,8 @@ services:
       - mitra-backup:/Mitra-Home-Backup   # weekly backups; copy this off the server too
     environment:
       TZ: ${TZ:-UTC}       # your timezone, e.g. America/New_York: the 7:00 brief runs on this clock
+      MITRAHOME_PUBLIC_HOST: ${MITRAHOME_PUBLIC_HOST:-}   # this server's address as phones reach it: the default for `pair --host`
+      MITRAHOME_PUBLIC_PORT: ${MITRAHOME_PUBLIC_PORT:-8701}   # the published HTTPS port: the default for `pair --port`
     stdin_open: true
     tty: true
 volumes:
