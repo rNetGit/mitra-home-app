@@ -3,6 +3,13 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
+## 0.148.0
+No new migration. Nothing changes for an existing Windows or Mac install apart from the weekly digest fix.
+- Added: **Docker image for a Linux server or NAS** (phones and wall tablets only): `Dockerfile`, `docker-compose.yml` with a data volume and a backup volume, and [docs/DOCKER.md](docs/DOCKER.md). The container serves HTTPS on port 8701 and needs a PIN; the PC browser screen is not offered. Setup, PINs and pairing are done in a terminal: `docker compose run --rm mitra setup`, `... pin NAME adult`, `... pair phone PERSON NAME --host SERVER-ADDRESS` (draws the pairing QR in the terminal; `pair wall` for a wall tablet). Scheduled jobs run inside the container; set `TZ` for local times. Tested on x86 and Apple silicon, not yet on a Raspberry Pi or a NAS.
+- Changed: inside a container the start-up messages, the setup wizard and the AI choices talk about "this server" (no Windows Firewall lines, AI default is none because Claude Code is not in the image), and the in-app updater shows the image update command instead of installing.
+- Fixed: **the weekly digest no longer fails on a household with no statements loaded yet** (the monthly trends part crashed when the listed months had no lines).
+- Docs: the README no longer links the private phone-app repository; the phone apps are free on Google Play and the App Store.
+
 ## 0.147.0
 No new migration.
 - Changed: **Mitra Home is open source.** The code now lives in the public repository `rNetGit/mitra-home-app` (AGPL-3.0-or-later, CONTRIBUTORS.md credits Sanjay Katukojwala). The app looks for new versions there: this release is the last one published from the old private repository, so installs that update through it move over by themselves.
