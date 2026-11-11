@@ -281,6 +281,8 @@ def lines(con, months=12, end=None, today=None):
     from money import fmt
     t = totals(rows)
     have = [r for r in rows if r["rows"] and not r["partial"]] or [r for r in rows if r["rows"]]
+    if not have:  # the months are listed (a report for a chosen month) but none of them has a statement line
+        return []
     newest = have[-1]
     out = [f"{newest['label']}: {fmt(newest['income'])} in, {fmt(newest['expenses'])} out, {fmt(newest['left'])} left"
            + (f" ({newest['left_pct']:.0f}% of income)." if newest["left_pct"] is not None else ".")]
@@ -313,7 +315,7 @@ def for_markdown(line):
 def markdown(con, months=12, end=None, today=None):
     """The Trends section of the monthly report."""
     rows = monthly(con, months, end, today)
-    if not rows:
+    if not any(r["rows"] for r in rows):
         return "_no transactions yet_\n"
     from money import fmt
     s = "\n".join(f"- {l}" for l in lines(con, months, end, today)) + "\n\n"
