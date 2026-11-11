@@ -5,7 +5,10 @@ screen (plain http, trusted on loopback) is deliberately not offered. Setup is d
 
 ## First time
 
+Get the code of the latest release (0.148.0 is the first with Docker; there is no published image yet, you build it):
+
 ```bash
+git clone --branch v0.148.0 https://github.com/rNetGit/mitra-home-app.git mitra-home && cd mitra-home
 docker compose build
 docker compose run --rm mitra setup          # quick-start questions: family name, people, country
 docker compose run --rm mitra pin Anna adult # one PIN per adult (asked twice is not needed; type it when prompted)
@@ -68,9 +71,13 @@ Never publish port 8701 to the internet; use Tailscale (docs/REMOTE_ACCESS.md) f
 
 ## Update
 
+To a new release (replace the tag with the newest one on the Releases page):
+
 ```bash
-git pull && docker compose build && docker compose up -d
+git fetch --tags && git checkout v0.148.0 && docker compose build && docker compose up -d
 ```
+
+If you follow `main` instead of releases: `git pull && docker compose build && docker compose up -d`.
 
 The start step brings the database up to date (a backup is taken first).
 
