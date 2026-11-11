@@ -1655,7 +1655,8 @@ def _update_state():
     daily = maintenance_data.daily_check()
     newer = st["newer"] if st["at"] > 0 else (daily["newer"] or None)  # the daily look counts until a manual check
     site = st.get("site", "") if st["at"] > 0 else daily.get("site", "")  # a version found on the public site: download, not install
-    return {"current": _version(), "newer": newer, "error": st["error"], "checked": st["at"] > 0, "daily": daily, "site": site}
+    return {"current": _version(), "newer": newer, "error": st["error"], "checked": st["at"] > 0, "daily": daily, "site": site,
+            "container": admin_actions.CONTAINER_UPDATE if admin_actions.in_container() else ""}
 
 
 def update_line(user):

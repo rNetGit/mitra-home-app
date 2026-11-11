@@ -1337,6 +1337,10 @@ def main():
         return updater.check()
     if cmd == "update":
         sys.path.insert(0, str(ROOT / "data"))
+        if CONTAINER:  # files changed inside a container are lost when it is recreated
+            import admin_actions
+            print(admin_actions.CONTAINER_UPDATE)
+            sys.exit(1)
         import updater
         args = sys.argv[2:]
         src = args[args.index("--from") + 1] if "--from" in args and args.index("--from") + 1 < len(args) else None

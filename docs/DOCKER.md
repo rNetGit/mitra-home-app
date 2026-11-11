@@ -57,3 +57,5 @@ git pull && docker compose build && docker compose up -d
 ```
 
 The start step brings the database up to date (a backup is taken first).
+
+The in-app update (Settings > Data > Updates, the Inbox "update" item, `onboard.py update`) does not install inside a container: files changed there are lost when the container is recreated. It says so and shows this command. Checking for a new version still works.
