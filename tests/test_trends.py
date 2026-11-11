@@ -138,3 +138,17 @@ def test_money_totals_are_summed_in_cents(root, modules):
     text = "\n".join(out) if isinstance(out, list) else str(out)
     assert "Bank interest credited (txn_type 'interest'): $1.00" in text, text[-800:]
     con.close()
+
+
+def test_a_report_month_with_no_statements_does_not_crash(root, modules):
+    """A fresh household: the weekly digest asks for last month's report, and none of the twelve listed months has a line."""
+    T, db = modules("trends"), modules("db")
+    con = sqlite3.connect(root / "data" / "family.db")
+    con.execute("DELETE FROM transactions")
+    con.commit()
+    con.close()
+    with db.open(readonly=True) as con:
+        assert T.lines(con, 12, "2026-10") == [] and "no transactions" in T.markdown(con, 12, "2026-10")
+    r = run(["data/make_report.py", "monthly", "2026-10"], root)
+    assert r.returncode == 0, r.stderr
+    assert "no transactions" in (root / "reports" / "2026-10_monthly.md").read_text(encoding="utf-8")
