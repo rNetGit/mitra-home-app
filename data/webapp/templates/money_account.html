@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% set a = acc.a %}
+{% block title %}{{ a.name }} · Money · {{ brand }}{% endblock %}
+{% block main %}
+<p class="small"><a href="/money?part=books">← Accounts</a></p>
+<section class="card bk-acct">
+  <div class="bk-ahead">
+    <div>
+      <p class="bk-meta">{{ a.institution ~ ' · ' if a.institution }}{{ a.kind_label }}{{ ' · x' ~ a.last4 if a.last4 }}{% if a.owners %} · {{ 'Joint: ' if a.joint }}{{ a.owners }}{% endif %}</p>
+      <h1>{{ a.name }}{% if a.closed_on %} <span class="chip-s">closed {{ a.closed_on }}</span>{% endif %}</h1>
+      <p><span class="bk-badge bk-{{ a.match.status }}">{{ '✓ ' if a.match.status == 'ok' }}{{ a.match.text }}</span></p>
+    </div>
+    <div class="bk-bal">
+      <span class="muted small">{{ 'You owe' if a.owed else ('Cash value' if a.group == 'insurance' else 'Balance') }}{{ ' · ' ~ a.as_of if a.as_of }}</span>
+      <b class="{{ 'bk-owed' if a.owed }}">{{ (a.balance)|money2 if a.balance is not none else '—' }}</b>
+      <a class="btn alt" href="{{ link('accounts:' ~ a.id) }}">Edit account</a>
+    </div>
+  </div>
+  {% if acc.facts %}<dl class="bk-facts">{% for k, val in acc.facts %}<div><dt>{{ k }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl>{% endif %}
+</section>
+<section class="card bk-reg">
+  <h2>Register <span class="muted small">newest first · {{ 'what you owe after each line' if a.owed else 'balance after each line' }}{% if not acc.running %} · no bank balance yet, so no running balance{% endif %}</span></h2>
+  {% if acc.register %}
+  <div class="tablewrap"><table class="bk-table nocards">
+    <thead><tr><th>Date</th><th>Description</th><th class="bk-wide">Category</th><th class="num">Amount</th>{% if acc.running %}<th class="num">{{ 'Owed' if a.owed else 'Balance' }}</th>{% endif %}</tr></thead>
+    <tbody>{% set ns = namespace(m='') %}{% for x in acc.register %}
+      {% if x.stmt is defined %}<tr class="bk-stmt {{ 'bk-sok' if x.ok else 'bk-soff' }}"><td colspan="{{ 5 if acc.running else 4 }}">{{ '✓' if x.ok else '!' }} Statement ended {{ x.stmt }} · bank said {{ (x.reported)|money2 }}{% if x.ok %} · matches{% else %} · here {{ (x.computed)|money2 }}, off by {{ ((x.reported - x.computed)|abs)|money2 }}{% endif %}</td></tr>
+      {% else %}{% if x.date[:7] != ns.m %}{% set ns.m = x.date[:7] %}<tr class="bk-month"><td colspan="{{ 5 if acc.running else 4 }}">{{ x.date[:7] }}</td></tr>{% endif %}
+      <tr><td>{{ x.date[5:] }}</td><td>{{ x.desc }}</td><td class="bk-wide{{ ' muted' if x.moved }}">{{ 'Moved' if x.moved else (x.category or '') }}</td>
+        <td class="num{{ ' bk-in' if x.amount > 0 and not a.owed }}">{{ '+' if x.amount > 0 }}{{ (x.amount)|money2 }}</td>{% if acc.running %}<td class="num">{{ (x.after)|money2 }}</td>{% endif %}</tr>{% endif %}
+    {% endfor %}</tbody>
+  </table></div>
+  <p class="muted small">{{ acc.shown }} of {{ acc.lines }} lines.{% if acc.more %} <a href="/money/account/{{ a.id }}?n={{ acc.shown * 2 }}">Show older lines</a>{% endif %} · <a href="/money?part=ledger&amp;account={{ a.id }}">Open in the Ledger</a></p>
+  {% else %}<p class="muted">No lines yet. Drop a statement for this account in the Inbox{{ ' or pull bank sync' }}.</p>{% endif %}
+</section>
+{% endblock %}

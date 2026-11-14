@@ -46,6 +46,7 @@ import dashboard_actions
 import dates
 import db
 import devices
+import books_data
 import finance_data
 import home_costs
 import month_statement
@@ -646,6 +647,11 @@ def money_page(request: Request, months: int = 12, part: str = "", ym: str = "")
         return page(request, "money.html", active="money", part="homecosts", groups=finance_data.groups(), group="",
                     outlook_parts=finance_data.OUTLOOK, furl=finance_url, hc=home_costs.view(pick, dates.today()),
                     today=dates.today(), flash=records_flash(request))
+    if part == "books":
+        closed = request.query_params.get("closed") == "1"
+        return page(request, "money.html", active="money", part="books", groups=finance_data.groups(), group="",
+                    outlook_parts=finance_data.OUTLOOK, furl=finance_url, b=books_data.view(dates.today(), closed),
+                    closed=closed, today=dates.today(), flash=records_flash(request))
     if part == "statement":
         pick = ym if re.fullmatch(r"\d{4}-\d{2}", ym) else None
         return page(request, "money.html", active="money", part="statement", groups=finance_data.groups(), group="",
@@ -677,6 +683,20 @@ def money_page(request: Request, months: int = 12, part: str = "", ym: str = "")
         ctx["v"] = finance_data.view(p, dates.today(), dict(request.query_params))
         ctx["md_html"] = render_md(ctx["v"]["md"]) if ctx["v"]["md"] else ""
     return page(request, "money.html", active="money", **ctx)
+
+
+@app.get("/money/account/{acct_id}", response_class=HTMLResponse)
+def money_account(request: Request, acct_id: int, n: int = 200):
+    """One account as the bank shows it (books_data.account): balance, bank match, type facts and the register."""
+    denied = need_adult(request)
+    if denied:
+        return denied
+    acc = books_data.account_view(acct_id, dates.today(), max(50, min(n, books_data.REGISTER_MAX)))
+    if acc is None:
+        return page(request, "money.html", active="money", part="books", groups=finance_data.groups(), group="",
+                    outlook_parts=finance_data.OUTLOOK, furl=finance_url, b=books_data.view(dates.today()), closed=False,
+                    today=dates.today(), flash=(False, "That account is not there any more."))
+    return page(request, "money_account.html", active="money", acc=acc, link=record_link)
 
 
 @app.post("/money/rule")

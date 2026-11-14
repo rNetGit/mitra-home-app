@@ -1,0 +1,33 @@
+{# Money > Accounts (books_data.overview): every account once, grouped like the bank. #}
+{% set mt = {'ok': 'Matches bank', 'off': 'Off from the bank', 'sync': 'From the bank, nothing to compare yet', 'none': 'No bank balance yet'} %}
+<div class="kpis rk bk-kpis">
+  <div class="kpi"><span>What you have</span><b>{{ (b.have)|money }}</b><i>bank, investments, life cash value</i></div>
+  <div class="kpi"><span>What you owe</span><b>{{ (b.owe)|money }}</b><i>cards, mortgage, loans</i></div>
+  <div class="kpi"><span>Net worth</span><b>{{ (b.net)|money }}</b>{% if b.change is not none %}<i>{{ '+' if b.change >= 0 }}{{ (b.change)|money }} since the 1st</i>{% endif %}</div>
+  <div class="kpi"><span>Matches bank</span><b>{{ b.count.ok }} of {{ b.accounts }}</b><i>{{ b.count.off }} off · {{ b.count.sync + b.count.none }} nothing to compare yet</i></div>
+</div>
+{% if b.needs %}<p class="bk-look"><b>Needs a look:</b>{% for n in b.needs %} <a class="pill warn" href="/money/account/{{ n.id }}">{{ n.text }}</a>{% endfor %}{% if b.more_needs %} <span class="muted">+{{ b.more_needs }} more</span>{% endif %}</p>{% endif %}
+{% for g in b.groups %}
+<details class="card bk-grp" open>
+  <summary class="bk-head"><b>{{ g.label }}</b> <span class="muted small">{{ g.rows|length }} account{{ 's' if g.rows|length != 1 }}</span><span class="bk-total{{ ' bk-owed' if g.owed }}">{{ 'owe ' if g.owed }}{{ (g.total)|money2 }}</span></summary>
+  <div class="tablewrap"><table class="bk-table nocards">
+    <thead><tr><th>Account</th><th class="bk-wide">Owners</th>
+      {% if g.key == 'card' %}<th class="bk-wide">Used</th><th class="bk-wide">Due</th>
+      {% elif g.key == 'loan' %}<th class="bk-wide">Rate</th><th class="bk-wide">Next payment</th>
+      {% else %}<th class="bk-wide">Type</th><th class="bk-wide">As of</th>{% endif %}
+      <th class="num">{{ 'Cash value' if g.key == 'insurance' else ('Owed' if g.owed else 'Balance') }}</th></tr></thead>
+    <tbody>{% for r in g.rows %}<tr{% if r.closed_on %} class="bk-closed"{% endif %}>
+      <td><span class="bk-dot bk-{{ r.match.status }}" title="{{ mt[r.match.status] }}" aria-label="{{ mt[r.match.status] }}"></span><a href="/money/account/{{ r.id }}" class="bk-name">{{ r.name }}</a>{% if r.joint %} <span class="chip-s t-good">Joint</span>{% endif %}{% if r.closed_on %} <span class="chip-s">closed {{ r.closed_on }}</span>{% endif %}
+        <span class="bk-meta">{{ r.institution ~ ' · ' if r.institution }}{{ r.kind_label }}{{ ' · x' ~ r.last4 if r.last4 }}</span></td>
+      <td class="bk-wide">{{ r.owners }}</td>
+      {% if g.key == 'card' %}<td class="bk-wide">{% if r.used_pct is defined %}<svg class="bk-bar" viewBox="0 0 100 6" preserveAspectRatio="none" aria-hidden="true"><rect class="fb-bg" x="0" y="0" width="100" height="6" rx="3"/><rect class="fb-fill" x="0" y="0" width="{{ [r.used_pct, 1]|max }}" height="6" rx="3"/></svg> {{ r.used_pct }}%{% else %}<span class="muted">add the limit</span>{% endif %}</td><td class="bk-wide">{{ r.due or '' }}</td>
+      {% elif g.key == 'loan' %}<td class="bk-wide">{{ ('%g'|format(r.apr_pct) ~ '%') if r.apr_pct is not none else '' }}</td><td class="bk-wide">{{ r.due or '' }}</td>
+      {% else %}<td class="bk-wide">{{ r.kind_label }}</td><td class="bk-wide">{{ r.as_of or '' }}</td>{% endif %}
+      <td class="num">{% if r.term %}<span class="muted">term · no cash value</span>{% elif r.balance is none %}<span class="muted">no balance yet</span>{% else %}<span class="{{ 'bk-owed' if g.owed }}">{{ (r.balance)|money2 }}</span>{% endif %}</td>
+    </tr>{% endfor %}</tbody>
+  </table></div>
+</details>
+{% else %}<p class="muted">No accounts yet. Drop a statement in the Inbox, connect bank sync, or add one below.</p>{% endfor %}
+<p class="muted small"><span class="bk-dot bk-ok"></span> matches bank <span class="bk-dot bk-off"></span> off from the bank <span class="bk-dot bk-sync"></span> from the bank, nothing to compare yet <span class="bk-dot bk-none"></span> no bank balance yet
+{% if b.closed %} · <a href="/money?part=books{{ '' if closed else '&amp;closed=1' }}">{{ 'Hide' if closed else 'Show' }} {{ b.closed }} closed account{{ 's' if b.closed != 1 }}</a>{% endif %}
+ · <a href="/money?part=accounts#radd-accounts">+ Add an account</a></p>
