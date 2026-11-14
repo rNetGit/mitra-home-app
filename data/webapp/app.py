@@ -46,6 +46,7 @@ import dashboard_actions
 import dates
 import db
 import devices
+import all_accounts
 import books_data
 import finance_data
 import home_costs
@@ -652,6 +653,12 @@ def money_page(request: Request, months: int = 12, part: str = "", ym: str = "")
         return page(request, "money.html", active="money", part="books", groups=finance_data.groups(), group="",
                     outlook_parts=finance_data.OUTLOOK, furl=finance_url, b=books_data.view(dates.today(), closed),
                     closed=closed, today=dates.today(), flash=records_flash(request))
+    if part == "all":
+        q = request.query_params
+        return page(request, "money.html", active="money", part="all", groups=finance_data.groups(), group="",
+                    outlook_parts=finance_data.OUTLOOK, furl=finance_url,
+                    a=all_accounts.page(dates.today(), q.get("period", "week"), q.get("d") or None, q.get("g", "")),
+                    today=dates.today(), flash=records_flash(request))
     if part == "statement":
         pick = ym if re.fullmatch(r"\d{4}-\d{2}", ym) else None
         return page(request, "money.html", active="money", part="statement", groups=finance_data.groups(), group="",
