@@ -1,7 +1,7 @@
 """The detailed account types (`accounts.subtype`, migration 070) and the groups Money shows them in.
 
 Each subtype belongs to one group (bank, card, investment, insurance, loan) and one coarse `accounts.type`
-(checking / savings / credit / loan / investment), which the older code keeps using for signs and spending rules.
+(checking / savings / credit / loan / investment / property), which the older code keeps using for signs and spending rules.
 `guess(name, institution)` is the no-AI guess bank sync and the migration use; a type the family picks by hand is
 locked (`accounts.subtype_locked`) and never guessed again.
 
@@ -16,6 +16,7 @@ GROUPS = {
     "bank": {"label": "Bank accounts", "owed": False},
     "card": {"label": "Credit cards", "owed": True},
     "investment": {"label": "Investments", "owed": False},
+    "property": {"label": "Home and property", "owed": False},
     "insurance": {"label": "Life insurance", "owed": False},
     "loan": {"label": "Mortgage and loans", "owed": True},
 }
@@ -39,6 +40,9 @@ SUBTYPES = {
     "life_whole": ("insurance", "investment", "Whole life"),
     "life_universal": ("insurance", "investment", "Universal life"),
     "life_term": ("insurance", "investment", "Term life"),
+    "home": ("property", "property", "Home"),
+    "vehicle": ("property", "property", "Vehicle"),
+    "other_property": ("property", "property", "Other property"),
     "mortgage": ("loan", "loan", "Mortgage"),
     "heloc": ("loan", "loan", "Home equity (HELOC)"),
     "auto": ("loan", "loan", "Auto loan"),
@@ -50,7 +54,7 @@ SUBTYPES = {
 
 # coarse accounts.type -> the subtype an account gets when nothing better is known
 DEFAULT_OF_TYPE = {"checking": "checking", "savings": "savings", "credit": "credit_card", "loan": "other_loan",
-                   "investment": "other_investment"}
+                   "investment": "other_investment", "property": "home"}
 
 OWNERSHIP = ("individual", "joint")
 

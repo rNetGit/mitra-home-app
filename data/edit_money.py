@@ -726,7 +726,7 @@ def account_add(actor, name, kind, last4=None, owner=None, institution=None, own
 @edits
 def account_update(actor, account_id, name=None, kind=None, institution=None, ownership=None, owners=None,
                    closed_on=None, credit_limit=None, apr=None, due_day=None, min_payment=None, death_benefit=None,
-                   premium=None, loan_id=None, holdings=None):
+                   premium=None, loan_id=None, holdings=None, value=None):
     """Change an account. None = unchanged, "" clears (not the name or type). A type set here is locked: bank sync
     never guesses it again. Owners are names as typed ("Marcus, Elena"); joint needs two. `loan_id` = the loan row this
     account is ("" = none); `holdings` = ids of the investments rows it holds (the list replaces the links)."""
@@ -776,6 +776,19 @@ def account_update(actor, account_id, name=None, kind=None, institution=None, ow
             raise EditError("a joint account needs two owners (type them like: Marcus, Elena)")
         upd = {k: x for k, x in upd.items() if x != row[k]}
         links = _link_details(con, row["id"], loan_id, holdings)
+        if value is not None and str(value).strip():
+            sub = upd.get("subtype", row["subtype"])
+            if AT.group_of(sub) != "property":
+                raise EditError("a value by hand is only for a home, a vehicle or other property")
+            worth = _clean(v.money(0, 1e10), value, "value")
+            day = dates.today().isoformat()
+            old = con.execute("SELECT balance FROM account_balances WHERE account_id=? AND kind='estimate' "
+                              "ORDER BY as_of DESC LIMIT 1", (row["id"],)).fetchone()
+            if not old or old[0] != worth:
+                con.execute("INSERT INTO account_balances(account_id, as_of, balance, kind) VALUES (?,?,?,'estimate') "
+                            "ON CONFLICT(account_id, as_of, kind) DO UPDATE SET balance=excluded.balance",
+                            (row["id"], day, worth))
+                links.append("value")
         if not upd and not links:
             return "Nothing changed."
         if upd:

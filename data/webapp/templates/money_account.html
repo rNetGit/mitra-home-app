@@ -11,7 +11,7 @@
       <p><span class="bk-badge bk-{{ a.match.status }}">{{ '✓ ' if a.match.status == 'ok' }}{{ a.match.text }}</span></p>
     </div>
     <div class="bk-bal">
-      <span class="muted small">{{ 'You owe' if a.owed else ('Cash value' if a.group == 'insurance' else 'Balance') }}{{ ' · ' ~ a.as_of if a.as_of }}</span>
+      <span class="muted small">{{ 'You owe' if a.owed else ('Cash value' if a.group == 'insurance' else ('Value' if a.group == 'property' else 'Balance')) }}{{ ' · ' ~ a.as_of if a.as_of }}</span>
       <b class="{{ 'bk-owed' if a.owed }}">{{ (a.balance)|money2 if a.balance is not none else '—' }}</b>
       <a class="btn alt" href="{{ link('accounts:' ~ a.id) }}">Edit account</a>
     </div>

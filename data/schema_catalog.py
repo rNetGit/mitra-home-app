@@ -181,12 +181,12 @@ TABLES = {
         means="Bank, card, loan and investment accounts, by name and last four digits.",
         person="owners (comma separated; owner = the card member)", vocab=["type", "subtype", "ownership"],
         links={"transactions.account_id": "its lines", "account_balances.account_id": "balance snapshots"},
-        notes="type: checking, savings, credit, loan, investment (coarse, for signs). subtype = the detailed kind "
+        notes="type: checking, savings, credit, loan, investment, property (coarse, for signs). subtype = the detailed kind "
               "(checking, savings, money_market, credit_card, store_card, brokerage, 401k, ira, roth_ira, 529, "
               "treasury_direct, cd, hsa, life_whole, life_universal, life_term, mortgage, heloc, auto, furniture, student, "
-              "personal, other_loan; may be NULL on old rows = use type). ownership individual / joint. "
+              "personal, other_loan, home, vehicle, other_property; may be NULL on old rows = use type). ownership individual / joint. "
               "closed_on not NULL = closed. Latest balance: v_balance_latest."),
-    "account_balances": dict(means="Balance snapshots of an account on a date (from statements or bank sync).",
+    "account_balances": dict(means="Balance snapshots of an account on a date (kind statement_end = a statement, snapshot = bank sync, estimate = a value typed for a home, vehicle or other property).",
                              date="as_of", money="balance", links={"account_id": "accounts.id"},
                              notes="Latest per account = MAX(as_of); v_balance_latest does it for you."),
     "transactions": dict(

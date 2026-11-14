@@ -89,7 +89,7 @@ FIELDS = {"life_items": ("domain", "title", "who", "provider", "due", "every", "
           "loans": ("name", "kind", "lender", "balance", "rate", "payment", "payoff"),
           "savings_goals": ("name", "target", "saved", "due", "account", "how"),
           "accounts": ("name", "kind", "last4", "owner", "institution", "ownership", "owners", "closed_on", "credit_limit",
-                       "apr", "due_day", "min_payment", "other", "death_benefit", "premium", "loan", "holdings_shown"),
+                       "apr", "due_day", "min_payment", "other", "death_benefit", "premium", "loan", "holdings_shown", "value"),
           "home_office_profile": ("year", "who", "office", "home", "months", "method", "self_employed", "exclusive", "regular",
                                   "principal", "income"),
           "home_assets": ASSET_FIELDS + ("how", "when", "receipt", "manual"),
@@ -179,7 +179,10 @@ def _account(rid):
             con.close()
     except sqlite3.Error:
         others, loans, loan, holds = [], [], None, []
-    return {"loans": loans, "loan": str(loan[0]) if loan else "", "holdings": holds,
+    est = _one("SELECT balance, as_of FROM account_balances WHERE account_id=? AND kind='estimate' ORDER BY as_of DESC LIMIT 1",
+               (rid,))
+    return {"value": _num(est["balance"]) if est else "", "value_date": est["as_of"] if est else "",
+            "loans": loans, "loan": str(loan[0]) if loan else "", "holdings": holds,
             "death_benefit": _num(r.get("death_benefit")), "premium": _num(r.get("premium")),
             "name": r["name"], "kind": sub, "group": AT.group_of(sub), "guessed": not r.get("subtype_locked"),
             "institution": r.get("institution") or "", "ownership": r.get("ownership") or "individual",
@@ -199,6 +202,8 @@ def _account_links(before, f, data):
         out["holdings"] = [k[2:] for k in data if k.startswith("h_") and k[2:] in offered]
     if before["group"] == "insurance":
         out.update(death_benefit=f["death_benefit"].strip(), premium=f["premium"].strip())
+    if before["group"] == "property" or AT.group_of(f["kind"].strip()) == "property":
+        out["value"] = f["value"].strip()
     return out
 
 

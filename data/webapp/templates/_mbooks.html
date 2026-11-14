@@ -1,7 +1,7 @@
 {# Money > Accounts (books_data.overview): every account once, grouped like the bank. #}
 {% set mt = {'ok': 'Matches bank', 'off': 'Off from the bank', 'sync': 'From the bank, nothing to compare yet', 'none': 'No bank balance yet'} %}
 <div class="kpis rk bk-kpis">
-  <div class="kpi"><span>What you have</span><b>{{ (b.have)|money }}</b><i>bank, investments, life cash value</i></div>
+  <div class="kpi"><span>What you have</span><b>{{ (b.have)|money }}</b><i>bank, investments, home and property, life cash value</i></div>
   <div class="kpi"><span>What you owe</span><b>{{ (b.owe)|money }}</b><i>cards, mortgage, loans</i></div>
   <div class="kpi"><span>Net worth</span><b>{{ (b.net)|money }}</b>{% if b.change is not none %}<i>{{ '+' if b.change >= 0 }}{{ (b.change)|money }} since the 1st</i>{% endif %}</div>
   <div class="kpi"><span>Matches bank</span><b>{{ b.count.ok }} of {{ b.accounts }}</b><i>{{ b.count.off }} off · {{ b.count.sync + b.count.none }} nothing to compare yet</i></div>
@@ -15,7 +15,7 @@
       {% if g.key == 'card' %}<th class="bk-wide">Used</th><th class="bk-wide">Due</th>
       {% elif g.key == 'loan' %}<th class="bk-wide">Rate</th><th class="bk-wide">Next payment</th>
       {% else %}<th class="bk-wide">Type</th><th class="bk-wide">As of</th>{% endif %}
-      <th class="num">{{ 'Cash value' if g.key == 'insurance' else ('Owed' if g.owed else 'Balance') }}</th></tr></thead>
+      <th class="num">{{ 'Cash value' if g.key == 'insurance' else ('Value' if g.key == 'property' else ('Owed' if g.owed else 'Balance')) }}</th></tr></thead>
     <tbody>{% for r in g.rows %}<tr{% if r.closed_on %} class="bk-closed"{% endif %}>
       <td><span class="bk-dot bk-{{ r.match.status }}" title="{{ mt[r.match.status] }}" aria-label="{{ mt[r.match.status] }}"></span><a href="/money/account/{{ r.id }}" class="bk-name">{{ r.name }}</a>{% if r.joint %} <span class="chip-s t-good">Joint</span>{% endif %}{% if r.closed_on %} <span class="chip-s">closed {{ r.closed_on }}</span>{% endif %}
         <span class="bk-meta">{{ r.institution ~ ' · ' if r.institution }}{{ r.kind_label }}{{ ' · x' ~ r.last4 if r.last4 }}</span></td>

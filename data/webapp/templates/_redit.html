@@ -351,6 +351,9 @@
   <fieldset class="nform-set"><legend>Holdings in this account</legend>
     {% for i, n, k, on in v.holdings %}<label class="check"><input type="checkbox" name="h_{{ i }}" value="1" {{ 'checked' if on }}> {{ n }}{{ ' · ' ~ k if k }}</label>{% else %}<p class="muted small">No holdings recorded yet (they come from filed investment statements).</p>{% endfor %}
   </fieldset>
+  {% elif v.group == 'property' %}
+  <label>Value today, your estimate{% if v.value_date %} <span class="muted small">last set {{ v.value_date }}</span>{% endif %}<input name="value" type="number" min="0" max="10000000000" step="1" value="{{ v.value }}"></label>
+  <p class="muted small">A home's worth from a recent appraisal or a sale-price site, a car's from a used-car guide. Change it when you like; each change is kept with its date.</p>
   {% elif v.group == 'insurance' %}
   <label>Death benefit (blank to clear)<input name="death_benefit" type="number" min="0" max="1000000000" step="1" value="{{ v.death_benefit }}"></label>
   <label>Premium a month (blank to clear)<input name="premium" type="number" min="0" max="1000000" step="0.01" value="{{ v.premium }}"></label>

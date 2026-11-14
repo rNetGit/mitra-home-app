@@ -664,7 +664,7 @@ def keep_split(bal):
     """(cash, investments, owed) from the latest balances: investment accounts (brokerage, TreasuryDirect T-bills and
     I bonds, CDs held there) apart from checking and savings; anything below zero is owed. The investments table is a
     breakdown of what those accounts hold, so it is not added again."""
-    cash = sum(r["signed_balance"] for r in bal if (r["signed_balance"] or 0) > 0 and r.get("type") != "investment")
+    cash = sum(r["signed_balance"] for r in bal if (r["signed_balance"] or 0) > 0 and r.get("type") not in ("investment", "property"))
     invested = sum(r["signed_balance"] for r in bal if (r["signed_balance"] or 0) > 0 and r.get("type") == "investment")
     owed = -sum(r["signed_balance"] for r in bal if (r["signed_balance"] or 0) < 0)
     return cash, invested, owed

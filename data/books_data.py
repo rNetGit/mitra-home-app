@@ -143,6 +143,8 @@ def reconcile(con, r):
     if len(ends) < 2:
         if r.get("bal_kind") == "loan":
             return {"status": "sync", "text": f"From your loan record · {r['as_of']}" if r["as_of"] else "From your loan record"}
+        if r.get("bal_kind") == "estimate":
+            return {"status": "sync", "text": f"Your estimate · {r['as_of']}" if r["as_of"] else "Your estimate"}
         if r.get("bal_kind") == "holdings":
             return {"status": "sync", "text": f"From the holdings · {r['as_of']}" if r["as_of"] else "From the holdings"}
         if ends or r["balance"] is not None:
@@ -278,6 +280,8 @@ def account(con, acct_id, today, n=200):
             facts.append(("APR", f"{r['apr_pct']:g}%"))
     elif r["group"] == "loan":
         facts += _loan_facts(con, r, today)
+    elif r["group"] == "property":
+        facts += _equity_facts(con, r)
     elif r["group"] == "insurance":
         facts.append(("Cash value", "none (term)" if r["subtype"] == "life_term" else
                       (M.fmt(r["balance"]) if r["balance"] is not None else "not recorded")))
@@ -300,6 +304,27 @@ def account(con, acct_id, today, n=200):
     total = con.execute("SELECT COUNT(*) FROM transactions WHERE account_id=?", (r["id"],)).fetchone()[0]
     return {"a": r, "facts": facts, "register": reg, "running": running, "lines": total,
             "shown": sum(1 for x in reg if "stmt" not in x), "more": min(int(n), REGISTER_MAX) < total and int(n) < REGISTER_MAX}
+
+
+# a home's equity counts the mortgage and home equity loans; a vehicle's counts the auto loans
+SECURED = {"home": ("mortgage", "heloc"), "vehicle": ("auto",)}
+
+
+def _equity_facts(con, r):
+    """Your estimate, and (when it is the only one of its kind) what is owed against it and the equity."""
+    out = [("Value (your estimate)", M.fmt(r["balance"], 0) if r["balance"] is not None else "not set: Edit account")]
+    debts = SECURED.get(r["subtype"])
+    if not debts or r["balance"] is None:
+        return out
+    rows = _accounts(con)
+    if sum(1 for x in rows if x["subtype"] == r["subtype"] and not x["closed_on"]) != 1:
+        return out  # two homes or two cars: which loan goes with which is not known
+    owed = [x for x in rows if x["subtype"] in debts and not x["closed_on"] and x["balance"] is not None]
+    if owed:
+        total = sum(x["balance"] for x in owed)
+        out.append(("Owed against it", M.fmt(total, 0)))
+        out.append(("Equity", M.fmt(r["balance"] - total, 0)))
+    return out
 
 
 def _holding_facts(r):
