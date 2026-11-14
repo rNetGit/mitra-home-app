@@ -1333,3 +1333,17 @@ a.kchip{color:inherit;text-decoration:none}a.kchip:hover,a.kchip:focus-visible{f
 .bk-in{color:var(--ok)}
 @media (max-width:760px){.bk-wide{display:none}.bk-table td,.bk-table th{padding:8px 10px}.bk-bal{align-items:flex-start}}
 .bk-pad{padding:0 16px 12px}
+
+/* Money > All accounts (all_accounts.py, _mall.html) */
+.aa-bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 10px}
+.aa-seg{display:inline-flex;border:1px solid var(--line);overflow:hidden}
+.aa-seg button{border:0;background:var(--surface);color:var(--text);padding:6px 14px;cursor:pointer;font:inherit}
+.aa-seg button.on{background:var(--accent);color:var(--on-accent);font-weight:600}
+.aa-step{display:inline-flex;align-items:center;gap:8px}
+.aa-step .btn{min-width:36px;text-align:center;text-decoration:none}
+.aa-off{opacity:.35;pointer-events:none}
+.aa-filter{margin-bottom:12px}
+.aa-spark{padding:10px 14px}.aa-spark p{margin:4px 0 0}
+.aa-svg{width:100%;height:60px}.aa-svg polyline{fill:none;stroke:var(--accent);stroke-width:2.5;vector-effect:non-scaling-stroke}
+.aa-moved td{color:var(--text-2);font-style:italic}
+.aa-ac{font-size:.8rem;border-radius:6px;padding:1px 6px;background:var(--neutral-soft);color:var(--text-2);white-space:nowrap;text-decoration:none}

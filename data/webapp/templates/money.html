@@ -2,14 +2,15 @@
 {% block title %}Money · {{ brand }}{% endblock %}
 {% block main %}
 {% set outlook = {'spending': 'Spending by category: this month, last month and the same month a year ago.', 'paid': 'Bills paid this month next to last month, per payee.', 'regular': 'What keeps coming every month: home, loans and insurance, subscriptions.'} %}
-<header class="head"><div><h1>Money</h1><p class="sub">{% if part == 'books' %}Every account, same as the bank.{% elif part == 'month' %}{{ today.strftime('%B %Y') }}: where the money went, category by category.{% elif part == 'homecosts' %}What the house costs to run: rent or mortgage, upkeep, utilities, home insurance.{% elif part == 'statement' %}One month as a home income statement: income, expenses by kind, and what moved.{% elif part == 'home' %}{{ today.strftime('%B %Y') }}: what came in, what went out, what is still to come.{% elif part in outlook %}{{ outlook[part] }}{% else %}{{ group }}{% if ptitle != group %} · {{ ptitle }}{% endif %}{% endif %}</p></div></header>
+<header class="head"><div><h1>Money</h1><p class="sub">{% if part == 'books' %}Every account, same as the bank.{% elif part == 'all' %}All accounts as one: what happened by day, week or month.{% elif part == 'month' %}{{ today.strftime('%B %Y') }}: where the money went, category by category.{% elif part == 'homecosts' %}What the house costs to run: rent or mortgage, upkeep, utilities, home insurance.{% elif part == 'statement' %}One month as a home income statement: income, expenses by kind, and what moved.{% elif part == 'home' %}{{ today.strftime('%B %Y') }}: what came in, what went out, what is still to come.{% elif part in outlook %}{{ outlook[part] }}{% else %}{{ group }}{% if ptitle != group %} · {{ ptitle }}{% endif %}{% endif %}</p></div></header>
 <nav class="pchips mtabs" aria-label="Money">
   <a href="{{ furl('books') }}" class="pchip{{ ' on' if part == 'books' }}"{% if part == 'books' %} aria-current="true"{% endif %}>Accounts</a>
+  <a href="{{ furl('all') }}" class="pchip{{ ' on' if part == 'all' }}"{% if part == 'all' %} aria-current="true"{% endif %}>All accounts</a>
   <a href="/money" class="pchip{{ ' on' if part == 'home' }}"{% if part == 'home' %} aria-current="true"{% endif %}>Overview</a>
   <a href="{{ furl('statement') }}" class="pchip{{ ' on' if part == 'statement' }}"{% if part == 'statement' %} aria-current="true"{% endif %}>Statement</a>
   <a href="{{ furl('homecosts') }}" class="pchip{{ ' on' if part == 'homecosts' }}"{% if part == 'homecosts' %} aria-current="true"{% endif %}>Home costs</a>
   {% for k, lbl in outlook_parts %}<a href="{{ furl(k) }}" class="pchip{{ ' on' if part == k }}"{% if part == k %} aria-current="true"{% endif %}>{{ lbl }}</a>{% endfor %}
-  {% for g, ks in groups if ks and (not simple or g == group) %}{% set on = part not in ('home', 'month', 'statement', 'homecosts', 'books') and g == group %}
+  {% for g, ks in groups if ks and (not simple or g == group) %}{% set on = part not in ('home', 'month', 'statement', 'homecosts', 'books', 'all') and g == group %}
   <a href="{{ furl(ks[0][0]) }}" class="pchip{{ ' on' if on }}"{% if on %} aria-current="true"{% endif %}>{{ g }}</a>{% endfor %}
 </nav>
 {% if group %}{% for g, ks in groups if g == group %}
@@ -17,6 +18,7 @@
 {% endfor %}{% endif %}
 {% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
 {% if part == 'books' %}{% include "_mbooks.html" %}
+{% elif part == 'all' %}{% include "_mall.html" %}
 {% elif part == 'homecosts' %}{% include "_mhomecosts.html" %}
 {% elif part == 'statement' %}{% include "_mstatement.html" %}
 {% elif part == 'month' %}{% include "_month_body.html" %}

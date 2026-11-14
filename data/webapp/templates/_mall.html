@@ -1,0 +1,36 @@
+{# Money > All accounts (all_accounts.view): every account as one, by day / week / month. #}
+{% set gl = {'': 'Everything', 'bank': 'Bank', 'card': 'Cards', 'investment': 'Investments', 'property': 'Property', 'loan': 'Loans'} %}
+<form class="aa-bar" action="/money" method="get">
+  <input type="hidden" name="part" value="all"><input type="hidden" name="g" value="{{ a.group }}"><input type="hidden" name="d" value="{{ a.start }}">
+  <div class="seg aa-seg" role="group" aria-label="Period">{% for p, lbl in (('day', 'Day'), ('week', 'Week'), ('month', 'Month')) %}<button type="submit" name="period" value="{{ p }}" class="{{ 'on' if a.period == p }}"{% if a.period == p %} aria-pressed="true"{% endif %}>{{ lbl }}</button>{% endfor %}</div>
+  <span class="aa-step"><a class="btn alt" href="/money?part=all&amp;period={{ a.period }}&amp;d={{ a.prev }}&amp;g={{ a.group }}" aria-label="Earlier">‹</a>
+    <b>{{ a.label }}</b>
+    {% if a.future %}<span class="btn alt aa-off" aria-hidden="true">›</span>{% else %}<a class="btn alt" href="/money?part=all&amp;period={{ a.period }}&amp;d={{ a.next }}&amp;g={{ a.group }}" aria-label="Later">›</a>{% endif %}</span>
+</form>
+<nav class="fchips aa-filter" aria-label="Which accounts">{% for k, lbl in gl.items() %}<a href="/money?part=all&amp;period={{ a.period }}&amp;d={{ a.start }}&amp;g={{ k }}" {% if a.group == k %}class="on" aria-current="true"{% endif %}>{{ lbl }}</a>{% endfor %}</nav>
+<div class="kpis rk bk-kpis">
+  <div class="kpi"><span>Money in</span><b class="bk-in">{{ (a.money_in)|money2 }}</b><i>pay, interest, dividends, refunds</i></div>
+  <div class="kpi"><span>Money out</span><b>{{ (a.money_out)|money2 }}</b><i>spending, bills, loan payments</i></div>
+  <div class="kpi"><span>Moved between your accounts</span><b class="muted">{{ (a.moved)|money2 }}</b><i>not spending · counted once</i></div>
+  <div class="kpi"><span>Net worth</span>{% if a.net_change is not none %}<b>{{ '+' if a.net_change >= 0 }}{{ (a.net_change)|money }}</b><i>{{ ('since ' ~ a.net_since[5:] ~ ': ') if a.net_since }}{{ (a.net_start)|money }} → {{ (a.net_end)|money }}</i>{% else %}<b>—</b><i>no balances on record for these days</i>{% endif %}</div>
+</div>
+{% if a.spark %}<section class="card aa-spark"><svg viewBox="0 0 700 60" preserveAspectRatio="none" class="aa-svg" aria-hidden="true"><polyline points="{{ a.spark }}"/></svg>
+  <p class="muted small">Net worth day by day, all accounts as one. Days between balances carry the last one forward.</p></section>{% endif %}
+{% if a.days %}
+<section class="card bk-reg">
+  <div class="tablewrap"><table class="bk-table nocards">
+    <thead><tr><th>What happened</th><th class="bk-wide">Account</th><th class="bk-wide">Category</th><th class="num">Amount</th></tr></thead>
+    <tbody>{% for d in a.days %}
+      <tr class="bk-month aa-day"><td colspan="3">{{ d.label }}</td><td class="num">{{ '+' if d.net > 0 }}{{ (d.net)|money2 }}</td></tr>
+      {% for it in d['items'] %}{% if it.kind in ('moved', 'loan') %}
+      <tr class="aa-moved"><td>⇄ {{ it.desc }}</td><td class="bk-wide"><span class="aa-ac">{{ it['from'].name if it['from'] else '?' }}</span> → <span class="aa-ac">{{ it['to'].name if it['to'] else '?' }}</span></td><td class="bk-wide">{{ it.category }}</td><td class="num">{{ (it.amount)|money2 }}</td></tr>
+      {% elif it.kind == 'moved1' %}
+      <tr class="aa-moved"><td>⇄ {{ it.desc }}</td><td class="bk-wide"><span class="aa-ac">{{ it.acct.name if it.acct else '?' }}</span> {{ '→ elsewhere' if it.out else '← from elsewhere' }}</td><td class="bk-wide">Moved</td><td class="num">{{ (it.amount)|money2 }}</td></tr>
+      {% else %}
+      <tr><td>{{ it.desc }}</td><td class="bk-wide">{% if it.acct %}<a class="aa-ac" href="/money/account/{{ it.acct.id }}">{{ it.acct.name }}{{ ' x' ~ it.acct.last4 if it.acct.last4 }}</a>{% endif %}</td><td class="bk-wide">{{ it.category }}</td><td class="num{{ ' bk-in' if it.amount > 0 }}">{{ '+' if it.amount > 0 }}{{ (it.amount)|money2 }}</td></tr>
+      {% endif %}{% endfor %}
+    {% endfor %}</tbody>
+  </table></div>
+  <p class="muted small bk-pad">{{ a.count }} line{{ 's' if a.count != 1 }}. Lines marked ⇄ moved money between your own accounts: they are shown once and left out of Money in and Money out (a loan payment counts in Money out).</p>
+</section>
+{% else %}<p class="muted">Nothing happened in these accounts in {{ a.label }}.</p>{% endif %}
