@@ -142,9 +142,11 @@
   <label>Year (optional)<input name="year" type="number" min="1950" max="2100" step="1" value="{{ v.year }}"></label>
 {% elif add.table == 'accounts' %}
   <label>Name<input name="name" maxlength="60" required value="{{ v.name }}"></label>
-  <label>Type<select name="kind">{% for k in ch.account_types %}<option value="{{ k }}" {{ 'selected' if v.kind == k }}>{{ k }}</option>{% endfor %}</select></label>
+  <label>Type<select name="kind">{% for g, subs in ch.account_subtypes %}<optgroup label="{{ g }}">{% for k, lab in subs %}<option value="{{ k }}" {{ 'selected' if v.kind == k }}>{{ lab }}</option>{% endfor %}</optgroup>{% endfor %}</select></label>
+  <label>Bank (optional)<input name="institution" maxlength="60" value="{{ v.institution }}"></label>
   <label>Last 4 digits (optional)<input name="last4" maxlength="4" pattern="[0-9]{4}" inputmode="numeric" value="{{ v.last4 }}"></label>
   <label>Owner (optional)<input name="owner" maxlength="40" value="{{ v.owner }}"></label>
+  <label>Ownership<select name="ownership"><option value="individual" {{ 'selected' if v.ownership != 'joint' }}>Individual</option><option value="joint" {{ 'selected' if v.ownership == 'joint' }}>Joint</option></select></label>
   <p class="muted small">Only the last four digits, never the whole account number.</p>
 {% else %}
   <label>Name<input name="name" maxlength="40" required value="{{ v.name }}"></label>

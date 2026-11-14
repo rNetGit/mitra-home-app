@@ -17,6 +17,7 @@ import datetime as dt
 import sqlite3
 
 import activities
+import account_types as AT
 import assets
 import db
 import dates  # noqa: E402
@@ -39,7 +40,7 @@ EDIT_OPS = {"life_items": ("save", "done", "drop"), "activity_schedules": ("save
             "loans": ("save", "status"), "savings_goals": ("save", "status"), "home_assets": ("save", "papers", "dispose"), "seasonal_tasks": ("done",),
             "vehicles": ("service", "save"), "id_documents": ("save",),
             "lists": ("item_add", "tick", "untick", "drop", "clear", "archive"), "meal_plan": ("clear",),
-            "recipes": ("archive",)}
+            "recipes": ("archive",), "accounts": ("save", "merge")}
 # (domain, section) -> the table its Add form adds to, or a tuple of tables when the part has more than one Add form
 ADD = {("people", "life"): "life_items", ("people", "classes"): "activity_schedules",
        ("people", "dates"): ("calendar_days", "events"), ("people", "profiles"): "member_info", ("people", "health"): "vaccinations", ("people", "people"): "members", ("money", "subs"): "subscriptions",
@@ -87,7 +88,8 @@ FIELDS = {"life_items": ("domain", "title", "who", "provider", "due", "every", "
           "budget": ("category", "limit"),
           "loans": ("name", "kind", "lender", "balance", "rate", "payment", "payoff"),
           "savings_goals": ("name", "target", "saved", "due", "account", "how"),
-          "accounts": ("name", "kind", "last4", "owner"),
+          "accounts": ("name", "kind", "last4", "owner", "institution", "ownership", "owners", "closed_on", "credit_limit",
+                       "apr", "due_day", "min_payment", "other"),
           "home_office_profile": ("year", "who", "office", "home", "months", "method", "self_employed", "exclusive", "regular",
                                   "principal", "income"),
           "home_assets": ASSET_FIELDS + ("how", "when", "receipt", "manual"),
@@ -151,6 +153,29 @@ def _member_ids(name):
         con.close()
 
 
+def _account(rid):
+    """Edit-form values of one account, with the other accounts of the same kind it could be merged with."""
+    r = _one("SELECT * FROM accounts WHERE id=?", (rid,))
+    if not r:
+        return None
+    sub = r.get("subtype") or AT.resolve(r["type"], r["name"], r.get("institution"))
+    try:
+        con = _con()
+        try:
+            others = [(str(i), f"{n} x{l}" if l else n) for i, n, l in con.execute(
+                "SELECT id, name, last4 FROM accounts WHERE id!=? AND type=? AND (last4 IS NULL OR ? IS NULL OR last4=?) "
+                "ORDER BY name", (rid, r["type"], r["last4"], r["last4"]))]
+        finally:
+            con.close()
+    except sqlite3.Error:
+        others = []
+    return {"name": r["name"], "kind": sub, "group": AT.group_of(sub), "guessed": not r.get("subtype_locked"),
+            "institution": r.get("institution") or "", "ownership": r.get("ownership") or "individual",
+            "owners": r.get("owners") or r.get("owner") or "", "closed_on": r.get("closed_on") or "",
+            "credit_limit": _num(r.get("credit_limit")), "apr": _num(r.get("apr_pct")), "due_day": _num(r.get("due_day")),
+            "min_payment": _num(r.get("min_payment")), "others": others}
+
+
 def goal_accounts():
     """[(id, label)] of the accounts a savings goal can follow (savings, checking, investment)."""
     try:
@@ -203,7 +228,7 @@ def people():
 def choices():
     return {"domains": list(life.DOMAINS), "people": people(), "roles": list(ea.ROLES), "freqs": list(ea.FREQS),
             "decisions": [(d, DECISION_LABEL[d]) for d in ea.SUB_DECISIONS], "today": dates.today().isoformat(),
-            "loan_kinds": list(ea.LOAN_KINDS), "account_types": list(ea.ACCOUNT_TYPES), "budget_lines": _budget_lines(), "goal_accounts": goal_accounts(),
+            "loan_kinds": list(ea.LOAN_KINDS), "account_types": list(ea.ACCOUNT_TYPES), "account_subtypes": AT.choices(), "budget_lines": _budget_lines(), "goal_accounts": goal_accounts(),
             "asset_categories": list(assets.CATEGORIES), "asset_ends": list(assets.STATUSES[1:]),
             "services": [(k, k.replace("_", " ")) for k in ea.VEHICLE_KINDS],
             "id_types": [(k, k.replace("_", " ")) for k in expiries.id_types()],
@@ -283,6 +308,8 @@ def values(table, rid):
         return r and {"name": r["name"], "balance": _num(r["balance"]), "balance_date": r["balance_date"] or "",
                       "rate": _num(r["rate_pct"]), "payment": _num(r["payment"]), "payoff": r["payoff_date"] or "",
                       "active": r["status"] != "paid_off"}
+    if table == "accounts":
+        return _account(rid)
     if table == "savings_goals":
         r = _one("SELECT name, target, saved, due_date, account_id, status FROM savings_goals WHERE id=?", (rid,))
         return r and {"name": r["name"], "target": _num(r["target"]), "saved": _num(r["saved"]), "due": r["due_date"] or "",
@@ -531,6 +558,19 @@ def edit(user, table, op, rid, data):
         else:
             ok, msg = ea.savings_goal_update(user, rid, status="active")
         return ok, msg, ok and before["active"]
+    if table == "accounts":
+        if op == "save":
+            ok, msg = ea.account_update(user, rid, name=f["name"], kind=f["kind"], institution=f["institution"].strip(),
+                                        ownership=f["ownership"], owners=f["owners"], closed_on=f["closed_on"].strip(),
+                                        credit_limit=f["credit_limit"].strip(), apr=f["apr"].strip(),
+                                        due_day=f["due_day"].strip(), min_payment=f["min_payment"].strip())
+            return ok, msg, False
+        if data.get("sure") not in ("1", "on", "yes"):
+            return False, "Tick 'Yes, it is the same account' first.", False
+        if f["other"].strip() not in {i for i, _ in before["others"]}:
+            return False, "Pick the other account from the list.", False
+        ok, msg = ea.account_merge(user, rid, int(f["other"]))
+        return ok, msg, False
     if table == "loans":
         if op == "save":
             ok, msg = ea.loan_update(user, rid, balance=f["balance"].strip(), rate=f["rate"].strip(),
@@ -676,5 +716,6 @@ def add(user, part, data):
     if table == "vehicles":
         return ea.vehicle_add(user, f["make"], f["model"], f["year"].strip() or None)
     if table == "accounts":
-        return ea.account_add(user, f["name"], f["kind"], f["last4"].strip() or None, f["owner"].strip() or None)
+        return ea.account_add(user, f["name"], f["kind"], f["last4"].strip() or None, f["owner"].strip() or None,
+                              f["institution"].strip() or None, f["ownership"].strip() or None)
     return ea.member_add(user, f["name"], f["role"], f["birthday"].strip(), f["year"].strip())

@@ -40,6 +40,7 @@ import dates  # noqa: E402
 import brand  # noqa: E402
 import config  # noqa: E402
 import db  # noqa: E402
+import account_types as AT  # noqa: E402
 import money  # noqa: E402
 
 NAME = "SIMPLEFIN_ACCESS_URL"
@@ -50,10 +51,6 @@ OVERLAP_DAYS = 3        # later pulls start a little before the last good one; t
 STALE_DAYS = 3          # health check: last good pull older than this = warn
 TIMEOUT = 60
 MAX_BODY = 20_000_000
-KINDS = (("credit", ("credit", "card", "visa", "mastercard", "amex", "discover")),
-         ("loan", ("loan", "mortgage")),
-         ("investment", ("401", "ira", "broker", "invest", "roth", "529")),
-         ("savings", ("saving",)))
 _TRAIL = re.compile(r"[\s(\[.*xX#-]*(\d{4})[)\]]?\s*$")   # a masked number at the end of the name: "...", "(", "x" + four digits
 
 
@@ -195,12 +192,9 @@ def split_name(raw):
     return raw, ""
 
 
-def kind_of(name):
-    low = name.lower()
-    for kind, words in KINDS:
-        if any(w in low for w in words):
-            return kind
-    return "checking"
+def kind_of(name, org=None):
+    """The coarse accounts.type of a new account (from the detailed guess, account_types.guess)."""
+    return AT.coarse(AT.guess(name, org)[0])
 
 
 def _summary(acc):
@@ -246,12 +240,18 @@ def map_account(con, summary, live_ids=None):
                            "AND COALESCE(last4, '')=''", (low,)).fetchall()
         if len(rows) == 1:
             row = rows[0]
+    org = (summary.get("org") or "").strip()[:60] or None
     if row is None:
-        cur = con.execute("INSERT INTO accounts(name, type, last4, currency, simplefin_id) VALUES (?,?,?,?,?)",
-                          (summary["name"], kind_of(summary["name"]), summary["last4"] or None, summary["currency"], sid))
-        row = (cur.lastrowid, summary["name"], kind_of(summary["name"]), summary["last4"])
+        sub = AT.guess(summary["name"], org)[0]
+        cur = con.execute("INSERT INTO accounts(name, type, last4, currency, simplefin_id, subtype, institution) "
+                          "VALUES (?,?,?,?,?,?,?)",
+                          (summary["name"], AT.coarse(sub), summary["last4"] or None, summary["currency"], sid, sub, org))
+        row = (cur.lastrowid, summary["name"], AT.coarse(sub), summary["last4"])
     else:
-        con.execute("UPDATE accounts SET simplefin_id=? WHERE id=?", (sid, row[0]))
+        # the bank's name and a missing type are filled in; a type a person picked (subtype_locked) is never touched
+        con.execute("UPDATE accounts SET simplefin_id=?, institution=COALESCE(institution, ?), "
+                    "subtype=CASE WHEN subtype IS NULL AND subtype_locked=0 THEN ? ELSE subtype END WHERE id=?",
+                    (sid, org, AT.resolve(row[2], row[1], org), row[0]))
     return {"id": row[0], "name": row[1], "type": row[2], "last4": row[3]}
 
 

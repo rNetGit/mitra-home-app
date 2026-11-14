@@ -9,6 +9,7 @@ import sys
 
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
+import account_types as AT  # noqa: E402
 import config  # noqa: E402
 import dates  # noqa: E402
 import paths  # noqa: E402
@@ -659,24 +660,143 @@ def receipt_ignore(actor, receipt_id):
 
 
 # ---------------------------------------------------------------- accounts and checkup dates (adults)
-@edits
-def account_add(actor, name, kind, last4=None, owner=None):
-    """A bank or card account, so statements can be matched to it. Last four digits only."""
-    _adult(actor)
-    name = _clean(v.text(60), name, "name")
+def _subtype(kind):
+    """A form's type: a detailed subtype or one of the older coarse types -> (subtype, coarse type)."""
+    kind = str(kind or "").strip()
+    if kind in AT.SUBTYPES:
+        return kind, AT.coarse(kind)
     kind = _clean(v.one_of(ACCOUNT_TYPES), kind, "type")
+    return AT.DEFAULT_OF_TYPE[kind], kind
+
+
+def _last4(last4):
     last4 = str(last4 or "").strip() or None
     if last4 and not (len(last4) == 4 and last4.isdigit()):
         raise EditError("last 4: exactly four digits, never the whole account number")
+    return last4
+
+
+@edits
+def account_add(actor, name, kind, last4=None, owner=None, institution=None, ownership=None):
+    """A bank or card account, so statements can be matched to it. Last four digits only. `kind` = a subtype
+    (account_types.SUBTYPES) or a coarse type."""
+    _adult(actor)
+    name = _clean(v.text(60), name, "name")
+    sub, kind = _subtype(kind)
+    last4 = _last4(last4)
     owner = _opt(v.text(40), owner, "owner")
+    institution = _opt(v.text(60), institution, "bank")
+    ownership = _opt(v.one_of(AT.OWNERSHIP), ownership, "ownership") or "individual"
     with _con() as con:
         if con.execute("SELECT 1 FROM accounts WHERE name=? COLLATE NOCASE", (name,)).fetchone():
             raise EditError(f"there is already an account called {name}")
         if last4 and con.execute("SELECT 1 FROM accounts WHERE last4=?", (last4,)).fetchone():
             raise EditError(f"another account already ends in {last4}; statements could not tell them apart")
-        con.execute("INSERT INTO accounts(name, type, last4, owner) VALUES (?,?,?,?)", (name, kind, last4, owner))
-        _log(actor, "account_add", f"type={kind}")
+        con.execute("INSERT INTO accounts(name, type, last4, owner, owners, subtype, subtype_locked, institution, ownership) "
+                    "VALUES (?,?,?,?,?,?,1,?,?)", (name, kind, last4, owner, owner, sub, institution, ownership))
+        _log(actor, "account_add", f"type={sub}")
     return f"Account {name} added. Drop its statement (PDF or CSV export) in the Inbox."
+
+
+@edits
+def account_update(actor, account_id, name=None, kind=None, institution=None, ownership=None, owners=None,
+                   closed_on=None, credit_limit=None, apr=None, due_day=None, min_payment=None):
+    """Change an account. None = unchanged, "" clears (not the name or type). A type set here is locked: bank sync
+    never guesses it again. Owners are names as typed ("Marcus, Elena"); joint needs two."""
+    _adult(actor)
+    with _con() as con:
+        con.row_factory = sqlite3.Row
+        row = con.execute("SELECT * FROM accounts WHERE id=?", (int(account_id),)).fetchone()
+        if not row:
+            raise EditError("no such account")
+        upd = {}
+        if name is not None and str(name).strip() and str(name).strip() != row["name"]:
+            name = _clean(v.text(60), name, "name")
+            if con.execute("SELECT 1 FROM accounts WHERE name=? COLLATE NOCASE AND id!=?", (name, row["id"])).fetchone():
+                raise EditError(f"there is already an account called {name}")
+            upd["name"] = name
+        if kind is not None and str(kind).strip():
+            sub, coarse = _subtype(kind)
+            if sub != row["subtype"] or not row["subtype_locked"]:
+                upd.update(subtype=sub, type=coarse, subtype_locked=1)
+        if institution is not None:
+            upd["institution"] = _opt(v.text(60), institution, "bank")
+        if owners is not None:
+            people = [p.strip() for p in str(owners).split(",") if p.strip()]
+            for p in people:
+                _clean(v.text(40), p, "owner")
+            upd["owners"] = ", ".join(people) or None
+        if ownership is not None and str(ownership).strip():
+            upd["ownership"] = _clean(v.one_of(AT.OWNERSHIP), ownership, "ownership")
+        if closed_on is not None:
+            upd["closed_on"] = _opt(v.iso_date, closed_on, "closed on")
+            if upd["closed_on"] and upd["closed_on"] > dates.today().isoformat():
+                raise EditError("closed on: it can not be in the future")
+        if credit_limit is not None:
+            upd["credit_limit"] = _opt(v.money(0, 1e7), credit_limit, "credit limit")
+        if apr is not None:
+            upd["apr_pct"] = _opt(v.num(0, 100), apr, "APR %")
+        if due_day is not None:
+            upd["due_day"] = _opt(v.integer(1, 31), due_day, "due day")
+        if min_payment is not None:
+            upd["min_payment"] = _opt(v.money(0, 1e7), min_payment, "minimum payment")
+        owners_now = upd.get("owners", row["owners"])
+        if upd.get("ownership", row["ownership"]) == "joint" and len([p for p in (owners_now or "").split(",") if p.strip()]) < 2:
+            raise EditError("a joint account needs two owners (type them like: Marcus, Elena)")
+        upd = {k: x for k, x in upd.items() if x != row[k]}
+        if not upd:
+            return "Nothing changed."
+        con.execute(f"UPDATE accounts SET {', '.join(k + '=?' for k in upd)} WHERE id=?", (*upd.values(), row["id"]))
+        _log(actor, "account_update", f"id={row['id']} fields={','.join(upd)}")
+    return f"Saved {upd.get('name', row['name'])}."
+
+
+def _account_tables(con):
+    """Every table with an account_id column (found at run time, so a later migration's table is merged too)."""
+    tables = [t for (t,) in con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")]
+    return [t for t in tables if t != "accounts" and "account_id" in {r[1] for r in con.execute(f"PRAGMA table_info({t})")}]
+
+
+@edits
+def account_merge(actor, keep_id, drop_id):
+    """Two rows that are the same bank account (a statement import and bank sync, say): every transaction, balance
+    and link of `drop_id` moves to `keep_id`, blanks of the kept row are filled from the other (last4, bank sync link,
+    bank, owners, card fields), then the emptied row is removed. A line both rows already have (same ref, or a balance
+    on the same day) is kept once. Logged by ids."""
+    _adult(actor)
+    keep_id, drop_id = int(keep_id), int(drop_id)
+    if keep_id == drop_id:
+        raise EditError("pick a different account to merge")
+    with _con() as con:
+        con.row_factory = sqlite3.Row
+        keep = con.execute("SELECT * FROM accounts WHERE id=?", (keep_id,)).fetchone()
+        drop = con.execute("SELECT * FROM accounts WHERE id=?", (drop_id,)).fetchone()
+        if not keep or not drop:
+            raise EditError("no such account")
+        if keep["type"] != drop["type"]:
+            raise EditError(f"{keep['name']} is {keep['type']} and {drop['name']} is {drop['type']}: "
+                            "change one so both are the same kind first")
+        if keep["last4"] and drop["last4"] and keep["last4"] != drop["last4"]:
+            raise EditError(f"they end in different numbers ({keep['last4']} and {drop['last4']}), so they are not the same account")
+        moved, dropped = 0, 0
+        for t in _account_tables(con):
+            if t == "transactions":
+                # same ref on both = the same line: keep the kept account's copy
+                dropped += con.execute(
+                    "DELETE FROM transactions WHERE account_id=? AND COALESCE(ref,'')!='' AND ref IN "
+                    "(SELECT ref FROM transactions WHERE account_id=? AND COALESCE(ref,'')!='')", (drop_id, keep_id)).rowcount
+            cur = con.execute(f"UPDATE OR IGNORE {t} SET account_id=? WHERE account_id=?", (keep_id, drop_id))
+            moved += cur.rowcount
+            left = con.execute(f"DELETE FROM {t} WHERE account_id=?", (drop_id,)).rowcount  # unique clashes = repeats
+            dropped += left
+        fill = {k: drop[k] for k in ("last4", "simplefin_id", "institution", "owners", "owner", "credit_limit", "apr_pct",
+                                      "due_day", "min_payment") if k in keep.keys() and not keep[k] and drop[k]}
+        con.execute("DELETE FROM accounts WHERE id=?", (drop_id,))
+        if fill:
+            con.execute(f"UPDATE accounts SET {', '.join(k + '=?' for k in fill)} WHERE id=?", (*fill.values(), keep_id))
+        _log(actor, "account_merge", f"keep={keep_id} drop={drop_id} moved={moved} repeats={dropped}")
+    return (f"Merged {drop['name']} into {keep['name']}: {moved} line(s) moved"
+            + (f", {dropped} repeat(s) kept once" if dropped else "") + ".")
 
 
 @edits
