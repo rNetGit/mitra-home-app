@@ -89,7 +89,7 @@ FIELDS = {"life_items": ("domain", "title", "who", "provider", "due", "every", "
           "loans": ("name", "kind", "lender", "balance", "rate", "payment", "payoff"),
           "savings_goals": ("name", "target", "saved", "due", "account", "how"),
           "accounts": ("name", "kind", "last4", "owner", "institution", "ownership", "owners", "closed_on", "credit_limit",
-                       "apr", "due_day", "min_payment", "other"),
+                       "apr", "due_day", "min_payment", "other", "death_benefit", "premium", "loan", "holdings_shown"),
           "home_office_profile": ("year", "who", "office", "home", "months", "method", "self_employed", "exclusive", "regular",
                                   "principal", "income"),
           "home_assets": ASSET_FIELDS + ("how", "when", "receipt", "manual"),
@@ -167,13 +167,39 @@ def _account(rid):
                 "ORDER BY name", (rid, r["type"], r["last4"], r["last4"]))]
         finally:
             con.close()
+        con = _con()
+        try:
+            loans = [(str(i), f"{n} ({lender})" if lender else n) for i, n, lender in con.execute(
+                "SELECT id, name, lender FROM loans WHERE account_id IS NULL OR account_id=? ORDER BY status='paid_off', name",
+                (rid,))]
+            loan = con.execute("SELECT id FROM loans WHERE account_id=?", (rid,)).fetchone()
+            holds = [(str(i), n, k or "", bool(a)) for i, n, k, a in con.execute(
+                "SELECT id, name, kind, account_id FROM investments WHERE account_id IS NULL OR account_id=? ORDER BY name", (rid,))]
+        finally:
+            con.close()
     except sqlite3.Error:
-        others = []
-    return {"name": r["name"], "kind": sub, "group": AT.group_of(sub), "guessed": not r.get("subtype_locked"),
+        others, loans, loan, holds = [], [], None, []
+    return {"loans": loans, "loan": str(loan[0]) if loan else "", "holdings": holds,
+            "death_benefit": _num(r.get("death_benefit")), "premium": _num(r.get("premium")),
+            "name": r["name"], "kind": sub, "group": AT.group_of(sub), "guessed": not r.get("subtype_locked"),
             "institution": r.get("institution") or "", "ownership": r.get("ownership") or "individual",
             "owners": r.get("owners") or r.get("owner") or "", "closed_on": r.get("closed_on") or "",
             "credit_limit": _num(r.get("credit_limit")), "apr": _num(r.get("apr_pct")), "due_day": _num(r.get("due_day")),
             "min_payment": _num(r.get("min_payment")), "others": others}
+
+
+def _account_links(before, f, data):
+    """account_update's link arguments from the Edit account form: the loan select (loan group) and the holdings tick
+    boxes `h_<id>` (investment group, only when the form showed them), the life fields (insurance group)."""
+    out = {}
+    if before["group"] == "loan":
+        out["loan_id"] = f["loan"].strip()
+    if before["group"] == "investment" and f["holdings_shown"] == "1":
+        offered = {i for i, *_ in before["holdings"]}
+        out["holdings"] = [k[2:] for k in data if k.startswith("h_") and k[2:] in offered]
+    if before["group"] == "insurance":
+        out.update(death_benefit=f["death_benefit"].strip(), premium=f["premium"].strip())
+    return out
 
 
 def goal_accounts():
@@ -563,7 +589,8 @@ def edit(user, table, op, rid, data):
             ok, msg = ea.account_update(user, rid, name=f["name"], kind=f["kind"], institution=f["institution"].strip(),
                                         ownership=f["ownership"], owners=f["owners"], closed_on=f["closed_on"].strip(),
                                         credit_limit=f["credit_limit"].strip(), apr=f["apr"].strip(),
-                                        due_day=f["due_day"].strip(), min_payment=f["min_payment"].strip())
+                                        due_day=f["due_day"].strip(), min_payment=f["min_payment"].strip(),
+                                        **_account_links(before, f, data))
             return ok, msg, False
         if data.get("sure") not in ("1", "on", "yes"):
             return False, "Tick 'Yes, it is the same account' first.", False

@@ -344,6 +344,17 @@
   <label>Payment due day of the month (blank to clear)<input name="due_day" type="number" min="1" max="31" step="1" value="{{ v.due_day }}"></label>
   <label>Minimum payment (blank to clear)<input name="min_payment" type="number" min="0" max="10000000" step="0.01" value="{{ v.min_payment }}"></label>
   {% endif %}
+  {% if v.group == 'loan' %}
+  <label>Loan details (rate, payment, payoff)<select name="loan"><option value="">none</option>{% for i, lab in v.loans %}<option value="{{ i }}" {{ 'selected' if v.loan == i }}>{{ lab }}</option>{% endfor %}</select></label>
+  {% elif v.group == 'investment' %}
+  <input type="hidden" name="holdings_shown" value="1">
+  <fieldset class="nform-set"><legend>Holdings in this account</legend>
+    {% for i, n, k, on in v.holdings %}<label class="check"><input type="checkbox" name="h_{{ i }}" value="1" {{ 'checked' if on }}> {{ n }}{{ ' · ' ~ k if k }}</label>{% else %}<p class="muted small">No holdings recorded yet (they come from filed investment statements).</p>{% endfor %}
+  </fieldset>
+  {% elif v.group == 'insurance' %}
+  <label>Death benefit (blank to clear)<input name="death_benefit" type="number" min="0" max="1000000000" step="1" value="{{ v.death_benefit }}"></label>
+  <label>Premium a month (blank to clear)<input name="premium" type="number" min="0" max="1000000" step="0.01" value="{{ v.premium }}"></label>
+  {% endif %}
   <label>Closed on (blank = open)<input name="closed_on" type="date" min="1990-01-01" max="2100-12-31" value="{{ v.closed_on }}"></label>
   <button class="btn" type="submit">Save changes</button>
 </form>

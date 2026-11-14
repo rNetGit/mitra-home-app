@@ -180,8 +180,33 @@ def loan_add(actor, name, kind="other", lender=None, balance=None, rate=None, pa
     with _con() as con:
         cur = con.execute("INSERT INTO loans(name, lender, kind, balance, balance_date, rate_pct, payment, payoff_date) VALUES (?,?,?,?,?,?,?,?)",
                           (name, lender, kind, balance, dates.today().isoformat() if balance is not None else None, rate, payment, payoff))
-        _log(actor, "loan_add", f"id={cur.lastrowid} kind={kind}")
+        aid = _loan_account(con, cur.lastrowid, name, kind, lender)
+        _log(actor, "loan_add", f"id={cur.lastrowid} kind={kind} account={aid}")
     return f"Added the {name} loan."
+
+
+LOAN_SUBTYPE = {"mortgage": "mortgage", "auto": "auto", "student": "student", "personal": "personal", "heloc": "heloc"}
+
+
+def _loan_account(con, loan_id, name, kind, lender):
+    """The account a new loan is the detail of: the one unlinked loan account of that name, else a new one (as migration
+    071 does for older loans). -> account id, or None when the name is taken by another kind of account twice over."""
+    linked = {r[0] for r in con.execute("SELECT account_id FROM loans WHERE account_id IS NOT NULL")}
+    same = [r[0] for r in con.execute("SELECT id FROM accounts WHERE type='loan' AND lower(name)=lower(?)", (name,))
+            if r[0] not in linked]
+    if len(same) == 1:
+        aid = same[0]
+    else:
+        label = name
+        for label in (name, f"{name} (loan)"):
+            if not con.execute("SELECT 1 FROM accounts WHERE name=? COLLATE NOCASE", (label,)).fetchone():
+                break
+        else:
+            return None
+        aid = con.execute("INSERT INTO accounts(name, type, subtype, subtype_locked, institution) VALUES (?,?,?,1,?)",
+                          (label, "loan", LOAN_SUBTYPE.get(kind, "other_loan"), lender)).lastrowid
+    con.execute("UPDATE loans SET account_id=? WHERE id=?", (aid, loan_id))
+    return aid
 
 
 @edits
@@ -700,9 +725,11 @@ def account_add(actor, name, kind, last4=None, owner=None, institution=None, own
 
 @edits
 def account_update(actor, account_id, name=None, kind=None, institution=None, ownership=None, owners=None,
-                   closed_on=None, credit_limit=None, apr=None, due_day=None, min_payment=None):
+                   closed_on=None, credit_limit=None, apr=None, due_day=None, min_payment=None, death_benefit=None,
+                   premium=None, loan_id=None, holdings=None):
     """Change an account. None = unchanged, "" clears (not the name or type). A type set here is locked: bank sync
-    never guesses it again. Owners are names as typed ("Marcus, Elena"); joint needs two."""
+    never guesses it again. Owners are names as typed ("Marcus, Elena"); joint needs two. `loan_id` = the loan row this
+    account is ("" = none); `holdings` = ids of the investments rows it holds (the list replaces the links)."""
     _adult(actor)
     with _con() as con:
         con.row_factory = sqlite3.Row
@@ -740,15 +767,54 @@ def account_update(actor, account_id, name=None, kind=None, institution=None, ow
             upd["due_day"] = _opt(v.integer(1, 31), due_day, "due day")
         if min_payment is not None:
             upd["min_payment"] = _opt(v.money(0, 1e7), min_payment, "minimum payment")
+        if death_benefit is not None:
+            upd["death_benefit"] = _opt(v.money(0, 1e9), death_benefit, "death benefit")
+        if premium is not None:
+            upd["premium"] = _opt(v.money(0, 1e6), premium, "premium a month")
         owners_now = upd.get("owners", row["owners"])
         if upd.get("ownership", row["ownership"]) == "joint" and len([p for p in (owners_now or "").split(",") if p.strip()]) < 2:
             raise EditError("a joint account needs two owners (type them like: Marcus, Elena)")
         upd = {k: x for k, x in upd.items() if x != row[k]}
-        if not upd:
+        links = _link_details(con, row["id"], loan_id, holdings)
+        if not upd and not links:
             return "Nothing changed."
-        con.execute(f"UPDATE accounts SET {', '.join(k + '=?' for k in upd)} WHERE id=?", (*upd.values(), row["id"]))
-        _log(actor, "account_update", f"id={row['id']} fields={','.join(upd)}")
+        if upd:
+            con.execute(f"UPDATE accounts SET {', '.join(k + '=?' for k in upd)} WHERE id=?", (*upd.values(), row["id"]))
+        _log(actor, "account_update", f"id={row['id']} fields={','.join(list(upd) + links)}")
     return f"Saved {upd.get('name', row['name'])}."
+
+
+def _link_details(con, acct_id, loan_id, holdings):
+    """Point one loan row and a set of investments rows at this account. -> the names of what changed."""
+    changed = []
+    if loan_id is not None:
+        lid = int(loan_id) if str(loan_id).strip() else None
+        if lid is not None:
+            r = con.execute("SELECT account_id FROM loans WHERE id=?", (lid,)).fetchone()
+            if not r:
+                raise EditError("no such loan")
+            if r[0] not in (None, acct_id):
+                raise EditError("that loan already belongs to another account")
+        now = [x for (x,) in con.execute("SELECT id FROM loans WHERE account_id=?", (acct_id,))]
+        if now != ([lid] if lid else []):
+            con.execute("UPDATE loans SET account_id=NULL WHERE account_id=?", (acct_id,))
+            if lid:
+                con.execute("UPDATE loans SET account_id=? WHERE id=?", (acct_id, lid))
+            changed.append("loan")
+    if holdings is not None:
+        want = {int(h) for h in holdings if str(h).strip()}
+        for h in want:
+            r = con.execute("SELECT account_id FROM investments WHERE id=?", (h,)).fetchone()
+            if not r:
+                raise EditError("no such holding")
+            if r[0] not in (None, acct_id):
+                raise EditError("that holding already belongs to another account")
+        now = {x for (x,) in con.execute("SELECT id FROM investments WHERE account_id=?", (acct_id,))}
+        if now != want:
+            con.execute("UPDATE investments SET account_id=NULL WHERE account_id=?", (acct_id,))
+            con.executemany("UPDATE investments SET account_id=? WHERE id=?", [(acct_id, h) for h in want])
+            changed.append("holdings")
+    return changed
 
 
 def _account_tables(con):
