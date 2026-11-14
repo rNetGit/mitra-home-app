@@ -18,6 +18,15 @@
   </div>
   {% if acc.facts %}<dl class="bk-facts">{% for k, val in acc.facts %}<div><dt>{{ k }}</dt><dd>{{ val }}</dd></div>{% endfor %}</dl>{% endif %}
 </section>
+{% if a.holdings %}
+<section class="card bk-reg">
+  <h2>Holdings</h2>
+  <div class="tablewrap"><table class="bk-table nocards">
+    <thead><tr><th>Holding</th><th class="bk-wide">Kind</th><th class="num bk-wide">Put in</th><th class="bk-wide">Matures</th><th class="num">Value</th></tr></thead>
+    <tbody>{% for h in a.holdings %}<tr><td>{{ h.name }}<span class="bk-meta">{{ 'as of ' ~ h.as_of if h.as_of }}</span></td><td class="bk-wide">{{ (h.kind or '')|replace('_', ' ') }}</td><td class="num bk-wide">{{ (h.invested)|money2 if h.invested is not none else '' }}</td><td class="bk-wide">{{ h.maturity_date or '' }}</td><td class="num">{{ (h.current_value)|money2 if h.current_value is not none else '' }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+</section>
+{% endif %}
 <section class="card bk-reg">
   <h2>Register <span class="muted small">newest first · {{ 'what you owe after each line' if a.owed else 'balance after each line' }}{% if not acc.running %} · no bank balance yet, so no running balance{% endif %}</span></h2>
   {% if acc.register %}

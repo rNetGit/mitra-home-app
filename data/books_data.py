@@ -45,7 +45,7 @@ def _accounts(con):
     """Every account with its subtype, group and newest balance (a statement end beats a snapshot on the same day)."""
     have = _cols(con)
     want = ("subtype", "institution", "ownership", "owners", "closed_on", "credit_limit", "apr_pct", "due_day",
-            "min_payment", "sort", "owner")
+            "min_payment", "sort", "owner", "death_benefit", "premium")
     sel = ", ".join(c if c in have else f"NULL AS {c}" for c in want)
     cur = con.execute(f"SELECT id, name, type, last4, {sel} FROM accounts")
     names = [d[0] for d in cur.description]
@@ -62,7 +62,60 @@ def _accounts(con):
         r["as_of"], r["balance"], r["bal_kind"] = latest.get(r["id"], (None, None, None))
         r["owners"] = r["owners"] or r["owner"] or ""
         r["joint"] = r["ownership"] == "joint"
+    _details(con, rows)
     return rows
+
+
+def _table_cols(con, table):
+    return {r[1] for r in con.execute(f"PRAGMA table_info({table})")}
+
+
+def _dicts(cur):
+    names = [d[0] for d in cur.description]
+    return [dict(zip(names, x)) for x in cur.fetchall()]
+
+
+def _details(con, rows):
+    """Linked loan rows (rate, payment, payoff; their balance when it is newer than the bank's) and holdings (their
+    value when the account has no balance of its own) onto the account rows (migration 071, slice 3)."""
+    by_id = {r["id"]: r for r in rows}
+    for r in rows:
+        r["loan"], r["holdings"] = None, []
+    if "account_id" in _table_cols(con, "loans"):
+        for ln in _dicts(con.execute("SELECT * FROM loans WHERE account_id IS NOT NULL")):
+            r = by_id.get(ln["account_id"])
+            if not r:
+                continue
+            r["loan"] = ln
+            if r["apr_pct"] is None and ln["rate_pct"] is not None:
+                r["apr_pct"] = ln["rate_pct"]
+            if not r["min_payment"] and ln["payment"]:
+                r["min_payment"] = ln["payment"]
+            if not r["due_day"] and ln["payment_day"]:
+                r["due_day"] = ln["payment_day"]
+            when = str(ln["balance_date"] or "")[:10]
+            if ln["balance"] is not None and (r["balance"] is None or (when and when > (r["as_of"] or ""))):
+                r["balance"], r["as_of"], r["bal_kind"] = ln["balance"], when or None, "loan"
+    if "account_id" in _table_cols(con, "investments"):
+        for h in _dicts(con.execute("SELECT * FROM investments WHERE account_id IS NOT NULL")):
+            r = by_id.get(h["account_id"])
+            if r:
+                r["holdings"].append(h)
+        for r in rows:
+            vals = [h["current_value"] for h in r["holdings"] if h["current_value"] is not None]
+            if r["balance"] is None and vals:
+                r["balance"] = round(sum(vals), 2)
+                r["as_of"] = max((str(h["as_of"])[:10] for h in r["holdings"] if h["as_of"]), default=None)
+                r["bal_kind"] = "holdings"
+
+
+def unlinked_holdings(con):
+    """Investments rows that belong to no account: listed apart, never in the totals (they may sit inside an account
+    that is not linked yet, so adding them could count them twice)."""
+    if "account_id" not in _table_cols(con, "investments"):
+        return []
+    return _dicts(con.execute("SELECT id, name, kind, invested, current_value, as_of, maturity_date FROM investments "
+                              "WHERE account_id IS NULL ORDER BY name"))
 
 
 def _signed(r, bal):
@@ -88,6 +141,10 @@ def reconcile(con, r):
     ends = [(str(d)[:10], b) for d, b in con.execute(
         "SELECT as_of, balance FROM account_balances WHERE account_id=? AND kind='statement_end' ORDER BY as_of", (r["id"],))]
     if len(ends) < 2:
+        if r.get("bal_kind") == "loan":
+            return {"status": "sync", "text": f"From your loan record · {r['as_of']}" if r["as_of"] else "From your loan record"}
+        if r.get("bal_kind") == "holdings":
+            return {"status": "sync", "text": f"From the holdings · {r['as_of']}" if r["as_of"] else "From the holdings"}
         if ends or r["balance"] is not None:
             return {"status": "sync", "text": f"From the bank · {r['as_of']}" if r["as_of"] else "From the bank"}
         return {"status": "none", "text": "No bank balance yet: add a statement"}
@@ -142,7 +199,7 @@ def overview(con, today, closed=False):
                 needs.append({"id": r["id"], "text": f"{r['name']} due {r['due']}"})
     return {"groups": groups, "have": round(have, 2), "owe": round(owe, 2), "net": round(have - owe, 2), "count": count,
             "accounts": sum(len(g["rows"]) for g in groups), "closed": len(shut), "needs": needs[:3],
-            "more_needs": max(0, len(needs) - 3), "change": _month_change(con, today)}
+            "more_needs": max(0, len(needs) - 3), "change": _month_change(con, today), "loose": unlinked_holdings(con)}
 
 
 def _month_change(con, today):
@@ -220,12 +277,14 @@ def account(con, acct_id, today, n=200):
         if r["apr_pct"] is not None:
             facts.append(("APR", f"{r['apr_pct']:g}%"))
     elif r["group"] == "loan":
-        if r["apr_pct"] is not None:
-            facts.append(("Rate", f"{r['apr_pct']:g}%"))
-        if r["min_payment"]:
-            facts.append(("Payment", M.fmt(r["min_payment"])))
-        if r["due"]:
-            facts.append(("Next payment", r["due"]))
+        facts += _loan_facts(con, r, today)
+    elif r["group"] == "insurance":
+        facts.append(("Cash value", "none (term)" if r["subtype"] == "life_term" else
+                      (M.fmt(r["balance"]) if r["balance"] is not None else "not recorded")))
+        if r["death_benefit"]:
+            facts.append(("Death benefit", M.fmt(r["death_benefit"], 0)))
+        if r["premium"]:
+            facts.append(("Premium a month", M.fmt(r["premium"])))
     else:
         inn, out_, moved = con.execute(
             "SELECT COALESCE(SUM(CASE WHEN amount>0 AND COALESCE(txn_type,'') NOT IN (?,?,?,?) THEN amount END), 0), "
@@ -236,9 +295,58 @@ def account(con, acct_id, today, n=200):
         mon = today.strftime("%b")
         facts += [(f"Money in · {mon}", M.fmt(inn)), (f"Money out · {mon}", M.fmt(out_)),
                   (f"Moved to or from your accounts · {mon}", M.fmt(moved))]
+    if r["group"] == "investment" and r["holdings"]:
+        facts += _holding_facts(r)
     total = con.execute("SELECT COUNT(*) FROM transactions WHERE account_id=?", (r["id"],)).fetchone()[0]
     return {"a": r, "facts": facts, "register": reg, "running": running, "lines": total,
             "shown": sum(1 for x in reg if "stmt" not in x), "more": min(int(n), REGISTER_MAX) < total and int(n) < REGISTER_MAX}
+
+
+def _holding_facts(r):
+    put = [h["invested"] for h in r["holdings"] if h["invested"] is not None]
+    val = [h["current_value"] for h in r["holdings"] if h["current_value"] is not None]
+    out = []
+    if put:
+        out.append(("Put in", M.fmt(sum(put))))
+    if val:
+        out.append(("Holdings value", M.fmt(sum(val))))
+    if put and val and len(put) == len(val) == len(r["holdings"]):
+        out.append(("Gain", M.fmt(sum(val) - sum(put))))
+    mat = sorted(str(h["maturity_date"])[:10] for h in r["holdings"] if h["maturity_date"])
+    if mat:
+        out.append(("Next maturity", mat[0]))
+    return out
+
+
+def _loan_facts(con, r, today):
+    """Rate, payment, next payment, payoff (the record's date and what the payment gives at the rate) and how much the
+    balance came down this year (from the balances on record)."""
+    import loans as L
+    out = []
+    if r["apr_pct"] is not None:
+        out.append(("Rate", f"{r['apr_pct']:g}%"))
+    if r["min_payment"]:
+        out.append(("Payment", M.fmt(r["min_payment"])))
+    if r["due"]:
+        out.append(("Next payment", r["due"]))
+    ln = r["loan"] or {}
+    if ln.get("payoff_date"):
+        out.append(("Payoff date on record", str(ln["payoff_date"])[:10]))
+    po = L.payoff(r["balance"], r["apr_pct"], r["min_payment"]) if r["balance"] and r["min_payment"] else None
+    if po:
+        months, interest = po
+        y, m = divmod(today.month - 1 + months, 12)
+        out.append(("At this payment, paid off", f"{dt.date(today.year + y, m + 1, 1):%b %Y} ({months} months)"))
+        out.append(("Interest still to pay", M.fmt(interest, 0)))
+    elif r["balance"] and r["min_payment"]:
+        out.append(("At this payment", "the payment does not cover the interest"))
+    jan = f"{today.year}-01-01"
+    start = con.execute("SELECT balance FROM account_balances WHERE account_id=? AND as_of<=? ORDER BY as_of DESC LIMIT 1",
+                        (r["id"], jan)).fetchone() or con.execute(
+        "SELECT balance FROM account_balances WHERE account_id=? AND as_of>=? ORDER BY as_of LIMIT 1", (r["id"], jan)).fetchone()
+    if start and r["balance"] is not None and start[0] > r["balance"]:
+        out.append((f"Paid down in {today.year}", M.fmt(start[0] - r["balance"])))
+    return out
 
 
 def view(today, closed=False):

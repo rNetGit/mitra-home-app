@@ -28,6 +28,16 @@
   </table></div>
 </details>
 {% else %}<p class="muted">No accounts yet. Drop a statement in the Inbox, connect bank sync, or add one below.</p>{% endfor %}
+{% if b.loose %}
+<details class="card bk-grp">
+  <summary class="bk-head"><b>Holdings not linked to an account</b> <span class="muted small">{{ b.loose|length }} · not in the totals</span></summary>
+  <div class="tablewrap"><table class="bk-table nocards">
+    <thead><tr><th>Holding</th><th class="bk-wide">Kind</th><th class="bk-wide">Matures</th><th class="num">Value</th></tr></thead>
+    <tbody>{% for h in b.loose %}<tr><td>{{ h.name }}<span class="bk-meta">{{ 'as of ' ~ h.as_of if h.as_of }}</span></td><td class="bk-wide">{{ (h.kind or '')|replace('_', ' ') }}</td><td class="bk-wide">{{ h.maturity_date or '' }}</td><td class="num">{{ (h.current_value)|money2 if h.current_value is not none else '' }}</td></tr>{% endfor %}</tbody>
+  </table></div>
+  <p class="muted small bk-pad">Open the investment account that holds them, then Edit account and tick them under Holdings.</p>
+</details>
+{% endif %}
 <p class="muted small"><span class="bk-dot bk-ok"></span> matches bank <span class="bk-dot bk-off"></span> off from the bank <span class="bk-dot bk-sync"></span> from the bank, nothing to compare yet <span class="bk-dot bk-none"></span> no bank balance yet
 {% if b.closed %} · <a href="/money?part=books{{ '' if closed else '&amp;closed=1' }}">{{ 'Hide' if closed else 'Show' }} {{ b.closed }} closed account{{ 's' if b.closed != 1 }}</a>{% endif %}
  · <a href="/money?part=accounts#radd-accounts">+ Add an account</a></p>
