@@ -29,7 +29,7 @@ import db  # noqa: E402
 DB = paths.DB
 LOG = paths.LOGS / "edits.log"
 ROLES = list(mem.ROLES)
-ACCOUNT_TYPES = ["checking", "savings", "credit", "loan", "investment"]
+ACCOUNT_TYPES = ["checking", "savings", "credit", "loan", "investment", "property"]
 KIND_OF_CATEGORY = {"transfer": "transfer", "transfers": "transfer", "investing": "investment_transfer",  # category -> txn_type
                     "salary": "income", "income": "income", "interest": "interest", "tax refund": "tax"}
 LOAN_KINDS = ["mortgage", "auto", "student", "personal", "heloc", "other"]
