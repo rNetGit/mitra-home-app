@@ -153,6 +153,8 @@ from edit_money import (  # noqa: E402,F401
     _next_yearly,
     _receipts,
     account_add,
+    account_merge,
+    account_update,
     audit_fix_undo,
     audit_remove_copies,
     bank_copy_remove,
