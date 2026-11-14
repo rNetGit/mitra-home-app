@@ -1760,7 +1760,7 @@ def test_finance_and_this_month_live_in_money(web):
     assert c.get("/month?ym=<x>").headers["location"] == "/money?part=month"
     page = c.get("/money", params={"part": "month"}).text
     tabs = page.split('class="pchips mtabs"', 1)[1].split("</nav>", 1)[0]
-    assert re.findall(r'>([A-Za-z ]+)</a>', tabs) == ["Overview", "Statement", "Home costs", "Spending", "Bills", "Regular", "Pay", "Keep", "Look back"]
+    assert re.findall(r'>([A-Za-z ]+)</a>', tabs) == ["Accounts", "Overview", "Statement", "Home costs", "Spending", "Bills", "Regular", "Pay", "Keep", "Look back"]
     assert "<h1>Money</h1>" in page and "All categories" in page, "This month stays (story card + every category)"
     bills = c.get("/money", params={"part": "bills"}).text
     assert 'class="pchip on" aria-current="true">Pay</a>' in bills and 'class="fchips"' in bills
@@ -1853,7 +1853,7 @@ def test_standard_view_money_is_the_outlook(web, root, modules):
     _set_view(root, modules, "simple")
     page = c.get("/money").text
     tabs = page.split('class="pchips mtabs"', 1)[1].split("</nav>", 1)[0]
-    assert re.findall(r'>([A-Za-z ]+)</a>', tabs) == ["Overview", "Statement", "Home costs", "Spending", "Bills", "Regular"]
+    assert re.findall(r'>([A-Za-z ]+)</a>', tabs) == ["Accounts", "Overview", "Statement", "Home costs", "Spending", "Bills", "Regular"]
     assert "All money pages" in page and 'href="/money?part=ledger"' in page and 'class="mo-sum"' in page
     for p, needle in (("spending", "Spending as in the Ledger"), ("paid", "Open on the bill list"), ("regular", "Subscriptions")):
         r = c.get(f"/money?part={p}")
