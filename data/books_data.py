@@ -23,6 +23,7 @@ import sys
 HERE = pathlib.Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import account_types as AT  # noqa: E402
+import dates  # noqa: E402
 import db  # noqa: E402
 import money as M  # noqa: E402
 import paths  # noqa: E402
@@ -257,7 +258,7 @@ def account_view(acct_id, today, n=200):
 
 
 def main(argv):
-    today = dt.date.today()
+    today = dates.today()
     if argv:
         v = account_view(int(argv[0]), today, 40)
         if not v:
