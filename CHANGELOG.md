@@ -3,7 +3,7 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
-## Unreleased
+## 0.150.0
 No migration.
 - Changed: **Settings pages stay where you are.** Saving a form or pressing a button on a Settings page no longer
   reloads the page and jumps to the top: the page is drawn again in place, on the same tab, and the result shows as a
