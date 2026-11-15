@@ -3,7 +3,7 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
-## Unreleased
+## 0.150.1
 No migration.
 - Fixed: **the data check no longer calls real charges "entered twice".** A statement is imported only when its lines add up to the cent, so a line one statement prints two or three times (three E-ZPass tolls in a day, three equal insurance payments) is separate charges. Such rows are no longer offered for removal, and an older offer for them is refused. Copies on two different papers, or with no paper, are still found. If you removed some earlier, Settings > Data > Data check > Fixes puts them back.
 
