@@ -364,8 +364,19 @@ HELP = {
                 "(docs/MAIL_FOLDER.md).",
                 "**Other calendars**: paste an iCloud, Outlook or other calendar's subscribe address (.ics or webcal://) "
                 "and [Add the calendar]; it shows on the Calendar page, read-only, read about once an hour.",
-                "**Bank sync (SimpleFIN)** (optional) pulls balances and new transactions every morning. Paste the setup "
-                "token on this PC, tick the accounts (**Select all** / **Unselect all**), save, then **Pull now**.",
+                "Each one has its own tab at the top of the page; a button saves without leaving the tab.",
+            ]),
+            ("Bank sync", [
+                "**Bank sync (SimpleFIN)** (optional, Advanced view) has its own page in Settings. It pulls balances and "
+                "new transactions every morning. Paste the setup token on this PC, tick the accounts (**Select all** / "
+                "**Unselect all**), [Save the choice], then [Pull now].",
+                "Linked another bank at SimpleFIN? [Find new accounts] asks SimpleFIN for its account list (nothing is "
+                "imported); new ones are marked New, ready to tick.",
+            ]),
+            ("Settings history", [
+                "Before every change made in Settings a copy of the settings files is kept on this PC. Settings > Data > "
+                "Backups > **Settings history** puts one back ([Put back], with a tick box). Records are restored "
+                "apart, with Restore from backup.",
             ]),
             ("Phones", [
                 "Pair a phone with the app's QR code ([Show the pairing code]); remove a lost phone.",

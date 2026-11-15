@@ -3,6 +3,23 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
+## Unreleased
+No migration.
+- Changed: **Settings pages stay where you are.** Saving a form or pressing a button on a Settings page no longer
+  reloads the page and jumps to the top: the page is drawn again in place, on the same tab, and the result shows as a
+  small message at the bottom that closes by itself.
+- Changed: **Settings sections are tabs.** Household profile, Home Profile, Connections and Data show one section at a
+  time (Connections: AI helper, Phone bot, Google, Mail folder, Other calendars, each with a status dot; Data: Health,
+  Backups, Runs on its own, Updates, This PC). The open tab is kept in the address, so a link or a save returns to it.
+- Changed: **Bank sync has its own page** (Settings > Bank sync, Advanced view), with its own line on the Settings
+  home: status, accounts pulled, the last pull, **Pull now** and the new **Find new accounts** (asks SimpleFIN which
+  accounts it has, for a bank you linked there later; imports nothing; new ones are marked New), accounts grouped by
+  bank with the Money account each one lands in.
+- Added: **Settings history.** Before every change made in Settings a copy of the settings files is kept on this PC
+  (never passwords, keys or tokens; only when something changed; the last 40). Settings > Data > Backups > Settings
+  history puts one back, after keeping the settings of right now.
+- Changed: the Simple / Advanced switch saves as soon as you pick one.
+
 ## 0.149.0
 Two new migrations (070, 071), applied by the update: new account fields and links only, nothing removed.
 - Changed: **Money is laid out like the bank now.** Five tabs: **Accounts** (where Money opens), **All accounts**, **Spending & income**, **Bills & plan** and **Tax & records**, each with its own row of pages. The old Overview and the Pay / Keep / Look back lanes are gone; every page they held has a tab (the Ledger under All accounts, Budget and loans under Bills & plan, Statement watch under Tax & records). The "Data as of" line moved to Accounts. Old links land on Accounts.

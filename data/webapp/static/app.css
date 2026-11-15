@@ -1347,3 +1347,24 @@ a.kchip{color:inherit;text-decoration:none}a.kchip:hover,a.kchip:focus-visible{f
 .aa-svg{width:100%;height:60px}.aa-svg polyline{fill:none;stroke:var(--accent);stroke-width:2.5;vector-effect:non-scaling-stroke}
 .aa-moved td{color:var(--text-2);font-style:italic}
 .aa-ac{font-size:.8rem;border-radius:6px;padding:1px 6px;background:var(--neutral-soft);color:var(--text-2);white-space:nowrap;text-decoration:none}
+/* Settings redesign: section tabs, the result toast, the Bank sync page */
+.stabs{margin:4px 0 14px}.stabs button{gap:7px}.stabs .dotm{flex:0 0 8px;width:8px;height:8px}
+.stabs button.on .dotm{box-shadow:0 0 0 2px var(--on-accent)}.stabs .devn{font-weight:700}
+.dotm.t-ok{background:var(--ok)}
+.spanel[hidden]{display:none}.spanel>.card+.card{margin-top:14px}
+.stoast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:60;display:flex;align-items:center;gap:10px;max-width:min(640px,calc(100vw - 32px));margin:0;padding:10px 10px 10px 16px;box-shadow:0 8px 28px rgba(0,0,0,.28);border:1px solid var(--line);transition:opacity .4s,transform .4s}
+.stoast{background:var(--surface);color:var(--text)}.stoast.t-ok{border-left:4px solid var(--accent)}.stoast.t-bad{border-left:4px solid var(--danger)}
+.stoast .notice,.stoast .alert{background:none;color:inherit;padding:0;margin:0;border-radius:0}
+.stoast span{flex:1;min-width:0;overflow-wrap:anywhere}.stoast .ibtn{flex:none;font-size:1.3rem;line-height:1;min-height:32px;min-width:32px}
+.stoast.gone{opacity:0;transform:translate(-50%,12px);pointer-events:none}
+@media (max-width:760px){.stoast{bottom:92px}}
+@media (prefers-reduced-motion:reduce){.stoast{transition:none}}
+.bhero .bh-top h2{margin:0 0 4px}
+.bstats{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:10px;margin:12px 0}
+.bstats div{background:var(--surface-2,rgba(0,0,0,.04));border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.bstats dt{font-size:.8rem;color:var(--text-2)}.bstats dd{margin:2px 0 0}.bstats dd b{font-size:1.1rem}
+.bacts{margin:6px 0}
+.bsteps{margin:6px 0 12px;padding-left:22px}.bsteps li{margin:6px 0}
+.bbank{margin:12px 0 4px;font-size:1rem}
+.bacct{list-style:none;margin:0;padding:0}.bacct li{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}
+.bacct li:last-child{border-bottom:0}

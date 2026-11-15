@@ -5,22 +5,32 @@
 {% elif name == 'i-agent' %}<rect x="5" y="7" width="14" height="11" rx="3"/><path d="M12 3v4M9 12h.01M15 12h.01M9.5 15h5"/>
 {% elif name == 'i-plug' %}<path d="M9 3v5M15 3v5M6 8h12v3a6 6 0 0 1-12 0z"/><path d="M12 17v4"/>
 {% elif name == 'i-phone' %}<rect x="7" y="2.5" width="10" height="19" rx="2.5"/><path d="M11 18.5h2"/>
+{% elif name == 'i-bank' %}<path d="M3 9l9-5 9 5"/><path d="M5 10v7M9.5 10v7M14.5 10v7M19 10v7"/><path d="M3 20h18"/>
 {% else %}<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v6c0 1.7 3.1 3 7 3s7-1.3 7-3V6"/><path d="M5 12v6c0 1.7 3.1 3 7 3s7-1.3 7-3v-6"/>{% endif %}</svg>{% endmacro %}
+{% macro sp(k) %}<div class="spanel" id="sp-{{ k }}" role="tabpanel" aria-labelledby="st-{{ k }}"{% if k != stab %} hidden{% endif %}>{% endmacro %}
 {% if group == 'home' %}
-<header class="head"><div><h1>Settings</h1><p class="sub">{% if simple %}Profile, home profile, phones and walls and data{% else %}Profile, home profile, phones and walls, connections and data{% endif %}</p></div></header>
+<header class="head"><div><h1>Settings</h1><p class="sub">{% if simple %}Profile, home profile, phones and walls and data{% else %}Profile, home profile, phones and walls, connections, bank sync and data{% endif %}</p></div></header>
 {% else %}
 <header class="head fhead"><div><a class="fback" href="/settings">Settings</a><h1>{{ titles.get(group, 'Settings') }}</h1></div></header>
-{% if group in ('household', 'agent') %}<nav class="fchips" aria-label="Settings group">{% for k, lbl in groups %}<a href="/settings?group={{ k }}" {% if k == group %}class="on" aria-current="true"{% endif %}>{{ lbl }}</a>{% endfor %}</nav>{% endif %}
 {% endif %}
-{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if flash %}<div class="stoast {{ 't-ok' if flash[0] else 't-bad' }}" role="status" data-toast><span class="{{ 'notice' if flash[0] else 'alert' }}">{{ flash[1] }}</span><button type="button" class="ghost ibtn" data-toast-close aria-label="Close">&times;</button></div>{% endif %}
+{% if stabs %}
+<nav class="fchips stabs" role="tablist" aria-label="{{ titles.get(group, 'Settings') }} sections">
+  {% for k, lbl in stabs %}
+  <button type="button" role="tab" id="st-{{ k }}" aria-controls="sp-{{ k }}" data-stab="{{ k }}" aria-selected="{{ 'true' if k == stab else 'false' }}" tabindex="{{ '0' if k == stab else '-1' }}"{% if k == stab %} class="on"{% endif %}>
+    {%- if group == 'connections' and conns|length > loop.index0 %}<span class="dotm t-{{ conns[loop.index0][1] }}" aria-hidden="true"></span>{% endif %}{{ lbl }}
+    {%- if group == 'data' and k == 'health' and bad %} <span class="devn">{{ bad|length }}</span>{% endif %}</button>
+  {% endfor %}
+</nav>
+{% endif %}
 {% if group == 'home' %}
-<form class="nform viewsw" hx-post="/settings/view" aria-label="How much to show">
+<form class="nform viewsw" hx-post="/settings/view" hx-trigger="change, submit" aria-label="How much to show">
   <fieldset class="seg"><legend class="vh">How much to show</legend>
     <label class="check"><input type="radio" name="mode" value="advanced" {{ 'checked' if view == 'advanced' }}> <span><b>Advanced</b> everything</span></label>
     <label class="check"><input type="radio" name="mode" value="simple" {{ 'checked' if view == 'simple' }}> <span><b>Simple</b> everyday tools</span></label>
   </fieldset>
-  <button class="btn" type="submit">Save</button>
-  <p class="muted small nform-note">{% if simple %}Simple shows the everyday tools: Today, Family, Calendar, Inbox, the Brief, bills, lists and notes, phones and backups.{% else %}Advanced shows everything, including finance, insurance, taxes, work, connections and the optional packs.{% endif %} This only changes what is shown; nothing is deleted or switched off.</p>
+  <noscript><button class="btn" type="submit">Save</button></noscript>
+  <p class="muted small nform-note">{% if simple %}Simple shows the everyday tools: Today, Family, Calendar, Inbox, the Brief, bills, lists and notes, phones and backups.{% else %}Advanced shows everything, including finance, insurance, taxes, work, connections, bank sync and the optional packs.{% endif %} This only changes what is shown; nothing is deleted or switched off.</p>
 </form>
 {% endif %}
 
@@ -54,7 +64,8 @@
 <p class="muted small">Light or dark: open More from your picture, then Dark mode or Light mode. Version {{ version }} · stored on this PC.</p>
 
 {% elif group == 'household' %}
-<details class="card sfold" open><summary><h2>How complete is your profile</h2></summary>
+{{ sp('profile') }}
+<section class="card"><h2>How complete is your profile</h2>
   <p><b>{{ h.pct }}%</b> filled in</p>
   {% if h['rows'] %}
   <ul class="fbars">{% for r in h['rows'] %}
@@ -63,28 +74,24 @@
   {% endfor %}</ul>
   {% endif %}
   <p class="muted small">The rest fills in over the coming weeks: a couple of questions a day arrive in the Inbox.</p>
-  {% if h.next %}
-  <button type="button" class="btn" hx-post="/settings/next">Ask me the next question ({{ h.next }})</button>
-  {% else %}<p class="muted">Everything is filled in.</p>{% endif %}
-</details>
-<details class="card sfold"><summary><h2>Names on your papers</h2><span class="muted">Full names hidden before anything goes to the AI</span></summary>
+  <div class="optrow">
+  {% if h.next %}<button type="button" class="btn" hx-post="/settings/next">Ask me the next question ({{ h.next }})</button>
+  {% else %}<span class="muted">Everything is filled in.</span>{% endif %}
+  <a class="btn alt" href="/setup">Run the setup interview again</a></div>
+</section>
+</div>
+{{ sp('papers') }}
+<section class="card"><h2>Names on your papers</h2>
   <p class="muted small">Bills, policies and statements often print full legal names, not the short names you use here. Write them
     one per line, so they are hidden before anything is sent to the AI. They stay on this PC.</p>
   <form class="nform" hx-post="/settings/papers">
     <label class="wide">Full names as printed<textarea name="names" rows="4" maxlength="4000" placeholder="Alexander Q Patel&#10;Samantha Patel">{{ h.paper_names }}</textarea></label>
     <button class="btn" type="submit">Save the names</button>
   </form>
-</details>
-{% if not simple %}
-<details class="card sfold"><summary><h2>Optional features</h2><span class="muted">Packs you can switch on</span></summary>
-  <p class="muted small">Switch on only what you will use. Turning one on never removes anything.</p>
-  <form class="nform" hx-post="/settings/packs">
-    {% for k, title, note, on in packs %}<label class="check wide"><input type="checkbox" name="pack" value="{{ k }}" {{ 'checked' if on }}> <span><b>{{ title }}</b>: {{ note }}</span></label>{% endfor %}
-    <button class="btn" type="submit">Save</button>
-  </form>
-</details>
-{% endif %}
-<details class="card sfold"><summary><h2>Traditions and holidays</h2><span class="muted">Festivals and holidays on the calendar</span></summary>
+</section>
+</div>
+{{ sp('traditions') }}
+<section class="card"><h2>Traditions and holidays</h2>
   <p class="muted small">{% if trad.holidays %}Public holidays: {{ trad.holidays }} (switch them off under {% if simple %}the Advanced view's {% endif %}Optional features).{% else %}No public holiday rules for your country yet: add your own days in Records &gt; People &gt; Holidays and dates.{% endif %}
     Optional: the traditions your family keeps (religious, cultural or regional), one per line, so their festivals and holidays reach the calendar. The list itself stays on this PC. The festival and holiday days it adds go to your paired phones and walls on the home Wi-Fi, so they show there too; never to Drive or a chat bot.</p>
   <form class="nform" hx-post="/settings/traditions">
@@ -96,18 +103,31 @@
   {% if trad.lookup and not trad.ai %}
   <form class="nform" hx-post="/settings/traditions" hx-vals='{"op": "now"}'><button class="btn alt" type="submit">Look up the dates now</button></form>
   {% endif %}
-</details>
+</section>
+</div>
 {% if not simple %}
-<details class="card sfold"><summary><h2>Tax papers</h2><span class="muted">Payers, state tax, tuition</span></summary>
-  <p class="muted small">Names only, separated by commas. No account numbers. All three are optional and stay on this PC.</p>
+{{ sp('features') }}
+<section class="card"><h2>Optional features</h2>
+  <p class="muted small">Packs you can switch on. Switch on only what you will use. Turning one on never removes anything.</p>
+  <form class="nform" hx-post="/settings/packs">
+    {% for k, title, note, on in packs %}<label class="check wide"><input type="checkbox" name="pack" value="{{ k }}" {{ 'checked' if on }}> <span><b>{{ title }}</b>: {{ note }}</span></label>{% endfor %}
+    <button class="btn" type="submit">Save</button>
+  </form>
+</section>
+</div>
+{{ sp('tax') }}
+<section class="card"><h2>Tax papers</h2>
+  <p class="muted small">Payers, state tax and tuition: names only, separated by commas. No account numbers. All three are optional and stay on this PC.</p>
   <form class="nform" hx-post="/settings/tax">
     <label class="wide">Banks, brokers or credit unions that send you interest forms<input name="payers" maxlength="2000" value="{{ tax.payers }}"></label>
     <label class="wide">Words on your state tax payments (for example the state tax agency's name)<input name="state" maxlength="2000" value="{{ tax.state }}"></label>
     <label class="wide">Tuition payee as it appears on statements (% is a wildcard)<input name="tuition" maxlength="2000" value="{{ tax.tuition }}"></label>
     <button class="btn" type="submit">Save</button>
   </form>
-</details>
-<details class="card sfold"><summary><h2>How early to remind</h2><span class="muted">Days before an expiry date</span></summary>
+</section>
+</div>
+{{ sp('reminders') }}
+<section class="card"><h2>How early to remind</h2>
   <p class="muted small">Days before an expiry date that its reminder starts.</p>
   {% if leads %}
   <div class="tablewrap"><table>
@@ -121,13 +141,14 @@
     <button class="btn alt" type="submit">Save</button>
   </form>
   {% endif %}
-</details>
+</section>
+</div>
 {% endif %}
-<p><a class="btn alt" href="/setup">Run the setup interview again</a></p>
 
 {% elif group == 'agent' %}
 {% set p = a.p %}
-<details class="card sfold" open><summary><h2>Your agent</h2></summary>
+{{ sp('agent') }}
+<section class="card"><h2>Your agent</h2>
   <p class="muted small">How the agent talks, when the brief is made and what it keeps an eye on. You can also ask in Chat,
     for example: send the brief at 6 instead.</p>
   <form class="nform" hx-post="/settings/agent">
@@ -147,12 +168,14 @@
     <button class="btn" type="submit">Save</button>
   </form>
   <p class="muted small">{{ a.schedule }}.</p>
-</details>
-<details class="card sfold"><summary><h2>Sign-in PINs</h2><span class="muted">Each person's PIN for this PC and phones</span></summary>
+</section>
+</div>
+{{ sp('pins') }}
+<section class="card"><h2>Sign-in PINs</h2>
   {% if not pins.people %}
   <p class="muted">Add the people of the household first.</p>
   {% else %}
-  <p class="muted small">A PIN lets each person sign in on this PC and on a phone. Phone access stays off until at least one PIN
+  <p class="muted small">Each person's PIN for this PC and phones. A PIN lets each person sign in on this PC and on a phone. Phone access stays off until at least one PIN
     exists. Children get a smaller screen with no money.</p>
   <p class="small">Has a PIN: {{ pins.people|selectattr('has_pin')|map(attribute='name')|join(', ') or 'nobody yet' }}.</p>
   <form class="nform" hx-post="/settings/pin" autocomplete="off">
@@ -163,19 +186,26 @@
   </form>
   <p class="muted small">Forgot a PIN? Pick the person and save a new one: the old PIN is not needed. A changed PIN signs that person out everywhere.</p>
   {% endif %}
-</details>
-<details class="card sfold"><summary><h2>Hidden from Today</h2><span class="muted">Items you hid or snoozed</span></summary>
+</section>
+</div>
+{{ sp('hidden') }}
+<section class="card"><h2>Hidden from Today</h2>
   {% if hidden %}
+  <p class="muted small">Items you hid or snoozed.</p>
   <ul class="checklist">{% for r in hidden %}
     <li><span class="ctext">{{ r.title or 'An item' }} <span class="muted">· {{ r.state }}{% if r.until %} until {{ r.until }}{% endif %}</span></span>
       <button type="button" class="btn alt sm" hx-post="/settings/restore" hx-vals='{{ {"key": r.key}|tojson }}'>Restore</button></li>
   {% endfor %}</ul>
   {% else %}<p class="muted">Nothing is hidden. Hide in a Brief row's menu quiets one item.</p>{% endif %}
-</details>
+</section>
+</div>
 <p class="muted small">Light or dark: open More from your picture, then Dark mode or Light mode.</p>
 
 {% elif group == 'connections' %}
 {% include "_conn.html" %}
+
+{% elif group == 'bank' %}
+{% include "_bank.html" %}
 
 {% elif group == 'phones' %}
 <dialog id="wprev" class="wprev" aria-label="Wall screen preview"><div class="wprev-head"><b>Preview</b> <span class="muted small">as the wall will show it (nothing is saved)</span><button type="button" class="btn alt sm" data-wprev-close>Close</button></div><iframe title="Wall screen preview" id="wprev-frame"></iframe></dialog>
@@ -500,24 +530,10 @@
 </section>
 {% endif %}
 
+
 {% else %}
-<details class="card sfold" id="data-where"><summary><h2>Where things are</h2><span class="muted">{{ brand }} {{ where.version }}: the app, your papers and the database on this PC</span></summary>
-  <ul class="wherelist">
-    {% for r in where.rows %}<li><span><b>{{ r.label }}</b>{% if r.note %} <span class="muted small">({{ r.note }})</span>{% endif %}<br>
-      <span class="wpath">{{ r.path }}</span>{% if not r.exists %} <span class="muted small">(not made yet)</span>{% endif %}</span>
-      {% if local and r.exists %}<form hx-post="/settings/folder"><input type="hidden" name="key" value="{{ r.key }}"><button class="btn alt" type="submit">Open</button></form>{% endif %}</li>
-    {% endfor %}
-    <li><span><b>Database</b> <span class="muted small">(one file; back it up with Settings &gt; Data &gt; Back up now)</span><br><span class="wpath">{{ where.db }}</span></span></li>
-    <li><span><b>Phones and walls</b><br><span class="wpath">{{ where.phones or ('switched off' if not where.want else 'not open to the Wi-Fi right now: Settings > Phones > Connection') }}</span></span></li>
-  </ul>
-  {% if not local %}<p class="muted small">Open buttons work on the PC itself.</p>{% endif %}
-</details>
-{% if local %}<details class="card sfold" id="data-stop"><summary><h2>Stop {{ brand }}</h2><span class="muted">It runs with no window; closing the browser leaves it running</span></summary>
-  <p>Phones, walls and the scheduled jobs cannot reach it while it is stopped. Start it again from the Start menu or the
-    desktop icon. If it is set to start by itself, it also comes back the next time this PC restarts.</p>
-  <form hx-post="/settings/stop"><button class="btn alt" type="submit">Stop {{ brand }}</button></form>
-</details>{% endif %}
-<details class="card sfold" open><summary><h2>Health check</h2></summary>
+{{ sp('health') }}
+<section class="card"><h2>Health check</h2>
   {% if bad %}<ul class="calmlist">{% for r in bad %}<li><span class="dotm t-bad" aria-hidden="true"></span><span><b>{{ r.name }}</b>: {{ r.note }}{% if r.here %}<br><span class="muted">Fix it in: {{ r.here }}</span>{% endif %}</span></li>{% endfor %}</ul>{% endif %}
   <p class="muted">{{ (bad|length ~ (' thing to fix.' if bad|length == 1 else ' things to fix.')) if bad else 'Nothing to fix.' }}</p>
   {% if checks %}
@@ -528,29 +544,71 @@
   </table></div>
   </details>
   {% endif %}
-</details>
-<details class="card sfold" id="data-audit"><summary><h2>Data check</h2><span class="muted">Records that do not add up, entered twice or missing</span></summary>
+</section>
+<section class="card" id="data-audit"><h2>Data check</h2>
   <p class="muted">Every week, with the weekly digest, {{ brand }} reads through the records for charges entered twice, bills
     still open long after their due date, phone bills that do not add up and filed papers missing on disk. It fixes only
     what cannot be wrong, with Undo; what needs you waits in the Inbox. No AI is used.</p>
   <div class="optrow"><a class="btn alt" href="/settings/audit">Open the data check</a>
     <button type="button" class="btn" hx-post="/settings/audit" hx-disabled-elt="this">Check now</button></div>
-</details>
-<details class="card sfold"><summary><h2>Calendar file</h2><span class="muted">Every due date for a phone's calendar</span></summary>
+</section>
+{% set dpart = 'health' %}{% include "_data.html" %}
+</div>
+{{ sp('backups') }}
+{% set dpart = 'backups' %}{% include "_data.html" %}
+<section class="card" id="data-history"><h2>Settings history</h2>
+  <p class="muted small">Before every change made in Settings, {{ brand }} keeps a copy of the settings files on this PC
+    (the household's settings, bank sync choices, calendars, rules; never passwords, keys or tokens). Put one back if a
+    change went wrong. Your records are not touched: that is Restore from backup above.</p>
+  {% if history %}
+  <form class="nform" hx-post="/settings/history/restore" hx-disabled-elt="find button">
+    <label class="wide">Settings as they were<select name="name">{% for r in history %}<option value="{{ r.name }}">{{ r.when }}{% if r.who %} · {{ r.who }}{% endif %}{% if r.what %} · before {{ r.what }}{% endif %}</option>{% endfor %}</select></label>
+    <label class="check wide"><input type="checkbox" name="sure" value="1"> Put these settings back (the settings of right now are kept in the history first)</label>
+    <button class="btn alt" type="submit">Put back</button>
+  </form>
+  {% else %}<p class="muted">No copy yet: the first one is made before the next change in Settings.</p>{% endif %}
+</section>
+</div>
+{{ sp('schedule') }}
+{% set dpart = 'schedule' %}{% include "_data.html" %}
+</div>
+{{ sp('updates') }}
+{% set dpart = 'updates' %}{% include "_data.html" %}
+</div>
+{{ sp('system') }}
+<section class="card" id="data-where"><h2>Where things are</h2>
+  <p class="muted small">{{ brand }} {{ where.version }}: the app, your papers and the database on this PC</p>
+  <ul class="wherelist">
+    {% for r in where.rows %}<li><span><b>{{ r.label }}</b>{% if r.note %} <span class="muted small">({{ r.note }})</span>{% endif %}<br>
+      <span class="wpath">{{ r.path }}</span>{% if not r.exists %} <span class="muted small">(not made yet)</span>{% endif %}</span>
+      {% if local and r.exists %}<form hx-post="/settings/folder"><input type="hidden" name="key" value="{{ r.key }}"><button class="btn alt" type="submit">Open</button></form>{% endif %}</li>
+    {% endfor %}
+    <li><span><b>Database</b> <span class="muted small">(one file; back it up with Settings &gt; Data &gt; Backups &gt; Back up now)</span><br><span class="wpath">{{ where.db }}</span></span></li>
+    <li><span><b>Phones and walls</b><br><span class="wpath">{{ where.phones or ('switched off' if not where.want else 'not open to the Wi-Fi right now: Settings > Phones > Connection') }}</span></span></li>
+  </ul>
+  {% if not local %}<p class="muted small">Open buttons work on the PC itself.</p>{% endif %}
+</section>
+<section class="card"><h2>Calendar file</h2>
+  <p class="muted small">Every due date for a phone's calendar.</p>
   <p><a class="btn" href="/settings/calendar.ics" download>Download the calendar file (next 365 days)</a></p>
   <p class="muted small">Open it on your phone to add every due date to its calendar. It holds names, amounts and last-4 digits
     only; importing it again updates the events instead of doubling them.</p>
-</details>
-{% include "_data.html" %}
+</section>
 {% if changes %}
-<details class="card sfold"><summary><h2>Changes made here</h2><span class="muted">Who changed which setting</span></summary>
+<section class="card"><h2>Changes made here</h2>
+  <p class="muted small">Who changed which setting. Settings changes only; no keys, tokens or questions are recorded.</p>
   <div class="tablewrap"><table>
     <thead><tr><th>When</th><th>Who</th><th>What</th><th>Detail</th></tr></thead>
     <tbody>{% for r in changes %}<tr><td>{{ r.when }}</td><td>{{ r.who }}</td><td>{{ r.what }}</td><td>{{ r.detail }}</td></tr>{% endfor %}</tbody>
   </table></div>
-  <p class="muted small">Settings changes only; no keys, tokens or questions are recorded.</p>
-</details>
+</section>
 {% endif %}
+{% if local %}<section class="card" id="data-stop"><h2>Stop {{ brand }}</h2>
+  <p class="muted small">It runs with no window; closing the browser leaves it running.</p>
+  <p>Phones, walls and the scheduled jobs cannot reach it while it is stopped. Start it again from the Start menu or the
+    desktop icon. If it is set to start by itself, it also comes back the next time this PC restarts.</p>
+  <form hx-post="/settings/stop"><button class="btn alt" type="submit">Stop {{ brand }}</button></form>
+</section>{% endif %}
 {% if not simple %}
 <details class="card more-form"><summary><h2>Advanced</h2></summary>
   <div class="tablewrap"><table><tbody>{% for k, val in adv.facts %}<tr><th>{{ k }}</th><td>{{ val }}</td></tr>{% endfor %}<tr><th>Version</th><td>{{ version }}</td></tr></tbody></table></div>
@@ -571,6 +629,7 @@
     config/contacts.json (copy contacts.example.json).</p>
 </details>
 {% endif %}
+</div>
 <p class="muted small">Version {{ version }} · stored on this PC.</p>
 {% endif %}
 {% endblock %}

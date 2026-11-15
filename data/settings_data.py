@@ -27,12 +27,34 @@ import dates
 import db
 import paths
 
-GROUPS = [("household", "Household profile"), ("agent", "Home Profile"), ("connections", "Connections"), ("phones", "Phones and walls"),
-          ("data", "Data")]
+GROUPS = [("household", "Household profile"), ("agent", "Home Profile"), ("connections", "Connections"), ("bank", "Bank sync"),
+          ("phones", "Phones and walls"), ("data", "Data")]
 # The pills: Phones is a part of Connections (a card there opens it) and Data is a lane on the Settings home; both still open
 # by their own address.
 PILLS = [("household", "Household profile"), ("agent", "Home Profile")]  # the chips on those two pages; the other groups have their own card on the home
-HOME_LANES = PILLS + [("phones", "Phones and walls"), ("connections", "Connections"), ("data", "Data")]
+HOME_LANES = PILLS + [("phones", "Phones and walls"), ("connections", "Connections"), ("bank", "Bank sync"), ("data", "Data")]
+# The tabs of each group page: (key, label, advanced_only). The page shows one tab at a time (app.js [data-stab]); the
+# address keeps ?tab= so a save comes back to it. Phones and walls has its own tabs (DEVICE_TABS).
+TABS = {
+    "household": [("profile", "Profile", False), ("papers", "Names on papers", False), ("traditions", "Traditions", False),
+                  ("features", "Optional features", True), ("tax", "Tax papers", True), ("reminders", "Reminders", True)],
+    "agent": [("agent", "Your agent", False), ("pins", "Sign-in PINs", False), ("hidden", "Hidden from Today", False)],
+    "connections": [("ai", "AI helper", False), ("bot", "Phone bot", False), ("google", "Google", False),
+                    ("mail", "Mail folder", False), ("calendars", "Other calendars", False)],
+    "data": [("health", "Health", False), ("backups", "Backups", False), ("schedule", "Runs on its own", False),
+             ("updates", "Updates", False), ("system", "This PC", False)],
+}
+
+
+def tabs(group, simple=False):
+    """[(key, label)] of a group page in this view."""
+    return [(k, lbl) for k, lbl, adv in TABS.get(group, []) if not (adv and simple)]
+
+
+def tab_of(group, tab, simple=False):
+    """The tab to open: the asked one when the page has it, else the first."""
+    keys = [k for k, _ in tabs(group, simple)]
+    return tab if tab in keys else (keys[0] if keys else "")
 DEFAULT = "home"  # the Settings home: profile meter, one lane per group, Needs a look
 TIMES = [f"{h:02d}:{m:02d}" for h in range(24) for m in (0, 30)]
 
@@ -279,22 +301,42 @@ def connections():
                     "Advanced, optional: your Google Calendar next to the family's dates (read-only) and bills that "
                     "arrive by email. Phones do not need it: pair them in Settings > Phones."))
     try:
+        import mail_folder as mf
+        m = mf.status()
+    except Exception:  # noqa: BLE001
+        m = {}
+    if m.get("enabled") and m.get("password"):
+        out.append(("Mail folder", "warn" if m.get("last_error") else "ok", "Needs attention" if m.get("last_error") else "On",
+                    m.get("last_error") or "Bills and papers sent to the family's mailbox are copied into the inbox."))
+    else:
+        out.append(("Mail folder", "info", "Off", "Any mail provider: a mailbox made only for the family's papers."))
+    try:
+        import calendar_feeds as cf
+        nf = len(cf.feeds())
+    except Exception:  # noqa: BLE001
+        nf = 0
+    out.append(("Other calendars", "ok" if nf else "info", f"{nf} added" if nf else "None",
+                "iCloud, Outlook, school or work calendars on Calendar, read-only."))
+    return out
+
+
+def bank_line():
+    """(title, level, word, line) of bank sync, without any network call."""
+    title = "Bank sync (SimpleFIN)"
+    try:
         import bank_sync
         bs = bank_sync.status() if bank_sync.configured() else None
     except Exception:  # noqa: BLE001 (same as not set up)
         bs = None
     if bs is None:
-        out.append(("Bank sync (SimpleFIN)", "info", "Not set up",
-                    "Optional, for power users: balances and new transactions pulled every morning through SimpleFIN "
-                    "Bridge (a service the family pays about $1.50 a month). Statements in the Inbox work without it."))
-    elif bs["error"] or (bs["stale_days"] is not None and bs["stale_days"] > bank_sync.STALE_DAYS):
-        out.append(("Bank sync (SimpleFIN)", "warn", "Needs attention",
-                    bs["error"] or f"The last good pull was {bs['stale_days']} days ago."))
-    else:
-        n = sum(1 for a in bs["accounts"] if a["chosen"])
-        out.append(("Bank sync (SimpleFIN)", "ok", "Connected", f"{n} account(s) pulled every morning."
-                    + (f" Last good pull {bs['last_ok'][:10]}." if bs["last_ok"] else " No pull yet.")))
-    return out
+        return (title, "info", "Not set up",
+                "Optional, for power users: balances and new transactions pulled every morning through SimpleFIN "
+                "Bridge (a service the family pays about $1.50 a month). Statements in the Inbox work without it.")
+    if bs["error"] or (bs["stale_days"] is not None and bs["stale_days"] > bank_sync.STALE_DAYS):
+        return (title, "warn", "Needs attention", bs["error"] or f"The last good pull was {bs['stale_days']} days ago.")
+    n = sum(1 for a in bs["accounts"] if a["chosen"])
+    return (title, "ok", "Connected", f"{n} account(s) pulled every morning."
+            + (f" Last good pull {bs['last_ok'][:10]}." if bs["last_ok"] else " No pull yet."))
 
 
 # ---- Data ----------------------------------------------------------------------------------------------------------
@@ -679,16 +721,38 @@ def wall_revoke(user, wall_id):
 # ---- the Settings home: one lane per group, the profile meter and what needs a look --------------------------------
 LANES = {"household": ("Who lives here, names on papers, traditions and optional features.", "i-house", "g-over"),
          "agent": ("The agent's name and tone, brief times, sign-in PINs.", "i-agent", "g-cat"),
-         "connections": ("AI helper, phone bot, Google and bank sync.", "i-plug", "g-flow"),
+         "connections": ("AI helper, phone bot, Google, mail folder and other calendars.", "i-plug", "g-flow"),
+         "bank": ("Balances and new transactions from your banks every morning (SimpleFIN).", "i-bank", "g-over"),
          "phones": ("Pair phones on the home Wi-Fi and choose what each carries.", "i-phone", "g-trend"),
          "data": ("Health check, data check, backups, restore, scheduled jobs and updates.", "i-data", "g-high")}
 ATTENTION_MAX = 6
 
 
+def _bank_figure():
+    """The Bank sync lane: (big, big_label, sub, tone). No network call."""
+    try:
+        import bank_sync as bs
+        if not bs.configured():
+            return ("Off", "", "Not set up: optional, statements work without it", "")
+        st = bs.status()
+    except Exception:  # noqa: BLE001 (the Settings home must still render)
+        return ("", "", "", "")
+    n = sum(1 for a in st["accounts"] if a["chosen"])
+    if st["error"]:
+        return (str(n), "accounts", "Last pull did not work", "bad")
+    if st["stale_days"] is not None and st["stale_days"] > bs.STALE_DAYS:
+        return (str(n), "accounts", f"Last good pull {st['stale_days']} days ago", "warn")
+    return (str(n), "account" if n == 1 else "accounts",
+            f"Last good pull {st['last_ok'][:10]}" if st["last_ok"] else "No pull yet", "")
+
+
 def _where_fix(here):
     """The page a health row's "Fix it in" text points at."""
     h = str(here or "").lower()
-    for word, url in (("data check", "/settings/audit"), ("inbox", "/add"), ("connections", "/settings?group=connections"),
+    for word, url in (("data check", "/settings/audit"), ("inbox", "/add"), ("bank sync", "/settings?group=bank"),
+                      ("back up", "/settings?group=data&tab=backups"), ("runs on its own", "/settings?group=data&tab=schedule"),
+                      ("updates", "/settings?group=data&tab=updates"),
+                      ("connections", "/settings?group=connections"),
                       ("phones", "/settings?group=phones"), ("household", "/settings?group=household"),
                       ("agent", "/settings?group=agent"), ("records", "/records")):
         if word in h:
@@ -716,6 +780,7 @@ def overview(today, groups):
         "agent": (a.get("name") or "Agent", "", f"Brief at {a.get('brief_time')}, "
                   f"{len(with_pin)} of {len(pin['people'])} with a PIN" if pin["people"] else f"Brief at {a.get('brief_time')}", ""),
         "connections": (f"{len(on)} of {len(conns)}", "connected", ", ".join(c[0].split(" (")[0] for c in on) or "Nothing connected yet", ""),
+        "bank": _bank_figure(),
         "phones": (str(len(paired)), "phone" if len(paired) == 1 else "phones",
                    "Ready for phones on the Wi-Fi" if ph["lan"]["on"] else "Started for this PC only", ""),
         "data": (str(len(warn)) if warn else "OK", "to fix" if warn else "health check",

@@ -3,6 +3,7 @@
 Names that live in app.py are read through `A` when a request comes in, so a test can still patch app.<name>.
 """
 from fastapi import APIRouter
+from fastapi import Depends
 from fastapi import Request
 from fastapi.responses import FileResponse
 from fastapi.responses import HTMLResponse
@@ -24,11 +25,34 @@ import dates  # noqa: E402
 import edit_actions as ea  # noqa: E402
 import maintenance_data  # noqa: E402
 import settings_data  # noqa: E402
+import settings_history  # noqa: E402
 import setup_data  # noqa: E402
 import view_mode  # noqa: E402
 from webapp import app as A  # noqa: E402
 
-router = APIRouter()
+# Posts under /settings/ that change no settings file (checks, downloads, record backups, opening a folder, stopping,
+# and the two restores, which copy first themselves): no settings copy before them.
+NO_SNAPSHOT = ("/settings/doctor", "/settings/audit", "/settings/backup", "/settings/export", "/settings/ai/test",
+               "/settings/next", "/settings/folder", "/settings/stop", "/settings/history/restore", "/settings/wall/photo")
+
+
+async def snapshot_first(request: Request):
+    """Before an adult's change under /settings/: a copy of the settings files (settings_history.py; nothing is copied
+    when they equal the newest copy). Never stops the change: a copy that fails is only logged."""
+    path = request.url.path
+    if request.method != "POST" or not path.startswith("/settings/") or path.startswith(NO_SNAPSHOT):
+        return
+    user = A.current_user(request)
+    if not user or user.get("role") != "adult":
+        return
+    try:
+        await run_in_threadpool(settings_history.snapshot, user.get("name") or "", path[len("/settings/"):])
+    except Exception as e:  # noqa: BLE001
+        import log
+        log.get("web").warning("settings copy failed: %s", type(e).__name__)
+
+
+router = APIRouter(dependencies=[Depends(snapshot_first)])
 
 
 # ---- Settings (adults; settings_data.py, connections_data.py, maintenance_data.py) ---------------------------------
@@ -39,11 +63,31 @@ def settings_url(group, tab=""):
     return "/settings?" + urllib.parse.urlencode(q)
 
 
-def settings_go(request, ok, msg, group, tab=""):
-    """After a Settings form: remember the result and let HTMX load the group again."""
+def _came_from(request):
+    """(group, tab) of the Settings page an HTMX form was sent from (HX-Current-URL), or None."""
+    if request.headers.get("HX-Request") != "true":
+        return None
+    u = urllib.parse.urlsplit(request.headers.get("HX-Current-URL") or "")
+    if u.path != "/settings":
+        return None
+    q = urllib.parse.parse_qs(u.query)
+    return settings_data.group_of((q.get("group") or [""])[0]), (q.get("tab") or [""])[0]
+
+
+async def settings_go(request, ok, msg, group, tab="", full=False):
+    """After a Settings form: remember the result, then show the page again. Sent from that group's own page, the page
+    is drawn again in place (same tab, same scroll position; the result shows as a toast). Otherwise HTMX loads the
+    group's page; `full` = always the whole page (a change that also changes the menu)."""
     s = A.session_of(request)
     if s is not None:
         s["settings_flash"] = (ok, msg)
+    here = _came_from(request)
+    if not full and here is not None and here[0] == settings_data.group_of(group):
+        r = await run_in_threadpool(settings, request, here[0], tab or here[1])
+        r.headers["HX-Retarget"] = "main"
+        r.headers["HX-Reselect"] = "main"
+        r.headers["HX-Reswap"] = "outerHTML show:none focus-scroll:false"
+        return r
     r = Response(status_code=200)
     r.headers["HX-Redirect"] = settings_url(group, tab)
     return r
@@ -56,8 +100,10 @@ def settings(request: Request, group: str = "", tab: str = ""):
         return denied
     g, today = settings_data.group_of(group), dates.today()
     s = A.session_of(request)
+    simple = view_mode.is_simple()
     ctx = {"group": g, "groups": view_mode.groups(settings_data.PILLS), "titles": dict(settings_data.GROUPS), "view": view_mode.get(),
-           "flash": s.pop("settings_flash", None) if s else None}
+           "flash": s.pop("settings_flash", None) if s else None, "stabs": settings_data.tabs(g, simple),
+           "stab": settings_data.tab_of(g, tab, simple)}
     if g == settings_data.DEFAULT:
         ctx["o"] = settings_data.overview(today, view_mode.groups(settings_data.HOME_LANES))
     elif g == "household":
@@ -68,9 +114,12 @@ def settings(request: Request, group: str = "", tab: str = ""):
                    me=A.current_user(request).get("name") or "")
     elif g == "connections":
         ctx.update(conns=settings_data.connections(), ai=connections_data.ai(), tg=connections_data.telegram(),
-                   g=connections_data.google(), bank=connections_data.bank(), feeds=connections_data.feeds(), mail=connections_data.mail(), local=A.is_local(request),
-                   local_only=connections_data.LOCAL_ONLY, bank_local_only=connections_data.BANK_LOCAL_ONLY,
+                   g=connections_data.google(), feeds=connections_data.feeds(), mail=connections_data.mail(), local=A.is_local(request),
+                   local_only=connections_data.LOCAL_ONLY,
                    conn_from="settings", pm=settings_data.phones_mode(), phn=len(settings_data.phones()["rows"]))
+    elif g == "bank":
+        ctx.update(bank=connections_data.bank_view(), bline=settings_data.bank_line(), local=A.is_local(request),
+                   bank_local_only=connections_data.BANK_LOCAL_ONLY)
     elif g == "phones":
         pair, wpair = (s.pop("phone_pair", None), s.pop("wall_pair", None)) if s else (None, None)
         # Sub-tabs Phones / Walls / Connection; a fresh pairing code opens its own tab
@@ -85,8 +134,20 @@ def settings(request: Request, group: str = "", tab: str = ""):
                    upd=A._update_state(),
                    changes=maintenance_data.changes(), export_name=s.pop("export_name", None) if s else None,
                    restoring=s.pop("restoring", None) if s else None, local=A.is_local(request),
-                   where=settings_data.where())
+                   where=settings_data.where(), history=settings_history.listing())
     return A.page(request, "settings.html", active="settings", **ctx)
+
+
+@router.post("/settings/history/restore")
+async def settings_history_restore(request: Request):
+    """Settings > Data > Backups > Settings history: put a copy of the settings files back (tick box; audited)."""
+    denied = A.need_adult(request)
+    if denied:
+        return denied
+    d = await A.form(request)
+    ok, msg = await run_in_threadpool(admin_actions.settings_restore, A.current_user(request), d.get("name", ""),
+                                      d.get("sure") == "1")
+    return await settings_go(request, ok, msg, "data", "backups")
 
 
 @router.post("/settings/view")
@@ -96,7 +157,7 @@ async def settings_view(request: Request):
     if denied:
         return denied
     ok, msg = admin_actions.view_mode_set(A.current_user(request), (await A.form(request)).get("mode", ""))
-    return settings_go(request, ok, msg, "home")
+    return await settings_go(request, ok, msg, "home", full=True)
 
 
 @router.post("/settings/next")
@@ -109,7 +170,7 @@ async def settings_next(request: Request):
         r = Response(status_code=200)
         r.headers["HX-Redirect"] = "/add"
         return r
-    return settings_go(request, ok, msg, "household")
+    return await settings_go(request, ok, msg, "household")
 
 
 @router.post("/settings/papers")
@@ -118,7 +179,7 @@ async def settings_papers(request: Request):
     if denied:
         return denied
     ok, msg = settings_data.paper_names_set(A.current_user(request), (await A.form(request)).get("names", ""))
-    return settings_go(request, ok, msg, "household")
+    return await settings_go(request, ok, msg, "household")
 
 
 @router.post("/settings/packs")
@@ -128,7 +189,7 @@ async def settings_packs(request: Request):
         return denied
     on = (await A.form_lists(request)).get("pack", [])
     ok, msg = await run_in_threadpool(settings_data.packs_save, A.current_user(request), on)
-    return settings_go(request, ok, msg, "household")
+    return await settings_go(request, ok, msg, "household", "features", full=True)  # a pack can add a page to the menu
 
 
 @router.post("/settings/traditions")
@@ -137,7 +198,7 @@ async def settings_traditions(request: Request):
     if denied:
         return denied
     ok, msg = await run_in_threadpool(settings_data.traditions_save, A.current_user(request), await A.form(request, limit=4096))
-    return settings_go(request, ok, msg, "household")
+    return await settings_go(request, ok, msg, "household")
 
 
 @router.post("/settings/tax")
@@ -146,7 +207,7 @@ async def settings_tax(request: Request):
     if denied:
         return denied
     ok, msg = settings_data.tax_save(A.current_user(request), await A.form(request))
-    return settings_go(request, ok, msg, "household")
+    return await settings_go(request, ok, msg, "household")
 
 
 @router.post("/settings/lead")
@@ -156,7 +217,7 @@ async def settings_lead(request: Request):
         return denied
     d = await A.form(request)
     ok, msg = settings_data.lead_save(A.current_user(request), d.get("type", ""), d.get("days", ""), d.get("reset") == "1")
-    return settings_go(request, ok, msg, "household")
+    return await settings_go(request, ok, msg, "household")
 
 
 @router.post("/settings/agent")
@@ -168,7 +229,7 @@ async def settings_agent(request: Request):
     one = {k: v[0] for k, v in data.items()}
     ok, msg = await run_in_threadpool(settings_data.agent_save, A.current_user(request), one, data.get("watch", []),
                                       data.get("approvers", []))
-    return settings_go(request, ok, msg, "agent")
+    return await settings_go(request, ok, msg, "agent")
 
 
 @router.post("/settings/pin")
@@ -191,7 +252,7 @@ async def settings_pin(request: Request):
         r.headers["HX-Redirect"] = "/login?pin=changed"
         r.delete_cookie(A.COOKIE, path="/")
         return r
-    return settings_go(request, ok, msg, "agent")
+    return await settings_go(request, ok, msg, "agent")
 
 
 @router.post("/settings/phones/add")
@@ -204,7 +265,7 @@ async def settings_phones_add(request: Request):
     ok, msg, pair = await run_in_threadpool(settings_data.phone_pair, A.current_user(request), A.is_local(request),
                                             data.get("who", ""), data.get("name", ""))
     if not ok:
-        return settings_go(request, ok, msg, "phones")
+        return await settings_go(request, ok, msg, "phones")
     s = A.session_of(request)
     if s is not None:
         s["phone_pair"] = pair
@@ -219,7 +280,7 @@ async def settings_phones_revoke(request: Request):
     if denied:
         return denied
     ok, msg = await run_in_threadpool(settings_data.phone_revoke, A.current_user(request), (await A.form(request)).get("id", ""))
-    return settings_go(request, ok, msg, "phones")
+    return await settings_go(request, ok, msg, "phones")
 
 
 @router.post("/settings/phones/scopes")
@@ -230,7 +291,7 @@ async def settings_phones_scopes(request: Request):
     data = await A.form_lists(request)
     ok, msg = await run_in_threadpool(settings_data.phone_scopes, A.current_user(request), (data.get("id") or [""])[0],
                                       data.get("scope", []))
-    return settings_go(request, ok, msg, "phones")
+    return await settings_go(request, ok, msg, "phones")
 
 
 @router.post("/settings/phones/mode")
@@ -240,7 +301,7 @@ async def settings_phones_mode(request: Request):
     if denied:
         return denied
     ok, msg = admin_actions.phones_set(A.current_user(request), (await A.form(request)).get("on") == "1")
-    return settings_go(request, ok, msg, "phones", "connection")
+    return await settings_go(request, ok, msg, "phones", "connection")
 
 
 @router.post("/settings/phones/restart")
@@ -251,7 +312,7 @@ async def settings_phones_restart(request: Request):
         return denied
     await A.form(request)
     if not A.is_local(request):
-        return settings_go(request, False, "Restart from the PC itself: the app closes and starts again there.",
+        return await settings_go(request, False, "Restart from the PC itself: the app closes and starts again there.",
                            "phones", "connection")
     return _restart_page(request, "/settings?group=phones&tab=connection")
 
@@ -277,7 +338,7 @@ async def settings_stop(request: Request):
         return denied
     await A.form(request)
     if not A.is_local(request):
-        return settings_go(request, False, "Stop it from the PC itself.", "data")
+        return await settings_go(request, False, "Stop it from the PC itself.", "data")
     msg = settings_data.stop_app()
     admin_actions._audit(A.current_user(request), "web_stop", "")
     maintenance_data.close_soon()
@@ -314,7 +375,7 @@ async def settings_phones_firewall_act(request: Request):
         ok, msg = firewall.open_network_settings()
     else:
         return PlainTextResponse("Bad request", status_code=400)
-    return settings_go(request, ok, msg, "phones", "connection")
+    return await settings_go(request, ok, msg, "phones", "connection")
 
 
 @router.post("/settings/folder")
@@ -324,7 +385,7 @@ async def settings_folder(request: Request):
     if denied:
         return denied
     ok, msg = settings_data.open_folder(A.current_user(request), A.is_local(request), (await A.form(request)).get("key", ""))
-    return data_go(request, ok, msg)
+    return await data_go(request, ok, msg)
 
 
 
@@ -339,7 +400,7 @@ async def settings_wall_add(request: Request):
     ok, msg, pair = await run_in_threadpool(settings_data.wall_pair, A.current_user(request), A.is_local(request),
                                             data.get("name", ""), port)
     if not ok:
-        return settings_go(request, ok, msg, "phones", "walls")
+        return await settings_go(request, ok, msg, "phones", "walls")
     s = A.session_of(request)
     if s is not None:
         pair["kind"] = "app" if data.get("kind") == "app" and pair.get("app_qr") else "browser"
@@ -355,7 +416,7 @@ async def settings_wall_revoke(request: Request):
     if denied:
         return denied
     ok, msg = await run_in_threadpool(settings_data.wall_revoke, A.current_user(request), (await A.form(request)).get("id", ""))
-    return settings_go(request, ok, msg, "phones", "walls")
+    return await settings_go(request, ok, msg, "phones", "walls")
 
 @router.post("/settings/wall/seasonal")
 async def settings_wall_seasonal(request: Request):
@@ -365,7 +426,7 @@ async def settings_wall_seasonal(request: Request):
         return denied
     d = await A.form(request, limit=256)
     ok, msg = await run_in_threadpool(ea.wall_seasonal_set, A.current_user(request), d.get("on") == "1")
-    return settings_go(request, ok, msg, "phones", "walls")
+    return await settings_go(request, ok, msg, "phones", "walls")
 
 
 @router.post("/settings/wall/screen")
@@ -381,7 +442,7 @@ async def settings_wall_screen(request: Request):
                                       d.get("night_to", ""), d.get("night_tone", "dim"), d.get("zone", ""),
                                       d.get("photo_style", ""), _wall_tabs(d), d.get("clock_only") == "1",
                                       d.get("theme", ""), d.get("rotate_seconds", "0"), _wall_led(d))
-    return settings_go(request, ok, msg, "phones", "walls")
+    return await settings_go(request, ok, msg, "phones", "walls")
 
 
 @router.get("/settings/wall/preview", response_class=HTMLResponse)
@@ -428,7 +489,7 @@ async def settings_wall_own(request: Request):
                                       d.get("photos_to", ""), d.get("night_from", ""), d.get("night_to", ""),
                                       d.get("night_tone", "dim"), d.get("zone", ""), d.get("photo_style", ""),
                                       _wall_tabs(d), d.get("clock_only") == "1", d.get("theme", ""), d.get("rotate_seconds", "0"), _wall_led(d))
-    return settings_go(request, ok, msg, "phones", "walls")
+    return await settings_go(request, ok, msg, "phones", "walls")
 
 
 @router.post("/settings/wall/photo")
@@ -450,7 +511,7 @@ async def settings_wall_photo_remove(request: Request):
     if denied:
         return denied
     ok, msg = await run_in_threadpool(ea.wall_photo_remove, A.current_user(request), (await A.form(request)).get("name", ""))
-    return settings_go(request, ok, msg, "phones", "walls")
+    return await settings_go(request, ok, msg, "phones", "walls")
 
 
 @router.get("/settings/wall/photo/{name}")
@@ -466,7 +527,7 @@ def settings_wall_photo_file(request: Request, name: str):
     return FileResponse(p, media_type="image/jpeg")
 
 
-def conn_go(request, ok, msg, where="settings"):
+async def conn_go(request, ok, msg, where="settings", group="connections"):
     """After a Connections change: the result once, then the setup step or Settings > Connections again."""
     if where == "setup":
         s = A.session_of(request)
@@ -475,7 +536,7 @@ def conn_go(request, ok, msg, where="settings"):
         r = Response(status_code=200)
         r.headers["HX-Redirect"] = "/setup"
         return r
-    return settings_go(request, ok, msg, "connections")
+    return await settings_go(request, ok, msg, group)
 
 
 @router.post("/settings/ai")
@@ -486,7 +547,7 @@ async def settings_ai(request: Request):
         return denied
     data = await A.form(request, limit=4096)
     ok, msg = await run_in_threadpool(connections_data.ai_save, A.current_user(request), data, A.is_local(request))
-    return conn_go(request, ok, msg, data.get("from"))
+    return await conn_go(request, ok, msg, data.get("from"))
 
 
 @router.post("/settings/ai/test")
@@ -496,7 +557,7 @@ async def settings_ai_test(request: Request):
         return denied
     data = await A.form(request)
     ok, msg = await run_in_threadpool(connections_data.ai_test, A.current_user(request))
-    return conn_go(request, ok, ("Test call: " if ok else "Test call failed: ") + msg, data.get("from"))
+    return await conn_go(request, ok, ("Test call: " if ok else "Test call failed: ") + msg, data.get("from"))
 
 
 @router.post("/settings/telegram")
@@ -507,7 +568,7 @@ async def settings_telegram(request: Request):
     data = await A.form(request, limit=2048)
     ok, msg = await run_in_threadpool(connections_data.telegram_act, A.current_user(request), data.get("op", ""), data,
                                       A.is_local(request))
-    return conn_go(request, ok, msg)
+    return await conn_go(request, ok, msg)
 
 
 @router.post("/settings/google/client")
@@ -538,7 +599,7 @@ async def settings_google(request: Request):
     one = {k: v[0] for k, v in data.items()}
     ok, msg = await run_in_threadpool(connections_data.google_act, A.current_user(request), one.get("op", ""), one,
                                       A.is_local(request), data.get("cal", []))
-    return conn_go(request, ok, msg)
+    return await conn_go(request, ok, msg)
 
 
 @router.post("/settings/bank")
@@ -551,7 +612,7 @@ async def settings_bank(request: Request):
     one = {k: v[0] for k, v in data.items()}
     ok, msg = await run_in_threadpool(connections_data.bank_act, A.current_user(request), one.get("op", ""), one,
                                       A.is_local(request), data.get("acct", []))
-    return conn_go(request, ok, msg)
+    return await conn_go(request, ok, msg, group="bank")
 
 
 @router.post("/settings/mail")
@@ -563,7 +624,7 @@ async def settings_mail(request: Request):
     data = await A.form(request, limit=4096)
     ok, msg = await run_in_threadpool(connections_data.mail_act, A.current_user(request), data.get("op", ""), data,
                                       A.is_local(request))
-    return conn_go(request, ok, msg)
+    return await conn_go(request, ok, msg)
 
 
 @router.post("/settings/feeds")
@@ -575,7 +636,7 @@ async def settings_feeds(request: Request):
     data = await A.form(request, limit=4096)
     ok, msg = await run_in_threadpool(connections_data.feeds_act, A.current_user(request), data.get("op", ""), data,
                                       A.is_local(request))
-    return conn_go(request, ok, msg)
+    return await conn_go(request, ok, msg)
 
 
 @router.get("/settings/google/preview", response_class=HTMLResponse)
@@ -589,14 +650,11 @@ async def settings_google_preview(request: Request):
 
 
 # ---- Settings > Data (maintenance_data.py) --------------------------------------------------------------------------
-def data_go(request, ok, msg, **keep):
+async def data_go(request, ok, msg, **keep):
     s = A.session_of(request)
     if s is not None:
-        s["settings_flash"] = (ok, msg)
         s.update({k: v for k, v in keep.items() if v})
-    r = Response(status_code=200)
-    r.headers["HX-Redirect"] = settings_url("data")
-    return r
+    return await settings_go(request, ok, msg, "data")
 
 
 @router.post("/settings/backup")
@@ -605,7 +663,7 @@ async def settings_backup(request: Request):
     if denied:
         return denied
     ok, msg = await run_in_threadpool(maintenance_data.backup, A.current_user(request))
-    return data_go(request, ok, msg)
+    return await data_go(request, ok, msg)
 
 
 @router.post("/settings/export")
@@ -614,7 +672,7 @@ async def settings_export(request: Request):
     if denied:
         return denied
     ok, msg, z = await run_in_threadpool(maintenance_data.export, A.current_user(request))
-    return data_go(request, ok, msg, export_name=z.name if ok and z is not None else None)
+    return await data_go(request, ok, msg, export_name=z.name if ok and z is not None else None)
 
 
 @router.get("/settings/export/{name}")
@@ -639,18 +697,18 @@ async def settings_backup_restore(request: Request):
     user, op = A.current_user(request), data.get("op", "")
     if op == "check":
         ok, msg = await run_in_threadpool(maintenance_data.restore_check, user, data.get("snap"), data.get("passphrase", ""))
-        return data_go(request, ok, msg)
+        return await data_go(request, ok, msg)
     if op != "start":
         return PlainTextResponse("Bad request", status_code=400)
     if data.get("sure") != "1":
-        return data_go(request, False, "Tick the box to confirm that everything entered after this backup is replaced.")
+        return await data_go(request, False, "Tick the box to confirm that everything entered after this backup is replaced.")
     if not A.is_local(request):  # the app closes and starts again: only where it can be started again by hand too
-        return data_go(request, False, "A restore can be started only on this PC (it closes the app and starts it again).")
+        return await data_go(request, False, "A restore can be started only on this PC (it closes the app and starts it again).")
     port = int(os.environ.get("MITRAHOME_WEB_PORT") or request.url.port or 8601)  # the PC's own port, never the phones'
     ok, msg = await run_in_threadpool(maintenance_data.restore_start, user, data.get("snap"), data.get("passphrase", ""),
                                       port, os.environ.get("MITRAHOME_WEB_LAN") == "1")
     if not ok:
-        return data_go(request, ok, msg)
+        return await data_go(request, ok, msg)
     maintenance_data.close_soon()
     return A.page(request, "_restoring.html", msg=msg)
 
@@ -662,7 +720,7 @@ async def settings_tasks(request: Request):
         return denied
     data = await A.form(request)
     ok, msg = await run_in_threadpool(maintenance_data.tasks_register, A.current_user(request), data.get("inbox") == "1")
-    return data_go(request, ok, msg)
+    return await data_go(request, ok, msg)
 
 
 @router.post("/settings/tasks/job")
@@ -674,7 +732,7 @@ async def settings_task_job(request: Request):
     data = await A.form(request)
     ok, msg = await run_in_threadpool(maintenance_data.task_set, A.current_user(request), str(data.get("job") or ""),
                                       data.get("on") == "1")
-    return data_go(request, ok, msg)
+    return await data_go(request, ok, msg)
 
 
 @router.post("/settings/tasks/time")
@@ -686,7 +744,7 @@ async def settings_task_time(request: Request):
     data = await A.form(request)
     ok, msg = await run_in_threadpool(maintenance_data.task_time, A.current_user(request), str(data.get("job") or ""),
                                       str(data.get("day") or ""), str(data.get("time") or ""))
-    return data_go(request, ok, msg)
+    return await data_go(request, ok, msg)
 
 
 @router.post("/settings/update")
@@ -699,19 +757,19 @@ async def settings_update(request: Request):
     if op == "check":
         u = await run_in_threadpool(maintenance_data.check_update, True)
         if u["error"]:
-            return data_go(request, False, u["error"])
-        return data_go(request, True, f"Version {u['newer']} is available." if u["newer"] else "Up to date.")
+            return await data_go(request, False, u["error"])
+        return await data_go(request, True, f"Version {u['newer']} is available." if u["newer"] else "Up to date.")
     if op == "go":
         port = int(os.environ.get("MITRAHOME_WEB_PORT") or request.url.port or 8601)
         ok, msg = await run_in_threadpool(maintenance_data.update, A.current_user(request), port,
                                           os.environ.get("MITRAHOME_WEB_LAN") == "1")
         if not ok:
-            return data_go(request, ok, msg)
+            return await data_go(request, ok, msg)
         maintenance_data.close_soon()  # the old code stops serving; restore_backup.py relaunch starts the new one
         return A.page(request, "_restoring.html", msg=msg, title="Update")
     if op == "daily":
         ok, msg = maintenance_data.daily_check_set(A.current_user(request), data.get("on") == "1")
-        return data_go(request, ok, msg)
+        return await data_go(request, ok, msg)
     return PlainTextResponse("Bad request", status_code=400)
 
 
@@ -783,7 +841,7 @@ async def settings_restore(request: Request):
     if denied:
         return denied
     ok, msg = settings_data.restore(A.current_user(request), (await A.form(request)).get("key", ""), dates.today())
-    return settings_go(request, ok, msg, "agent")
+    return await settings_go(request, ok, msg, "agent")
 
 
 @router.get("/settings/calendar.ics")

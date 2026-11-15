@@ -208,52 +208,129 @@ def test_setup_ai_step_shows_the_ai_form(conn, modules):
     si.clear_draft()
 
 
-def test_bank_sync_card_token_only_from_this_pc_accounts_pull_forget(conn, root, modules, monkeypatch):
-    """Settings > Connections > Bank sync (SimpleFIN): the token box only on this PC, ticked accounts, Pull now, Forget
-    with a tick box; the access URL never comes back; a limited person gets 403."""
+def test_bank_sync_page_token_only_from_this_pc_accounts_find_pull_forget(conn, root, modules, monkeypatch):
+    """Settings > Bank sync (SimpleFIN, its own page since the Settings redesign): the token box only on this PC, ticked
+    accounts grouped by bank, Find new accounts, Pull now, Forget with a tick box; the access URL never comes back; a
+    limited person gets 403. Connections no longer carries it."""
     import test_bank_sync as tb
     c, _, local = conn
     bs = modules("bank_sync")
     bs.forget()
     tb.fake_http(monkeypatch, bs)
     t = _token(c)
-    page = c.get("/settings?group=connections").text
-    assert "Bank sync (SimpleFIN)" in page and 'name="token"' not in page.split('id="conn-bank"')[1]
-    assert "only on this PC" in page.split('id="conn-bank"')[1], "a phone gets no token box"
+    assert 'id="conn-bank"' not in c.get("/settings?group=connections").text, "bank sync left Connections"
+
+    def page():
+        return c.get("/settings?group=bank").text
+
+    p = page()
+    assert "Bank sync (SimpleFIN)" in p and 'name="token"' not in p and "only on this PC" in p, "a phone gets no token box"
+    assert "Connect your banks" in p and "Find new accounts" not in p
     _post(c, "/settings/bank", t, op="token", token=tb.TOKEN)
-    assert "only on this PC" in _flash(c) and not bs.configured()
+    assert "only on this PC" in page() and not bs.configured()
     local()
-    page = c.get("/settings?group=connections").text
-    assert 'name="token"' in page.split('id="conn-bank"')[1]
+    assert 'name="token"' in page()
     _post(c, "/settings/bank", t, op="token", token="nope")
-    assert "not a SimpleFIN setup token" in _flash(c)
-    _post(c, "/settings/bank", t, op="token", token=tb.TOKEN)
-    page = _flash(c)
-    assert "Connected to SimpleFIN: 2 account(s)" in page and "Everyday Checking x4477" in page and "Pull now" in page
-    bank_card = page.split('id="conn-bank"')[1]
-    assert 'data-check-all="1">Select all' in bank_card and 'data-check-all="0">Unselect all' in bank_card
-    assert tb.ACCESS not in page and "sfsecret" not in page
+    assert "not a SimpleFIN setup token" in page()
+    r = _post(c, "/settings/bank", t, op="token", token=tb.TOKEN)
+    assert r.headers["hx-redirect"] == "/settings?group=bank"
+    p = page()
+    assert "Connected to SimpleFIN: 2 account(s)" in p and "Everyday Checking" in p and "x4477" in p and "Pull now" in p
+    assert "Find new accounts" in p and '<h3 class="bbank">Test Bank' in p
+    assert 'data-check-all="1">Select all' in p and 'data-check-all="0">Unselect all' in p
+    assert tb.ACCESS not in p and "sfsecret" not in p
     _post(c, "/settings/bank", t, op="pull")
-    assert "tick at least one account" in _flash(c)
+    assert "tick at least one account" in page()
     r = c.post("/settings/bank", data={"op": "pick", "acct": ["ACT-chk", "bogus"]}, headers={"X-CSRF-Token": t})
-    assert r.headers["hx-redirect"] == "/settings?group=connections"
-    page = _flash(c)
-    assert "1 account(s) will be pulled" in page and 'value="ACT-chk" checked' in page
+    assert r.headers["hx-redirect"] == "/settings?group=bank"
+    p = page()
+    assert "1 account(s) will be pulled" in p and 'value="ACT-chk" checked' in p and "New</span>" not in p
+    # a bank linked later at SimpleFIN: Find new accounts lists it as New, imports nothing
+    more = tb.ACCOUNTS + [{"id": "ACT-sav", "name": "High Yield Savings ...5050", "currency": "USD", "balance": "10.00",
+                           "balance-date": tb.ACCOUNTS[0]["balance-date"], "org": {"name": "Other Bank"}, "transactions": []}]
+    calls = tb.fake_http(monkeypatch, bs, accounts=more)
+    _post(c, "/settings/bank", t, op="refresh")
+    p = page()
+    assert "Found 1 new account(s)" in p and "High Yield Savings" in p and '<span class="devpill p-info">New</span>' in p
+    assert calls and "balances-only=1" in calls[-1][1], "Find new accounts asks for balances only"
+    _post(c, "/settings/bank", t, op="refresh")
+    assert "No new accounts" in page()
+    tb.fake_http(monkeypatch, bs)
     _post(c, "/settings/bank", t, op="pull")
-    page = _flash(c)
-    assert "Pulled 2 new transaction(s)" in page and "Last good pull" in page
+    p = page()
+    assert "Pulled 2 new transaction(s)" in p and "Last good pull" in p and "in Money: Everyday Checking" in p
     _post(c, "/settings/bank", t, op="forget")
-    assert "Tick the box" in _flash(c) and bs.configured()
+    assert "Tick the box" in page() and bs.configured()
     _post(c, "/settings/bank", t, op="forget", sure="1")
-    page = _flash(c)
-    assert "forgotten" in page and not bs.configured() and 'name="token"' in page.split('id="conn-bank"')[1]
+    p = page()
+    assert "forgotten" in p and not bs.configured() and 'name="token"' in p
     _post(c, "/settings/bank", t, op="explode")
-    assert "cannot be done here" in _flash(c)
+    assert "cannot be done here" in page()
     log = (root / "logs" / "admin_audit.log").read_text(encoding="utf-8")
-    assert "bank_setup" in log and "bank_pull" in log and "bank_forget" in log and "sfsecret" not in log
+    assert "bank_setup" in log and "bank_pull" in log and "bank_refresh" in log and "bank_forget" in log and "sfsecret" not in log
     assert c.post("/settings/bank", data={"op": "pull"}).status_code == 403, "CSRF"
     c.cookies.clear()
     c.post("/login", data={"name": "Kid", "pin": "0000"})
     t = re.search(r'name="csrf-token" content="([^"]+)"', c.get("/").text).group(1)
     assert _post(c, "/settings/bank", t, op="pull").status_code == 403
     assert "Bank sync" not in c.get("/").text
+
+
+def test_settings_form_redraws_in_place_on_its_own_tab(conn, modules):
+    """A form sent by HTMX from its own Settings page gets the page back to swap into <main> (scroll and tab kept, the
+    result as a toast); from another page, or without HTMX, it still gets HX-Redirect."""
+    c, _, local = conn
+    local()
+    t = _token(c)
+    h = {"X-CSRF-Token": t, "HX-Request": "true",
+         "HX-Current-URL": "http://127.0.0.1:8601/settings?group=connections&tab=calendars"}
+    r = c.post("/settings/feeds", data={"op": "remove", "id": "nope"}, headers=h)
+    assert r.status_code == 200 and "hx-redirect" not in r.headers
+    assert r.headers["hx-retarget"] == "main" and r.headers["hx-reselect"] == "main"
+    assert r.headers["hx-reswap"].startswith("outerHTML show:none")
+    assert 'class="stoast' in r.text and "data-toast" in r.text
+    assert 'id="sp-calendars" role="tabpanel"' in r.text and 'id="sp-ai" role="tabpanel" aria-labelledby="st-ai" hidden' in r.text
+    assert 'data-stab="calendars" aria-selected="true"' in r.text, "the tab the form was sent from stays open"
+    h["HX-Current-URL"] = "http://127.0.0.1:8601/settings?group=data"
+    r = c.post("/settings/feeds", data={"op": "remove", "id": "nope"}, headers=h)
+    assert r.headers["hx-redirect"] == "/settings?group=connections"
+    page = c.get("/settings?group=connections").text
+    for k in ("ai", "bot", "google", "mail", "calendars"):
+        assert f'data-stab="{k}"' in page and f'id="sp-{k}"' in page
+    assert 'id="sp-bot" role="tabpanel" aria-labelledby="st-bot" hidden' in page, "one tab at a time, AI first"
+    page = c.get("/settings?group=data&tab=backups").text
+    assert 'id="sp-backups" role="tabpanel" aria-labelledby="st-backups">' in page and "Settings history" in page
+
+
+def test_settings_change_keeps_a_copy_first_and_puts_it_back(conn, root, modules):
+    """Before a change in Settings the settings files are copied (only when they changed since the newest copy);
+    Settings > Data > Backups > Settings history puts one back, after copying the files of right now."""
+    import json as _json
+    c, _, local = conn
+    sh = modules("settings_history")
+    import shutil
+    shutil.rmtree(sh.home(), ignore_errors=True)
+    t = _token(c)
+    before = (root / "config" / "family.json").read_text(encoding="utf-8")
+    _post(c, "/settings/agent", t, name="Robo", tone="brief", brief_time="07:00", weekly_day="SUN", weekly_time="18:00")
+    first = sh.listing()
+    assert len(first) == 1 and first[0]["who"] == "Ann" and first[0]["what"] == "Home Profile"
+    assert _json.loads((sh.home() / first[0]["name"] / "family.json").read_text(encoding="utf-8")) == _json.loads(before)
+    assert "secrets.env" not in [p.name for p in (sh.home() / first[0]["name"]).iterdir()]
+    _post(c, "/settings/audit", t)
+    assert len(sh.listing()) == 1, "a check changes no settings: no copy"
+    page = c.get("/settings?group=data&tab=backups").text
+    assert first[0]["name"] in page and "Put back" in page
+    _post(c, "/settings/history/restore", t, name=first[0]["name"])
+    assert "Tick the box" in c.get("/settings?group=data").text
+    _post(c, "/settings/history/restore", t, name="../../etc", sure="1")
+    assert "not in the settings history" in c.get("/settings?group=data").text
+    _post(c, "/settings/history/restore", t, name=first[0]["name"], sure="1")
+    assert "Settings put back" in c.get("/settings?group=data").text
+    assert _json.loads((root / "config" / "family.json").read_text(encoding="utf-8")) == _json.loads(before)
+    assert len(sh.listing()) == 2 and sh.listing()[0]["what"].startswith("before putting back"), "now is kept first"
+    assert "settings_restore" in (root / "logs" / "admin_audit.log").read_text(encoding="utf-8")
+    c.cookies.clear()
+    c.post("/login", data={"name": "Kid", "pin": "0000"})
+    t = re.search(r'name="csrf-token" content="([^"]+)"', c.get("/").text).group(1)
+    assert _post(c, "/settings/history/restore", t, name=first[0]["name"], sure="1").status_code == 403

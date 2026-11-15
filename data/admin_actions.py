@@ -772,6 +772,34 @@ def bank_pick(user, ids):
     return True, f"{n} account(s) will be pulled every morning." if n else "No account is pulled until you tick one."
 
 
+def settings_restore(user, name, sure):
+    """Settings > Data > Backups > Settings history: put a copy of the settings files back. -> (ok, message)."""
+    if not _is_adult(user):
+        return False, "Only adults can do this."
+    if not sure:
+        return False, "Tick the box to confirm putting these settings back."
+    import settings_history as sh
+    ok, msg = sh.restore(name, (user or {}).get("name") or "")
+    _audit(user, "settings_restore", f"{name} ok={ok}")
+    return ok, msg
+
+
+def bank_refresh(user):
+    """Find new accounts at SimpleFIN Bridge (read-only, nothing imported). -> (ok, message)."""
+    if not _is_adult(user):
+        return False, "Only adults can do this."
+    import bank_sync as bs
+    try:
+        n, new = bs.refresh_accounts()
+    except bs.BankError as e:
+        _audit(user, "bank_refresh", "failed")
+        return False, bs.scrub(e)
+    _audit(user, "bank_refresh", f"accounts={n} new={new}")
+    if new:
+        return True, f"Found {new} new account(s), marked New below. Tick the ones to pull and save the choice."
+    return True, f"No new accounts: SimpleFIN lists the same {n} account(s). Linked a bank just now? It can take a few minutes to show."
+
+
 def bank_pull_now(user):
     if not _is_adult(user):
         return False, "Only adults can do this."
