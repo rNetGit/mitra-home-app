@@ -573,6 +573,63 @@
     if (h) try { sessionStorage.setItem('sfold', h.textContent); } catch (err) {}
   });
 
+  // Settings section tabs ([data-stab] in .stabs): one panel (#sp-<key>) at a time, no page load; the address keeps
+  // ?tab= (replaceState), so a save, which draws the page again in place, comes back to the same tab. Arrow keys move
+  // between tabs. A link to #id inside a hidden panel opens that panel.
+  function showTab(key, focus) {
+    var bar = document.querySelector('.stabs');
+    var panel = document.getElementById('sp-' + key);
+    if (!bar || !panel) return;
+    bar.querySelectorAll('[data-stab]').forEach(function (b) {
+      var on = b.getAttribute('data-stab') === key;
+      b.classList.toggle('on', on);
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      b.tabIndex = on ? 0 : -1;
+      if (on && focus) b.focus();
+      if (on && bar.scrollWidth > bar.clientWidth) bar.scrollLeft = Math.max(0, b.offsetLeft - bar.offsetLeft - 16);
+    });
+    document.querySelectorAll('.spanel').forEach(function (p) { p.hidden = p !== panel; });
+    try {
+      var u = new URL(location.href);
+      if (u.searchParams.get('tab') !== key) { u.searchParams.set('tab', key); u.hash = ''; history.replaceState(history.state, '', u.toString()); }
+    } catch (err) {}
+  }
+  document.addEventListener('click', function (e) {
+    var b = e.target.closest && e.target.closest('.stabs [data-stab]');
+    if (b) showTab(b.getAttribute('data-stab'), false);
+  });
+  document.addEventListener('keydown', function (e) {
+    var b = e.target.closest && e.target.closest('.stabs [data-stab]');
+    if (!b || (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft' && e.key !== 'Home' && e.key !== 'End')) return;
+    var all = Array.prototype.slice.call(b.parentNode.querySelectorAll('[data-stab]'));
+    var i = all.indexOf(b);
+    i = e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + all.length) % all.length;
+    e.preventDefault();
+    showTab(all[i].getAttribute('data-stab'), true);
+  });
+  function tabForHash() {
+    var el = location.hash.length > 1 && document.getElementById(location.hash.slice(1));
+    var p = el && el.closest ? el.closest('.spanel') : null;
+    if (p && p.hidden) { showTab(p.id.slice(3), false); el.scrollIntoView({block: 'start'}); }
+  }
+  document.addEventListener('DOMContentLoaded', tabForHash);
+  window.addEventListener('hashchange', tabForHash);
+
+  // The result of a Settings form shows as a toast at the bottom ([data-toast]); it closes by itself or on its x.
+  function toasts(root) {
+    (root || document).querySelectorAll('[data-toast]').forEach(function (t) {
+      if (t.dataset.timer) return;
+      t.dataset.timer = '1';
+      setTimeout(function () { t.classList.add('gone'); }, t.classList.contains('t-bad') ? 12000 : 6000);
+    });
+  }
+  document.addEventListener('DOMContentLoaded', function () { toasts(); });
+  document.addEventListener('htmx:afterSettle', function (e) { toasts(e.detail && e.detail.elt ? e.detail.elt.parentNode || document : document); });
+  document.addEventListener('click', function (e) {
+    var x = e.target.closest && e.target.closest('[data-toast-close]');
+    if (x) x.closest('[data-toast]').classList.add('gone');
+  });
+
   // Money > Ledger: picking a period fills From / To (this week = Monday to Sunday, this month, this year); editing a
   // date makes the period Custom. The server fills them too when a link names only a period.
   document.addEventListener('change', function (e) {

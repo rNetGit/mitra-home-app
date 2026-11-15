@@ -169,7 +169,7 @@ def checks(today=None):
         import bank_sync
         if bank_sync.configured():
             bs = bank_sync.status(today)
-            here = "Settings > Connections > Bank sync"
+            here = "Settings > Bank sync"
             if bs["stale_days"] is None:
                 out.append(_row("Bank sync", "warn", "set up but no pull has worked yet" + (f": {bs['error']}" if bs["error"] else ""),
                                 "python data/bank_sync.py pull", here))

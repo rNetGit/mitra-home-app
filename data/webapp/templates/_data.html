@@ -1,4 +1,5 @@
-<details class="card sfold"><summary><h2>Back up and export</h2><span class="muted">Back up now or export every table</span></summary>
+{% if dpart == 'backups' %}
+<section class="card"><h2>Back up and export</h2><p class="muted small">Back up now or export every table</p>
 <div id="data-backup">
   <div class="optrow">
     <button type="button" class="btn" hx-post="/settings/backup" hx-disabled-elt="this" hx-indicator="#bk-wait">Back up now</button>
@@ -9,13 +10,15 @@
   <p class="muted small">A backup also runs every week by itself once it runs on its own (below). An export is every table as
     CSV files in one zip, for you to keep or open in a spreadsheet.</p>
 </div>
-</details>
+</section>
+{% endif %}
 
-<details class="card sfold"><summary><h2>Restore from backup</h2><span class="muted">Put the records back as they were</span></summary>
+{% if dpart == 'backups' %}
+<section class="card"><h2>Restore from backup</h2><p class="muted small">Put the records back as they were</p>
 <div id="data-restore">
   {% if last_restore %}<p class="{{ 'notice' if last_restore.ok else 'alert' }}">{{ last_restore.when }}: {{ last_restore.message }}{% if last_restore.ok and last_restore.kept %} A copy of the data from just before is kept with your backups.{% endif %}</p>{% endif %}
   {% if restoring %}
-  <p class="notice" data-wait-back="/settings?group=data" role="status">{{ restoring }}</p>
+  <p class="notice" data-wait-back="/settings?group=data&amp;tab=backups" role="status">{{ restoring }}</p>
   {% elif snaps %}
   <p class="muted">Puts the household's records back as they were at the time of a backup. Everything entered since then is
     replaced; a copy of today's data is kept first. Filed papers and settings are not overwritten, only ones that went
@@ -34,9 +37,11 @@
   <p class="muted">No backups yet. Back up now makes the first one.</p>
   {% endif %}
 </div>
-</details>
+</section>
+{% endif %}
 
-<details class="card sfold"><summary><h2>Runs on its own</h2><span class="muted">Daily brief, weekly digest, backups, inbox check</span></summary>
+{% if dpart == 'schedule' %}
+<section class="card"><h2>Runs on its own</h2><p class="muted small">Daily brief, weekly digest, backups, inbox check</p>
 <div id="data-run">
   <p class="muted">This PC makes the Brief, the weekly digest and the backups at set times, with nothing to keep open.
     Switch each one on or off, change when it runs, and see when it last ran. The PC must be on and you signed in.</p>
@@ -72,9 +77,11 @@
   </form>
   {% endif %}
 </div>
-</details>
+</section>
+{% endif %}
 
-<details class="card sfold"><summary><h2>About {{ brand }}</h2><span class="muted">Version, website, source and licence</span></summary>
+{% if dpart == 'updates' %}
+<section class="card"><h2>About {{ brand }}</h2><p class="muted small">Version, website, source and licence</p>
 <div id="data-about">
   <p class="muted">{{ brand }} {{ upd.current }}. Free to use, no account, no subscription. Your records stay on this PC.</p>
   <p class="optrow">
@@ -84,9 +91,11 @@
   </p>
   <p class="muted small">Licence: GNU AGPL-3.0-or-later (the file LICENSE in the app folder). Records and checklists only, not financial, tax, legal, insurance or medical advice.</p>
 </div>
-</details>
+</section>
+{% endif %}
 
-<details class="card sfold"><summary><h2>Updates</h2><span class="muted">Check for and install new versions</span></summary>
+{% if dpart == 'updates' %}
+<section class="card"><h2>Updates</h2><p class="muted small">Check for and install new versions</p>
 <div id="data-update">
   <p class="muted">This is {{ brand }} {{ upd.current }}.{% if upd.error %} {{ upd.error }}{% elif upd.newer %} Version {{ upd.newer }} is available.{% elif upd.checked %} Up to date.{% endif %}</p>
   <div class="optrow">
@@ -107,13 +116,16 @@
     <p class="muted small">Once a day the morning task asks {{ upd.daily.host }} for the latest release number and its notes. Only that address is contacted and nothing about your family is sent. A new version shows up in the Inbox; it is never installed without you. Off: no network call at all.{% if upd.daily.on and upd.daily.checked %} Last look: {{ upd.daily.checked }}.{% endif %}</p>
   </div>
 </div>
-</details>
+</section>
+{% endif %}
 
-<details class="card sfold"><summary><h2>Check everything</h2><span class="muted">Every task on this PC and the AI</span></summary>
+{% if dpart == 'health' %}
+<section class="card"><h2>Check everything</h2><p class="muted small">Every task on this PC and the AI</p>
 <div id="data-check">
   <p class="muted">Also checks every scheduled task on this PC (not only this household's), and asks the AI a short question, so it uses a little of your AI plan (about a minute).</p>
   <button type="button" class="btn alt" hx-post="/settings/doctor" hx-target="#doctor-out" hx-swap="innerHTML" hx-disabled-elt="this" hx-indicator="#doc-wait">Run full check</button>
   <span id="doc-wait" class="setting-up muted" role="status">Checking...</span>
   <div id="doctor-out"></div>
 </div>
-</details>
+</section>
+{% endif %}

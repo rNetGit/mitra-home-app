@@ -30,11 +30,13 @@ read-only format to any app you hand a *setup token* to. Mitra Home is such an a
 
 ## Set it up
 1. At SimpleFIN Bridge: create an account, connect your banks, then **Create a setup token** (one long string).
-2. In Mitra Home on this PC: Settings > Connections > **Bank sync (SimpleFIN)** > paste the token > Connect.
+2. In Mitra Home on this PC: Settings > **Bank sync** (its own page, Advanced view) > paste the token > Connect.
    The token works once; after that Mitra Home holds the access URL and the token is useless to anyone else.
    The box is shown only on this PC, never on a phone (the home Wi-Fi speaks plain http).
 3. **Tick the accounts to pull** and save. Nothing is pulled for an account you did not tick, and no `accounts` row is
    made for it. A ticked account is matched to an existing row by the last four digits and name, or a new row is made.
+   Linked another bank at SimpleFIN later? **Find new accounts** asks the bridge for its account list (balances only,
+   nothing imported); the new ones are marked New, ready to tick.
 4. **Pull now** for the last 45 days (SimpleFIN recommends at most 45 days a request; older days come from your statements). From then on the daily brief task pulls every morning (`tasks/run_task.py
    daily_digest`; `python tasks/run_task.py bank_sync` or `python data/bank_sync.py pull` run it by hand).
 
@@ -51,7 +53,7 @@ one item in the Inbox ("Bank sync did not work", with the reason) and tried agai
 (Settings > Data) warns when the last good pull is older than three days. The reason shown never contains the secret.
 
 ## Forget it
-Settings > Connections > Bank sync > **Forget the bank connection** (tick the box), or `python data/bank_sync.py
+Settings > Bank sync > **Forget the bank connection** (tick the box), or `python data/bank_sync.py
 forget`. This removes the access URL from this PC and clears the SimpleFIN ids on your accounts. Transactions and
 balances already pulled stay, like any imported statement. To cut the bridge's own access to your banks, delete the
 connections at SimpleFIN Bridge too.

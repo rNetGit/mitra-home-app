@@ -481,7 +481,7 @@ def from_bank_sync(con, today):
         return
     when = (s["last_pull"] or "")[:16].replace("T", " ")
     yield _p("bank_sync:failed", "bank_sync", "decision", "Bank sync did not work",
-             f"Last try {when}: {s['error']} It is tried again tomorrow morning; Settings > Connections > Bank sync has "
+             f"Last try {when}: {s['error']} It is tried again tomorrow morning; Settings > Bank sync has "
              "\"Pull now\" and the account list.", {})
 
 

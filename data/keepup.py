@@ -31,7 +31,7 @@ ACTIVE_MONTHS = 2           # of the 3 calendar months before this one
 EVIDENCE_DAYS = 9           # a heartbeat this recent = the jobs run, flag or no flag
 SLOW_TYPES = ("savings", "investment", "loan")   # accounts with few lines a month: listed after checking and cards
 SETTINGS_DATA = "/settings?group=data"
-SETTINGS_BANK = "/settings?group=connections#conn-bank"
+SETTINGS_BANK = "/settings?group=bank"
 
 
 def _row(key, tone, text, action="", href="", op=""):

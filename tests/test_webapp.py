@@ -1269,7 +1269,11 @@ def test_settings_groups_render_for_adults_only(web, modules):
     r = c.get("/settings")  # the home: profile hero, one lane per group, back link + chips inside a group
     assert 'href="/settings?group=data"' in r.text and 'class="fhero g-over shero"' in r.text
     r = c.get("/settings?group=agent")
-    assert 'class="fback" href="/settings"' in r.text and 'class="fchips"' in r.text and 'details class="card sfold" open' in r.text
+    assert 'class="fback" href="/settings"' in r.text and 'class="fchips stabs" role="tablist"' in r.text
+    assert 'data-stab="agent" aria-selected="true"' in r.text and 'id="sp-pins" role="tabpanel" aria-labelledby="st-pins" hidden' in r.text
+    r = c.get("/settings?group=agent&tab=pins")  # a tab named in the address opens it; an unknown one opens the first
+    assert 'data-stab="pins" aria-selected="true"' in r.text and 'id="sp-agent" role="tabpanel" aria-labelledby="st-agent" hidden' in r.text
+    assert 'data-stab="agent" aria-selected="true"' in c.get("/settings?group=agent&tab=evil").text
     r = c.get("/settings/calendar.ics")
     assert r.status_code == 200 and r.headers["content-type"].startswith("text/calendar") and "BEGIN:VCALENDAR" in r.text
 
@@ -1794,10 +1798,11 @@ def test_simple_view_trims_the_rail_and_settings_but_blocks_nothing(web, root, m
     h = c.get("/settings?group=household").text
     assert "<h2>Optional features</h2>" not in h and "<h2>Tax papers</h2>" not in h and "<h2>How early to remind</h2>" not in h
     assert "Names on your papers" in h and "Traditions and holidays" in h and "How much to show" in c.get("/settings").text
-    pills = h.split('aria-label="Settings group"', 1)[1].split("</nav>", 1)[0]
-    assert "group=agent" in pills and "group=connections" not in pills and "group=phones" not in pills and "group=data" not in pills
+    tabs = h.split('class="fchips stabs"', 1)[1].split("</nav>", 1)[0]
+    assert 'data-stab="papers"' in tabs and 'data-stab="features"' not in tabs and 'data-stab="tax"' not in tabs, "Simple: fewer tabs"
     home_page = c.get("/settings").text
     assert "group=data" in home_page and "group=connections" in home_page and "group=phones" in home_page, "each has its card on the Settings home"
+    assert "group=bank" not in home_page, "bank sync is an Advanced-view page"
     assert "Advanced</h2>" not in c.get("/settings?group=data").text
     # nothing is gated: every page and group still opens by its address
     for url in ("/money", "/money/trends", "/chat", "/work", "/settings?group=connections"):

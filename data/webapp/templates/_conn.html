@@ -1,13 +1,17 @@
-<p class="muted small">Your documents go only to the AI you choose, under your own account, with account numbers and names masked
-  first. Keys and tokens stay on this PC, are never shown again, and can be typed only on this PC.</p>
-{% for title, level, word, line in conns %}{% if loop.index == 1 %}
+<p class="muted small conn-note">Your documents go only to the AI you choose, under your own account, with account numbers and names masked
+  first. Keys and tokens stay on this PC, are never shown again, and can be typed only on this PC.{% if not simple %} Bank sync has its
+  own page: <a href="/settings?group=bank">Settings &gt; Bank sync</a>.{% endif %}</p>
+{% set title, level, word, line = conns[0] %}
+<div class="spanel" id="sp-ai" role="tabpanel" aria-labelledby="st-ai"{% if stab != 'ai' %} hidden{% endif %}>
 <section class="card" id="conn-ai">
   <h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2>
   <p class="muted">{{ line }}</p>
   {% if not (ai.provider in ai.keyed and ai.key_hint) %}{% set guide_open, guide_flat = false, true %}{% include "_ai_guide.html" %}{% endif %}
   {% include "_conn_ai.html" %}
 </section>
-{% elif loop.index == 2 %}
+</div>
+{% set title, level, word, line = conns[1] %}
+<div class="spanel" id="sp-bot" role="tabpanel" aria-labelledby="st-bot"{% if stab != 'bot' %} hidden{% endif %}>
 <section class="card" id="conn-tg">
   <h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2>
   {% if tg.bot %}<p>Bot <b>{{ tg.bot }}</b> · {{ 'running' if tg.running else 'stopped' }}</p>
@@ -35,7 +39,9 @@
   {% endif %}
   {% endif %}
 </section>
-{% elif loop.index == 3 %}
+</div>
+{% set title, level, word, line = conns[2] %}
+<div class="spanel" id="sp-google" role="tabpanel" aria-labelledby="st-google"{% if stab != 'google' %} hidden{% endif %}>
 <section class="card" id="conn-google">
   <h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2>
   <p class="muted">Shows your Google Calendar on Calendar (your own events are only read, never changed). Full steps, with
@@ -112,43 +118,8 @@
     </details>
   {% endif %}
 </section>
-{% else %}
-<section class="card" id="conn-bank">
-  <h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2>
-  <p class="muted">{{ line }}</p>
-  {% if not bank.configured %}
-  <p class="muted small">SimpleFIN Bridge (bridge.simplefin.org) is a paid service the family signs up for themselves (about $1.50 a month,
-    paid to them, not to {{ brand }}). You connect your banks there; {{ brand }} only asks it, read-only, for balances and new
-    transactions once a morning. Nothing else leaves this PC. Make a setup token there and paste it here. docs/BANK_SYNC.md has the steps.</p>
-  {% if local %}
-  <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "token"}' hx-disabled-elt="find button">
-    <label>Setup token<input name="token" type="password" maxlength="2000" required autocomplete="off" spellcheck="false"></label>
-    <button class="btn" type="submit">Connect</button>
-  </form>
-  {% else %}<p class="muted">{{ bank_local_only }}</p>{% endif %}
-  {% else %}
-  {% if bank.error %}<p class="alert">Last pull did not work: {{ bank.error }}</p>
-  {% elif bank.stale %}<p class="alert">The last good pull was {{ bank.stale_days }} days ago.</p>{% endif %}
-  {% if bank.accounts %}
-  <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "pick"}'>
-    <fieldset class="wide"><legend>Accounts to pull</legend>
-    {% if bank.accounts|length > 1 %}<div class="optrow"><button type="button" class="btn alt" data-check-all="1">Select all</button><button type="button" class="btn alt" data-check-all="0">Unselect all</button></div>{% endif %}
-    {% for a in bank.accounts %}<label class="check"><input type="checkbox" name="acct" value="{{ a.id }}" {{ 'checked' if a.chosen }}> {{ a.org }} {{ a.name }}{% if a.last4 %} x{{ a.last4 }}{% endif %}</label>{% endfor %}
-    </fieldset>
-    <button class="btn alt" type="submit">Save the choice</button>
-  </form>
-  {% else %}<p class="muted">SimpleFIN lists no accounts yet. Connect a bank at SimpleFIN Bridge, then Pull now.</p>{% endif %}
-  <div class="optrow"><button type="button" class="btn" hx-post="/settings/bank" hx-vals='{"op": "pull"}' hx-disabled-elt="this">Pull now</button></div>
-  <p class="muted small">{% if bank.last_ok %}Last good pull {{ bank.last_ok[:16]|replace('T', ' ') }}{% if bank.last %} · {{ bank.last.inserted }} new, {{ bank.last.skipped }} already there{% endif %}{% else %}No pull has worked yet{% endif %}. Runs every morning with the daily brief.</p>
-  <details class="more-form"><summary class="btn alt">Forget the bank connection</summary>
-    <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "forget"}'>
-      <label class="check"><input type="checkbox" name="sure" value="1" required> Remove the SimpleFIN access from this PC (transactions already pulled stay)</label>
-      <button class="btn" type="submit">Forget</button>
-    </form>
-  </details>
-  {% endif %}
-</section>
-{% endif %}{% endfor %}
+</div>
+<div class="spanel" id="sp-mail" role="tabpanel" aria-labelledby="st-mail"{% if stab != 'mail' %} hidden{% endif %}>
 <section class="card" id="conn-mail">
   <h2>Mail folder <span class="chip {{ 'ok' if mail.enabled and mail.password else 'muted' }}">{{ 'on' if mail.enabled and mail.password else 'off' }}</span></h2>
   <p class="muted">Any mail provider, not just Gmail: make a new mailbox only for {{ brand }}, forward bills, statements, school
@@ -182,6 +153,8 @@
   <p class="muted small">Read-only: messages stay unread and nothing is moved or deleted. Attachments pass the same checks as
     any upload; a message without one is kept as text. The app password stays on this PC.</p>
 </section>
+</div>
+<div class="spanel" id="sp-calendars" role="tabpanel" aria-labelledby="st-calendars"{% if stab != 'calendars' %} hidden{% endif %}>
 <section class="card" id="conn-feeds">
   <h2>Other calendars <span class="chip {{ 'ok' if feeds else 'muted' }}">{{ feeds|length }} added</span></h2>
   <p class="muted">An iCloud, Outlook, school or work calendar shown on the Calendar page next to everything else,
@@ -204,3 +177,4 @@
   <p class="muted small">The address stays on this PC and goes only to that calendar's own server, read about once an
     hour. Titles and times are kept; descriptions and places are not. Nothing is written back.</p>
 </section>
+</div>

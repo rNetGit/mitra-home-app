@@ -212,8 +212,32 @@ def _remember_accounts(st, data):
         s = _summary(acc)
         if not s["id"]:
             continue
-        st["accounts"][s["id"]] = {**s, "chosen": bool((had.get(s["id"]) or {}).get("chosen"))}
+        before = had.get(s["id"]) or {}
+        st["accounts"][s["id"]] = {**s, "chosen": bool(before.get("chosen"))}
+        if had and not before:  # not on the first list: an account linked at the bridge since; New until the next choice
+            st["new_ids"] = sorted(set(st.get("new_ids") or []) | {s["id"]})
+        if before.get("account_id"):
+            st["accounts"][s["id"]]["account_id"] = before["account_id"]
     return st
+
+
+def refresh_accounts():
+    """Find new accounts: one read-only balances-only GET of /accounts, so accounts the family linked at SimpleFIN
+    Bridge since the last look show up to be ticked. Nothing is imported. -> (number of accounts, number new)."""
+    if not configured():
+        raise BankError("Bank sync is not set up.")
+    st = state()
+    known = set((st.get("accounts") or {}).keys())
+    try:
+        data = fetch(balances_only=True)
+    except BankError as e:
+        st["error"] = scrub(e)
+        _save(st)
+        raise
+    _remember_accounts(st, data)
+    st["refreshed"] = _now()
+    _save(st)
+    return len(st["accounts"]), len(set(st["accounts"]) - known)
 
 
 def map_account(con, summary, live_ids=None):
@@ -315,6 +339,7 @@ def choose(ids):
     """Tick the accounts to import (SimpleFIN ids from `status()`). -> number chosen."""
     st = state()
     want = {str(i) for i in ids}
+    st["new_ids"] = []
     n = 0
     for sid, a in (st.get("accounts") or {}).items():
         a["chosen"] = sid in want
@@ -426,8 +451,11 @@ def status(today=None):
     st = state()
     out = {"configured": configured(), "set_up": st.get("set_up") or "", "last_pull": st.get("last_pull") or "",
            "last_ok": st.get("last_ok") or "", "error": scrub(st.get("error") or ""), "last": st.get("last") or {},
+           "refreshed": st.get("refreshed") or "",
            "accounts": [{"id": sid, "name": a.get("name", ""), "last4": a.get("last4", ""), "org": a.get("org", ""),
-                         "chosen": bool(a.get("chosen"))} for sid, a in sorted((st.get("accounts") or {}).items(),
+                         "chosen": bool(a.get("chosen")), "account_id": a.get("account_id"),
+                         "new": not a.get("chosen") and sid in (st.get("new_ids") or [])}
+                        for sid, a in sorted((st.get("accounts") or {}).items(),
                                                                                key=lambda kv: (kv[1].get("org", ""), kv[1].get("name", "")))]}
     out["stale_days"] = (today - dt.date.fromisoformat(out["last_ok"][:10])).days if out["last_ok"] else None
     return out

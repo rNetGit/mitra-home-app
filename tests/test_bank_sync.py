@@ -85,7 +85,7 @@ def test_setup_claims_the_token_once_and_keeps_the_access_url_write_only(root, m
     assert f"SIMPLEFIN_ACCESS_URL={ACCESS}" in _secrets(root)
     s = bs.status()
     assert s["configured"] and [a["id"] for a in s["accounts"]] == ["ACT-chk", "ACT-card"]
-    assert s["accounts"][0] == {"id": "ACT-chk", "name": "Everyday Checking", "last4": "4477", "org": "Test Bank", "chosen": False}
+    assert {k: s["accounts"][0][k] for k in ("id", "name", "last4", "org", "chosen", "new")} ==         {"id": "ACT-chk", "name": "Everyday Checking", "last4": "4477", "org": "Test Bank", "chosen": False, "new": False}
     assert "sfsecret" not in json.dumps(s) and "sfsecret" not in (root / "config" / "bank_sync.json").read_text(encoding="utf-8")
     # a token that is not base64 of an https URL, or one SimpleFIN refuses
     for bad in ("", "not-a-token!", base64.b64encode(b"http://plain.example.test/claim").decode()):
@@ -225,7 +225,7 @@ def test_no_plan_needed(root, modules, monkeypatch):
     _clean(root, bs)
     assert "plan" not in modules("config").family()
     assert not hasattr(modules("config"), "plan_is_pro")
-    assert [t for t in modules("settings_data").connections() if t[0].startswith("Bank sync")]
+    assert modules("settings_data").bank_line()[0].startswith("Bank sync")
     fake_http(monkeypatch, bs)
     bs.setup(TOKEN)
     bs.choose(["ACT-chk"])

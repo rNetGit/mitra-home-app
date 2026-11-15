@@ -1,0 +1,77 @@
+{% set title, level, word, line = bline %}
+<section class="card bhero" id="conn-bank">
+  <div class="bh-top"><h2>{{ title }} <span class="chip {{ level }}">{{ word }}</span></h2></div>
+  <p class="muted">{{ line }}</p>
+  {% if bank.configured %}
+  <dl class="bstats">
+    <div><dt>Accounts pulled</dt><dd><b>{{ bank.n_chosen }}</b> of {{ bank.accounts|length }}</dd></div>
+    <div><dt>Last good pull</dt><dd>{% if bank.last_ok %}<b>{{ bank.last_ok[:10]|day }}</b> {{ bank.last_ok[11:16] }}{% else %}<b>Not yet</b>{% endif %}</dd></div>
+    <div><dt>Last pull brought</dt><dd>{% if bank.last %}<b>{{ bank.last.inserted }}</b> new · {{ bank.last.skipped }} already there{% else %}<b>&mdash;</b>{% endif %}</dd></div>
+  </dl>
+  {% if bank.error %}<p class="alert">Last pull did not work: {{ bank.error }}</p>
+  {% elif bank.stale %}<p class="alert">The last good pull was {{ bank.stale_days }} days ago.</p>{% endif %}
+  <div class="optrow bacts">
+    <button type="button" class="btn" hx-post="/settings/bank" hx-vals='{"op": "pull"}' hx-disabled-elt="find .bacts button" hx-indicator="#bk-pull">Pull now</button>
+    <button type="button" class="btn alt" hx-post="/settings/bank" hx-vals='{"op": "refresh"}' hx-disabled-elt="find .bacts button" hx-indicator="#bk-find">Find new accounts</button>
+    <span id="bk-pull" class="setting-up muted" role="status">Pulling new transactions (up to a minute)...</span>
+    <span id="bk-find" class="setting-up muted" role="status">Asking SimpleFIN for its account list...</span>
+  </div>
+  <p class="muted small">Pull now brings new transactions and balances for the ticked accounts. Find new accounts only asks
+    SimpleFIN which accounts it has (for example a bank you just linked there) and imports nothing. Both also run
+    every morning with the daily brief.</p>
+  {% endif %}
+</section>
+
+{% if not bank.configured %}
+<section class="card">
+  <h2>Connect your banks</h2>
+  <ol class="bsteps">
+    <li><b>Sign up at SimpleFIN Bridge</b> (bridge.simplefin.org). It is a paid service the family signs up for themselves:
+      about $1.50 a month, paid to them, not to {{ brand }}.</li>
+    <li><b>Link your banks there.</b> {{ brand }} never sees a bank password.</li>
+    <li><b>Make a setup token there</b> and paste it below. {{ brand }} then asks SimpleFIN, read-only, for balances and
+      new transactions once a morning. Nothing else leaves this PC.</li>
+  </ol>
+  {% if local %}
+  <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "token"}' hx-disabled-elt="find button">
+    <label class="wide">Setup token<input name="token" type="password" maxlength="2000" required autocomplete="off" spellcheck="false"></label>
+    <button class="btn" type="submit">Connect</button>
+  </form>
+  {% else %}<p class="muted">{{ bank_local_only }}</p>{% endif %}
+  <p class="muted small">docs/BANK_SYNC.md in the app folder has the steps with every click. Statements dropped in the Inbox
+    keep working without bank sync.</p>
+</section>
+{% else %}
+<section class="card" id="bank-accounts">
+  <div class="devhead"><h2>Accounts</h2>{% if bank.n_new %}<span class="devpill p-info">{{ bank.n_new }} new</span>{% endif %}</div>
+  {% if bank.accounts %}
+  {% if bank.n_new %}<p class="notice">New account{{ 's' if bank.n_new > 1 }} found at SimpleFIN. Tick the ones to pull, then Save the choice.</p>{% endif %}
+  <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "pick"}'>
+    <fieldset class="wide"><legend>Accounts to pull</legend>
+    {% if bank.accounts|length > 1 %}<div class="optrow"><button type="button" class="btn alt sm" data-check-all="1">Select all</button><button type="button" class="btn alt sm" data-check-all="0">Unselect all</button></div>{% endif %}
+    {% for org, rows in bank.banks %}
+      <h3 class="bbank">{{ org }} <span class="muted small">· {{ rows|selectattr('chosen')|list|length }} of {{ rows|length }} pulled</span></h3>
+      <ul class="bacct">{% for a in rows %}
+        <li><label class="check"><input type="checkbox" name="acct" value="{{ a.id }}" {{ 'checked' if a.chosen }}> <span><b>{{ a.name }}</b>{% if a.last4 %} x{{ a.last4 }}{% endif %}{% if a.new %} <span class="devpill p-info">New</span>{% endif %}</span></label>
+          {% if a.acct_url %}<a class="muted small" href="{{ a.acct_url }}">in Money: {{ a.acct_name }} ›</a>{% elif a.chosen %}<span class="muted small">gets its Money account at the next pull</span>{% endif %}</li>
+      {% endfor %}</ul>
+    {% endfor %}
+    </fieldset>
+    <button class="btn" type="submit">Save the choice</button>
+  </form>
+  {% else %}<p class="muted">SimpleFIN lists no accounts yet. Link a bank at SimpleFIN Bridge, then Find new accounts.</p>{% endif %}
+  <p class="muted small">Each ticked account lands in its own account under Money (matched by its last four digits, or a new
+    one). Unticking stops new pulls; what was pulled stays.</p>
+</section>
+<section class="card">
+  <h2>Connection</h2>
+  <p class="muted small">Connected {% if bank.set_up %}{{ bank.set_up[:10]|day }}{% endif %}. The SimpleFIN access is kept only on
+    this PC and never shown. To move to another SimpleFIN account, forget this one and connect with a new setup token.</p>
+  <details class="more-form"><summary class="btn alt">Forget the bank connection</summary>
+    <form class="nform" hx-post="/settings/bank" hx-vals='{"op": "forget"}'>
+      <label class="check"><input type="checkbox" name="sure" value="1" required> Remove the SimpleFIN access from this PC (transactions already pulled stay)</label>
+      <button class="btn" type="submit">Forget</button>
+    </form>
+  </details>
+</section>
+{% endif %}

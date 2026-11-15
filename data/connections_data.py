@@ -209,6 +209,35 @@ def bank():
     return s
 
 
+def bank_view():
+    """Settings > Bank sync: bank() plus the accounts grouped by bank, each with the Mitra Home account it lands in
+    (`acct_name`, `acct_url`), and counts. No network call, never the access URL."""
+    import db
+    import paths
+    b = bank()
+    names = {}
+    ids = [a["account_id"] for a in b["accounts"] if a.get("account_id")]
+    if ids:
+        try:
+            con = db.connect(paths.DB, readonly=True)
+            try:
+                q = ",".join("?" * len(ids))
+                names = {r[0]: r[1] for r in con.execute(f"SELECT id, name FROM accounts WHERE id IN ({q})", ids)}
+            finally:
+                con.close()
+        except Exception:  # noqa: BLE001 (the page must still render)
+            names = {}
+    groups = {}
+    for a in b["accounts"]:
+        a["acct_name"] = names.get(a.get("account_id"), "")
+        a["acct_url"] = f"/money/account/{int(a['account_id'])}" if a["acct_name"] else ""
+        groups.setdefault(a["org"] or "Other", []).append(a)
+    b["banks"] = sorted(groups.items(), key=lambda kv: kv[0].lower())
+    b["n_chosen"] = sum(1 for a in b["accounts"] if a["chosen"])
+    b["n_new"] = sum(1 for a in b["accounts"] if a["new"])
+    return b
+
+
 def mail():
     """Settings > Connections > Mail folder: the settings, whether an app password is saved (never the password)."""
     import mail_folder as mf
@@ -281,6 +310,8 @@ def bank_act(user, op, d, local, ids=()):
         return aa.bank_pick(user, [i for i in ids if i in known])
     if op == "pull":
         return aa.bank_pull_now(user)
+    if op == "refresh":
+        return aa.bank_refresh(user)
     if op == "forget":
         if d.get("sure") != "1":
             return False, "Tick the box to confirm forgetting the bank connection."
