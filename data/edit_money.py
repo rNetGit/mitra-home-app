@@ -595,6 +595,10 @@ def audit_remove_copies(actor, fix, ids, key=None):
             keep, table, action = paid or ids[0], "bills", "remove_bills"
         if same[0] != len(ids) or same[1] != 1 or (fix == "dupe_txn" and same[3]):  # rows with a bank reference are real
             raise EditError("those rows have changed since the data check; run it again")
+        if fix == "dupe_txn":
+            import audit
+            if audit.same_statement_twice(c, ids):  # an older data check offered it: the statement itself lists it more than once
+                raise EditError("the same statement lists those rows more than once, so they are separate charges, not copies")
         drop = [i for i in ids if i != keep]
         try:
             u = audit_fix.remove_rows(c, table, keep, drop)

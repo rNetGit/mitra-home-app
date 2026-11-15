@@ -232,6 +232,32 @@ def test_remove_copies_refuses_rows_that_changed(root, modules):
     assert ea.audit_remove_copies(ADULT, "drop_table", [1, 2])[0] is False
 
 
+def test_a_line_one_statement_prints_twice_is_not_a_duplicate(root, modules):
+    """Statements are imported only when their lines add up, so two identical lines on ONE statement are two real
+    charges (three E-ZPass tolls in a day). Copies on two different papers are still a charge entered twice."""
+    au, ea = modules("audit"), modules("edit_actions")
+    with db(root) as con:
+        acc = con.execute("INSERT INTO accounts(name, type, last4) VALUES ('Stmt Checking', 'checking', '8888')").lastrowid
+        docs = [con.execute("INSERT INTO documents(filed_path, doc_type, vendor, doc_date) VALUES (?, 'statement', 'Stmt Bank', ?)",
+                            (f"2026/statements/s{i}.pdf", _iso(-30))).lastrowid for i in range(2)]
+        for _ in range(3):  # one statement prints the toll three times
+            con.execute("INSERT INTO transactions(account_id, txn_date, description, amount, category, document_id) "
+                        "VALUES (?, ?, 'TOLL SAME STATEMENT', -25, 'tolls', ?)", (acc, _iso(-20), docs[0]))
+        for d in docs:  # two overlapping statements each print the line once: one charge listed twice
+            con.execute("INSERT INTO transactions(account_id, txn_date, description, amount, category, document_id) "
+                        "VALUES (?, ?, 'LUNCH TWO STATEMENTS', -9, 'Dining', ?)", (acc, _iso(-21), d))
+    au.run("now", "Alex")
+    text = "\n".join(s for (s,) in q(root, "SELECT summary FROM audit_findings"))
+    assert "TOLL SAME STATEMENT" not in text, "one statement printing it three times = three real charges"
+    assert "LUNCH TWO STATEMENTS" in text, "the same line on two papers is still offered"
+    toll = [r[0] for r in q(root, "SELECT id FROM transactions WHERE description='TOLL SAME STATEMENT' ORDER BY id")]
+    ok, msg = ea.audit_remove_copies(ADULT, "dupe_txn", toll)  # an older run may still have offered it
+    assert ok is False and "separate charges" in msg
+    assert len(q(root, "SELECT id FROM transactions WHERE description='TOLL SAME STATEMENT'")) == 3
+    lunch = [r[0] for r in q(root, "SELECT id FROM transactions WHERE description='LUNCH TWO STATEMENTS' ORDER BY id")]
+    assert ea.audit_remove_copies(ADULT, "dupe_txn", lunch)[0] is True
+
+
 def test_ai_explanation_is_checked_cached_and_shown(root, modules, web):
     import json as J
 
