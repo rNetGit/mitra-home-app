@@ -51,11 +51,6 @@ SECTIONS = {
     "papers": [("papers", "Papers"), ("ids", "Expiries and IDs"), ("policies", "Insurance"), ("emergency", "Emergency sheet")],
 }
 
-# Finance parts grouped for the pills (Pay / Keep / Look back); parts not listed fall into the last group
-GROUPS = {"money": [("Pay", ["bills", "receipts", "paypal", "mobile", "subs", "amazon"]),
-                    ("Keep", ["accounts", "budget", "benefits"]),
-                    ("Look back", ["ledger", "deposits", "trends", "watch", "spikes", "tax", "home_office", "year_end", "work"])]}
-
 # raw column name -> what a person reads at the top of a table
 LABELS = {
     "appt_datetime": "When", "followup_due": "Follow-up due", "due_date": "Due", "birth_year": "Born", "birth_month_day": "Birthday",

@@ -29,7 +29,7 @@ ROWS_MAX = 300
 WORDS_MAX = 100
 MONTH = re.compile(r"^\d{4}-(0[1-9]|1[0-2])$")
 SPANS = (6, 12, 24)
-DEFAULT = "home"  # the Finance home: this month + the three lanes (overview)
+DEFAULT = "books"  # Money opens on Accounts (books_data), PLAN_money_books slice 5
 # parts that only fill in once statements are loaded (no statements = a note instead)
 STATEMENT_PARTS = {"ledger", "trends", "deposits", "benefits", "watch", "spikes", "amazon", "year_end"}
 NO_STATEMENTS = "This fills in once bank and card statements are filed. Drop them in the Inbox."
@@ -69,34 +69,49 @@ def parts():
     return out + OUTLOOK
 
 
-def groups():
-    """[(group, [(key, title)])] for the pills; parts not listed in records.GROUPS fall into the last group."""
-    titles = dict(parts())
-    out = [(g, [(k, titles[k]) for k in ks if k in titles]) for g, ks in R.GROUPS["money"]]
-    listed = {k for _, ks in R.GROUPS["money"] for k in ks} | dict(OUTLOOK).keys()
-    rest = [(k, t) for k, t in parts() if k not in listed]
-    if rest and out:
-        out[-1] = (out[-1][0], out[-1][1] + rest)
-    return [(g, ks) for g, ks in out if ks]
+# Money's tabs (PLAN_money_books slice 5): (key, label, parts in chip order). Parts a household does not have
+# (PayPal before PayPal shows up) are left out; the Standard (simple) view leaves Tax & records out.
+TABS = [("books", "Accounts", ["books"]),
+        ("all", "All accounts", ["all", "ledger"]),
+        ("spend", "Spending & income", ["month", "statement", "spending", "homecosts", "trends", "deposits", "spikes"]),
+        ("plan", "Bills & plan", ["paid", "bills", "regular", "subs", "budget", "benefits"]),
+        ("records", "Tax & records", ["tax", "home_office", "year_end", "receipts", "paypal", "mobile", "amazon", "watch"])]
+# parts with a page of their own (not a finance_data view) and the chip names that differ from the Records titles
+OWN_PAGES = {"books": "Accounts", "all": "All accounts", "month": "This month", "statement": "Statement",
+             "homecosts": "Home costs"}
+CHIP = {"paid": "Bills this month", "bills": "Bill list", "deposits": "Income sources", "spikes": "Price spikes",
+        "budget": "Budget and loans", "benefits": "Card benefits", "tax": "Tax papers", "mobile": "Phone bills",
+        "watch": "Statement watch"}
+# old part names that still arrive from links and bookmarks -> where they live now
+ALIASES = {"home": "books", "accounts": "books"}
+
+
+def tabs(simple=False, current=None):
+    """[(key, label, [(part, chip label)])] in order, only the parts this household has. The Standard view leaves Tax &
+    records out unless one of its pages is open (it is still reached by its address, like the old lanes)."""
+    have = dict(parts()) | OWN_PAGES
+    out = []
+    for key, label, ps in TABS:
+        if simple and key == "records" and current not in ps:
+            continue
+        chips = [(k, CHIP.get(k) or have[k]) for k in ps if k in have]
+        if chips:
+            out.append((key, label, chips))
+    return out
+
+
+def tab_of(part):
+    return next((k for k, _, ps in TABS if part in ps), "books")
 
 
 def part_of(value):
-    """The part asked for, kept only when it is one of the offered ones; else the default (the Finance home)."""
-    return value if value in dict(parts()) else DEFAULT
-
-
-def group_of(part):
-    return next((g for g, ks in groups() if part in dict(ks)), "")
+    """The part asked for, kept only when it is one of the offered ones (old names follow ALIASES); else Accounts."""
+    value = ALIASES.get(value, value)
+    return value if value in dict(parts()) or value in OWN_PAGES else DEFAULT
 
 
 def title(part):
-    return dict(parts()).get(part, "Overview" if part == DEFAULT else "")
-
-
-# The three lanes of the Finance home, in records.GROUPS order: (group, one line about it, icon, gradient class).
-LANES = {"Pay": ("Bills, subscriptions, receipts and phone bills.", "i-pay", "g-high"),
-         "Keep": ("Accounts, budget, loans and card perks.", "i-keep", "g-flow"),
-         "Look back": ("The Ledger, trends, statements, tax papers and year-end.", "i-back", "g-trend")}
+    return CHIP.get(part) or OWN_PAGES.get(part) or dict(parts()).get(part, "")
 
 
 def _safe(fn, default):
@@ -104,70 +119,6 @@ def _safe(fn, default):
         return fn()
     except (sqlite3.Error, KeyError, TypeError, ValueError, ZeroDivisionError):
         return default
-
-
-def overview(today):
-    """The Finance home: {"month": trends.month_summary or None, "lanes": [lane], "attention": [(tone, text, url)]}.
-    lane = {"group", "line", "icon", "g", "first", "parts", "big", "big_label", "sub", "tone"}. Read-only, no AI."""
-    import budget as B
-    import statement_watch as SW
-    import trends as T
-    lanes, attention = [], []
-    try:
-        con = _con()
-    except sqlite3.Error:
-        return {"month": None, "lanes": [], "attention": [], "as_of": None}
-    try:
-        t = today.isoformat()
-        soon = (today + dt.timedelta(days=14)).isoformat()
-        open_bills = _safe(lambda: _rows(con, "SELECT id, name, amount, due_date FROM bills WHERE status IN ('due','overdue',"
-                                              "'unpaid') AND due_date <= ? ORDER BY due_date", (soon,)), [])
-        late = [b for b in open_bills if b["due_date"] < t]
-        upcoming = [b for b in open_bills if b["due_date"] >= t]
-        unpaid = sum(b["amount"] or 0 for b in open_bills)
-        for b in late[:3]:
-            attention.append(("bad", f"{b['name']} {M.fmt(b['amount'] or 0)} was due {short_date(b['due_date'], today)}",
-                              "/records?" + urllib.parse.urlencode({"ref": f"bills:{b['id']}"})))
-        pay_sub = ", ".join(x for x in (f"{len(late)} overdue" if late else "",
-                                        f"{len(upcoming)} due in 14 days" if upcoming else "") if x) or "Nothing due in 14 days"
-        bal = _safe(lambda: _rows(con, "SELECT type, signed_balance FROM v_balance_latest"), [])
-        pace = _safe(lambda: B.pace(con, today), {"lines": []})
-        red = [r for r in pace["lines"] if r["status"] == "red"]
-        amber = [r for r in pace["lines"] if r["status"] == "amber"]
-        for r in red[:2]:
-            attention.append(("warn", f"Budget: {r['label']} is over ({M.fmt(r['spent'], 0)} of {M.fmt(r['limit'], 0)})",
-                              "/money?part=budget"))
-        cash, invested, _owed = keep_split(bal)
-        keep_sub = (f"Cash {M.fmt(cash, 0)} · invested {M.fmt(invested, 0)}" if invested else
-                    f"{len(bal)} account{'' if len(bal) == 1 else 's'}") if bal else "No balances yet"
-        if pace["lines"]:
-            keep_sub += " · budget " + (f"{len(red)} over" if red else f"{len(amber)} close" if amber else "on track")
-        for w in _safe(lambda: SW.watch(con, today), [])[:20]:
-            if w["status"] == "overdue":
-                attention.append(("warn", f"Statement for {w['account']} x{w['last4'] or ''} is overdue", "/money?part=watch"))
-        rows = _safe(lambda: T.monthly(con, 12), [])  # the same span as Trends opens with
-        full = [r for r in rows if r["rows"] and not r["partial"]]
-        newest = full[-1] if full else None
-        tot = T.totals(rows) if rows else {"months": 0}
-        back_sub = (f"{newest['label']} spent {M.fmt(newest['expenses'], 0)}"
-                    + (f" ({newest['vs_prev']:+.0f}% vs the month before)" if newest.get("vs_prev") is not None else "")
-                    if newest else "Fills in once statements are filed")
-        figures = {"Pay": (M.fmt(unpaid, 0), "open, next 14 days", pay_sub, "bad" if late else ""),
-                   "Keep": (M.fmt(sum(b["signed_balance"] or 0 for b in bal), 0) if bal else "", "net balances" if bal else "", keep_sub,
-                            "warn" if red else ""),
-                   "Look back": (M.fmt(tot["expenses"] / tot["months"], 0) if tot.get("months") else "-",
-                                 "typical month", back_sub, "")}
-        for g, ks in groups():
-            line, icon, grad = LANES.get(g, ("", "i-back", "g-cat"))
-            big, big_label, sub, tone = figures.get(g, ("", "", "", ""))
-            lanes.append({"group": g, "line": line, "icon": icon, "g": grad, "first": ks[0][0], "parts": ks,
-                          "big": big, "big_label": big_label, "sub": sub, "tone": tone})
-        month = _safe(lambda: T.month_summary(con, today.strftime("%Y-%m"), today=today), None)
-        import keepup
-        as_of = _safe(lambda: keepup.data_as_of(con, today), None)
-    finally:
-        con.close()
-    return {"month": month, "lanes": lanes, "attention": attention[:5], "as_of": as_of}
 
 
 OUTLOOK_VIEWS = {"spending": "spending", "paid": "bills", "regular": "regular"}  # part -> wall_money function
@@ -670,89 +621,6 @@ def keep_split(bal):
     return cash, invested, owed
 
 
-def net_worth_history(con, today, months=12):
-    """Net worth at the end of each of the last `months` months (this month: so far) from the reported balances: for each
-    account its latest balance on or before that day, cards and loans as owed (keep_split). Months before any balance
-    are left out. -> [{"month", "cash", "invested", "owed", "net"}], oldest first."""
-    try:
-        bal = con.execute("SELECT b.account_id, a.type, b.as_of, b.balance FROM account_balances b "
-                          "JOIN accounts a ON a.id=b.account_id ORDER BY b.as_of").fetchall()
-    except sqlite3.Error:
-        return []
-    out = []
-    first = today.replace(day=1)
-    for back in range(months - 1, -1, -1):
-        y, m = first.year, first.month - back
-        while m < 1:
-            y, m = y - 1, m + 12
-        end = today if back == 0 else (dt.date(y + (m == 12), m % 12 + 1, 1) - dt.timedelta(days=1))
-        latest = {}
-        for acct, typ, as_of, balance in bal:
-            if str(as_of)[:10] <= end.isoformat() and balance is not None:
-                latest[acct] = {"type": typ, "signed_balance": -balance if typ in ("credit", "loan") else balance}
-        if not latest:
-            continue
-        cash, invested, owed = keep_split(list(latest.values()))
-        out.append({"month": f"{dt.date(y, m, 1):%b %Y}", "cash": cash, "invested": invested, "owed": owed,
-                    "net": cash + invested - owed})
-    return out
-
-
-def accounts(con, today, args):
-    import statement_watch as SW
-    blocks, tiles = [], []
-    try:
-        bl = _rows(con, "SELECT account_id AS id, name || ' x' || COALESCE(last4, '') AS account, balance AS reported, type, owner, "
-                        "as_of, signed_balance FROM v_balance_latest ORDER BY type, name")
-    except sqlite3.Error:
-        bl = []
-    if bl:
-        cash, invested, owed = keep_split(bl)
-        tiles = [("Cash", M.fmt(cash, 0), ""), ("Investments", M.fmt(invested, 0), ""),
-                 ("Cards and loans owed", M.fmt(owed, 0), ""),
-                 (f"Net position · {short_date(max(str(r['as_of']) for r in bl), today)}", M.fmt(cash + invested - owed, 0), "")]
-    blocks.append(block("Latest statement balances", [{k: v for k, v in r.items() if k != "signed_balance"} for r in bl],
-                        "No balances recorded yet.", "accounts", money=("reported",)))
-    hist = net_worth_history(con, today)
-    if len(hist) >= 2:  # newest first, each with the change from the month before it
-        rows = []
-        for i in range(len(hist) - 1, -1, -1):
-            h, d = hist[i], (hist[i]["net"] - hist[i - 1]["net"]) if i else None
-            rows.append({"month": h["month"], "cash": h["cash"], "investments": h["invested"],
-                         "cards_and_loans_owed": h["owed"], "net_worth": h["net"],
-                         "change": "" if d is None else ("+" if d >= 0 else "-") + M.fmt(abs(d), 0)})
-        blocks.append(block("Net worth by month", rows, "",
-                            money=("cash", "investments", "cards_and_loans_owed", "net_worth")))
-    acc = _rows(con, "SELECT a.id, a.name AS account, a.type, a.last4, a.owner, "
-                     "(SELECT COUNT(*) FROM transactions t WHERE t.account_id=a.id) AS transactions, "
-                     "(SELECT MAX(txn_date) FROM transactions t WHERE t.account_id=a.id) AS last_txn "
-                     "FROM accounts a ORDER BY a.type, a.name")
-    w = {r["last4"]: r for r in SW.watch(con, today)}
-    for r in acc:
-        s = w.get(r["last4"])
-        r["latest_statement"] = str(s["last_stmt"]) if s and s["last_stmt"] else ""
-        r["note"] = f"statement {s['status']}" if s and s["status"] in ("due now", "overdue") else ""
-        if not r["note"] and r["last_txn"]:
-            import keepup
-            r["note"] = keepup.age_note((today - dt.date.fromisoformat(str(r["last_txn"])[:10])).days)
-    blocks.append(block("Accounts and statement coverage", acc, "No accounts yet. Drop a statement in the Inbox.",
-                        "accounts"))
-    try:
-        inv = _rows(con, "SELECT id, name, kind, invested, current_value, as_of, maturity_date FROM investments "
-                         "ORDER BY maturity_date")
-    except sqlite3.Error:
-        inv = []
-    blocks.append(block("Investments (maturity ladder)", inv, "No holdings recorded.", "investments"))
-    try:
-        flows = _rows(con, "SELECT month, payee, invested, cumulative_total FROM v_investment_flows "
-                           "ORDER BY month DESC, payee LIMIT 36")
-    except sqlite3.Error:
-        flows = []
-    blocks.append(block("Money moved to investments (from bank statements)", flows, "None seen.",
-                        money=("cumulative_total",)))
-    return {"tiles": tiles, "blocks": blocks}
-
-
 TYPE_WORD = {"income": "income", "interest": "interest", "transfer": "transfer", "investment_transfer": "from investments",
              "tax": "tax refund", "spend": "refund", "card_payment": "card payment", None: "not sorted"}
 
@@ -982,7 +850,7 @@ def work(con, today, args):
 
 
 VIEWS = {"bills": bills, "receipts": receipts, "paypal": paypal, "mobile": mobile, "subs": subs, "amazon": amazon,
-         "ledger": ledger, "watch": watch, "spikes": spikes, "accounts": accounts, "deposits": deposits, "budget": budget,
+         "ledger": ledger, "watch": watch, "spikes": spikes, "deposits": deposits, "budget": budget,
          "benefits": benefits, "tax": tax, "home_office": home_office, "year_end": year_end,
          "work": work}
 

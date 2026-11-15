@@ -13,7 +13,7 @@
       <i class="w-{{ [v.plan_pct, 100]|min }}{{ ' over' if v.plan_over }}"></i>{% if v.even_pct is not none %}<b class="x-{{ v.even_pct }}"></b>{% endif %}
     </div>
     <p class="note">Budgeted lines: {{ v.plan_spent|money }} of {{ v.plan|money }}{% if v.plan_over %}, over{% endif %}. The black mark is where an even month would be today.</p>
-    {% else %}<p class="note">No budget lines yet: set them on the PC (Money › Keep › Budget).</p>{% endif %}
+    {% else %}<p class="note">No budget lines yet: set them on the PC (Money › Bills &amp; plan › Budget and loans).</p>{% endif %}
     {% else %}<p class="empty">No statements for this month yet.</p>{% endif %}
   </section>
   <section class="card"><span class="muted">Came in</span><div class="figure">{{ v.income|money if v.income is not none else '—' }}</div></section>

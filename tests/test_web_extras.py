@@ -115,13 +115,13 @@ def test_ledger_summary_sits_in_a_side_panel_after_the_list(web, modules):
 
 
 def test_money_lists_put_their_tiles_in_the_side_panel(web, modules):
-    """Bills, Receipts, Subscriptions and Accounts show the list first and their tiles and notes in the side panel."""
+    """Bills, Receipts and Subscriptions show the list first and their tiles and notes in the side panel."""
     c, _ = web
     acct = _sql(modules, "INSERT INTO accounts(name, type, last4) VALUES ('Side checking', 'checking', '7777')")
     _sql(modules, "INSERT INTO bills(name, vendor, amount, due_date, status) VALUES ('Side water', 'City', 40, date('now'), 'due')")
     _sql(modules, "INSERT INTO account_balances(account_id, as_of, balance) VALUES (?, date('now'), 100)", acct)
     for part, heading in (("bills", "Bills due in"), ("receipts", "Waiting for a charge"),
-                          ("subs", "Other recurring payments seen"), ("accounts", "Accounts and statement coverage")):
+                          ("subs", "Other recurring payments seen")):
         page = c.get(f"/money?part={part}").text
         assert '<div class="lgrid' in page, part
         side, main = page.split('<div class="lgrid', 1)[1].split('<div class="lmain">', 1)

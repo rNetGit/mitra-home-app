@@ -10,10 +10,13 @@ def test_labels_are_words_not_column_names(modules):
     assert R.column_label("who") == "Who"
 
 
-def test_money_parts_are_grouped_once(modules):
-    R = modules("records")
-    grouped = [k for _, ks in R.GROUPS["money"] for k in ks]
-    assert sorted(grouped) == sorted(k for k, _ in R.SECTIONS["money"]), "every Money part is in exactly one group"
+def test_money_parts_are_in_one_tab_each(modules):
+    R, fd = modules("records"), modules("finance_data")
+    tabbed = [k for _, _, ks in fd.TABS for k in ks]
+    assert len(tabbed) == len(set(tabbed)), "a part sits in one tab only"
+    have = {k for k, _ in R.SECTIONS["money"] if k != "work"} | dict(fd.OUTLOOK).keys() | fd.OWN_PAGES.keys()
+    assert have - {"accounts"} <= set(tabbed) | {"trends"} and set(tabbed) <= have | {"trends"}, \
+        "every Money page has a tab (Keep > Accounts became the Accounts tab)"
 
 
 def _contrast(a, b):

@@ -628,66 +628,46 @@ def finance(request: Request):
 
 @app.get("/money", response_class=HTMLResponse)
 def money_page(request: Request, months: int = 12, part: str = "", ym: str = ""):
-    """Money (audit U14): Overview, the outlook Spending / Bills / Regular (finance_data.OUTLOOK, wall_money.py), then in
-    the Advanced view the lanes Pay, Keep, Look back. Overview = this month's story card, Needs a look and the lanes
-    (Advanced) or one hero card, the three outlook figures and every page folded (Standard, view_mode simple). This month
-    (`part=month`, `ym` picks another month) = the story card and every category; Trends or one Finance part
-    (finance_data.view); rows open in /records, where the Pay parts' rows can be changed (records_edit); the Add forms of
-    a part (subscriptions, receipts, budget, loans, accounts) sit above its lists."""
+    """Money (PLAN_money_books slice 5): tabs Accounts | All accounts | Spending & income | Bills & plan | Tax & records
+    (finance_data.TABS), each with its chips. Accounts (books_data) is the default; the old Overview and Keep > Accounts
+    land there (finance_data.ALIASES). Own pages: Accounts, All accounts, This month (`ym`), Statement (`ym`), Home costs
+    (`ym`), Trends; Spending / Bills this month / Regular = the outlook (wall_money.py); every other part is a
+    finance_data view whose rows open in /records, with the part's Add forms above its lists (records_edit)."""
     denied = need_adult(request)
     if denied:
         return denied
-    if part == "month":
-        bc = brief_context(current_user(request))
-        pick = ym if re.fullmatch(r"\d{4}-\d{2}", ym) else None
-        return page(request, "money.html", active="money", part="month", groups=finance_data.groups(), group="",
-                    outlook_parts=finance_data.OUTLOOK, furl=finance_url, v=today_data.month_view(bc, pick), today=bc.today,
-                    flash=records_flash(request))
-    if part == "homecosts":
-        pick = ym if re.fullmatch(r"\d{4}-\d{2}", ym) else None
-        return page(request, "money.html", active="money", part="homecosts", groups=finance_data.groups(), group="",
-                    outlook_parts=finance_data.OUTLOOK, furl=finance_url, hc=home_costs.view(pick, dates.today()),
-                    today=dates.today(), flash=records_flash(request))
-    if part == "books":
-        closed = request.query_params.get("closed") == "1"
-        return page(request, "money.html", active="money", part="books", groups=finance_data.groups(), group="",
-                    outlook_parts=finance_data.OUTLOOK, furl=finance_url, b=books_data.view(dates.today(), closed),
-                    closed=closed, today=dates.today(), flash=records_flash(request))
-    if part == "all":
-        q = request.query_params
-        return page(request, "money.html", active="money", part="all", groups=finance_data.groups(), group="",
-                    outlook_parts=finance_data.OUTLOOK, furl=finance_url,
-                    a=all_accounts.page(dates.today(), q.get("period", "week"), q.get("d") or None, q.get("g", "")),
-                    today=dates.today(), flash=records_flash(request))
-    if part == "statement":
-        pick = ym if re.fullmatch(r"\d{4}-\d{2}", ym) else None
-        return page(request, "money.html", active="money", part="statement", groups=finance_data.groups(), group="",
-                    outlook_parts=finance_data.OUTLOOK, furl=finance_url, st=month_statement.view(pick, dates.today()),
-                    today=dates.today(), flash=records_flash(request))
     p = finance_data.part_of(part)
-    grp = finance_data.group_of(p)
-    ctx = {"part": p, "ptitle": finance_data.title(p), "groups": finance_data.groups(), "group": grp,
-           "outlook_parts": finance_data.OUTLOOK, "furl": finance_url, "link": record_link, "today": dates.today(),
+    today = dates.today()
+    pick = ym if re.fullmatch(r"\d{4}-\d{2}", ym) else None
+    ctx = {"part": p, "ptitle": finance_data.title(p), "mtabs": finance_data.tabs(view_mode.is_simple(), p),
+           "mtab": finance_data.tab_of(p), "furl": finance_url, "link": record_link, "today": today,
            "flash": records_flash(request),
            "rq": urllib.parse.urlencode([(k, v) for k, v in request.query_params.multi_items() if k != "part"]),
            "editable_here": ("money", p) in records_edit.EDIT_PARTS,
            "download": "/money/download?" + urllib.parse.urlencode({**dict(request.query_params), "part": p})
            if p in finance_data.DOWNLOADS else ""}
-    adds = records_edit.adds(("money", p))
+    adds = records_edit.adds(("money", "accounts" if p == "books" else p))
     if adds:
         ctx.update(adds=adds, ch=records_edit.choices())
-    if p == finance_data.DEFAULT:
-        ctx["o"] = finance_data.overview(dates.today())
-        if view_mode.is_simple():
-            ctx["mo"] = finance_data.outlook(dates.today())
-        else:
-            ctx["v"] = today_data.month_view(brief_context(current_user(request)))
+    if p == "books":
+        ctx["closed"] = request.query_params.get("closed") == "1"
+        ctx["b"] = books_data.view(today, ctx["closed"])
+    elif p == "all":
+        q = request.query_params
+        ctx["a"] = all_accounts.page(today, q.get("period", "week"), q.get("d") or None, q.get("g", ""))
+    elif p == "month":
+        bc = brief_context(current_user(request))
+        ctx.update(v=today_data.month_view(bc, pick), today=bc.today)
+    elif p == "statement":
+        ctx["st"] = month_statement.view(pick, today)
+    elif p == "homecosts":
+        ctx["hc"] = home_costs.view(pick, today)
     elif p in dict(finance_data.OUTLOOK):
-        ctx["mo"] = finance_data.outlook(dates.today(), p)
+        ctx["mo"] = finance_data.outlook(today, p)
     elif p == "trends":
         ctx.update(trends_context(months))
     else:
-        ctx["v"] = finance_data.view(p, dates.today(), dict(request.query_params))
+        ctx["v"] = finance_data.view(p, today, dict(request.query_params))
         ctx["md_html"] = render_md(ctx["v"]["md"]) if ctx["v"]["md"] else ""
     return page(request, "money.html", active="money", **ctx)
 
@@ -700,9 +680,10 @@ def money_account(request: Request, acct_id: int, n: int = 200):
         return denied
     acc = books_data.account_view(acct_id, dates.today(), max(50, min(n, books_data.REGISTER_MAX)))
     if acc is None:
-        return page(request, "money.html", active="money", part="books", groups=finance_data.groups(), group="",
-                    outlook_parts=finance_data.OUTLOOK, furl=finance_url, b=books_data.view(dates.today()), closed=False,
-                    today=dates.today(), flash=(False, "That account is not there any more."))
+        s = session_of(request)
+        if s is not None:
+            s["records_flash"] = (False, "That account is not there any more.")
+        return RedirectResponse(finance_url("books"), status_code=303)
     return page(request, "money_account.html", active="money", acc=acc, link=record_link)
 
 

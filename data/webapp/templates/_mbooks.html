@@ -1,4 +1,5 @@
 {# Money > Accounts (books_data.overview): every account once, grouped like the bank. #}
+{% if b.as_of %}<p class="muted asof"{% if b.as_of.behind %} data-behind="{{ b.as_of.behind }}"{% endif %}>Data as of: {{ b.as_of.text }}{% if b.as_of.behind %} · <a href="/money?part=watch">see which</a>{% endif %}</p>{% endif %}
 {% set mt = {'ok': 'Matches bank', 'off': 'Off from the bank', 'sync': 'From the bank, nothing to compare yet', 'none': 'No bank balance yet'} %}
 <div class="kpis rk bk-kpis">
   <div class="kpi"><span>What you have</span><b>{{ (b.have)|money }}</b><i>bank, investments, home and property, life cash value</i></div>
@@ -40,4 +41,10 @@
 {% endif %}
 <p class="muted small"><span class="bk-dot bk-ok"></span> matches bank <span class="bk-dot bk-off"></span> off from the bank <span class="bk-dot bk-sync"></span> from the bank, nothing to compare yet <span class="bk-dot bk-none"></span> no bank balance yet
 {% if b.closed %} · <a href="/money?part=books{{ '' if closed else '&amp;closed=1' }}">{{ 'Hide' if closed else 'Show' }} {{ b.closed }} closed account{{ 's' if b.closed != 1 }}</a>{% endif %}
- · <a href="/money?part=accounts#radd-accounts">+ Add an account</a></p>
+ · <a href="#add-accounts">+ Add an account</a></p>
+{% for add in adds or [] %}
+<details class="card addnote" id="add-{{ add.table }}">
+  <summary><h2>{{ add.title }}</h2></summary>
+  <div id="radd-{{ add.table }}">{% include "_radd.html" %}</div>
+</details>
+{% endfor %}

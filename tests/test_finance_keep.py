@@ -14,9 +14,9 @@ def test_keep_splits_cash_from_investments(modules):
 
 
 def test_deposit_sources_and_bills_take_a_month_range_a_category_and_a_wide_search(root, modules):
-    fd, R = modules("finance_data"), modules("records")
-    assert dict(R.GROUPS["money"])["Keep"] == ["accounts", "budget", "benefits"]
-    assert dict(R.GROUPS["money"])["Look back"][:2] == ["ledger", "deposits"], "R5: Deposit sources next to the Ledger"
+    fd = modules("finance_data")
+    tabs = {k: ps for k, _, ps in fd.TABS}
+    assert tabs["plan"][-2:] == ["budget", "benefits"] and tabs["spend"][-2:] == ["deposits", "spikes"]
     today = D.date(2026, 10, 17)
     with db(root) as con:
         acc = con.execute("INSERT INTO accounts(name, type, last4) VALUES ('Joint Savings', 'savings', '0080')").lastrowid
@@ -47,7 +47,7 @@ def test_deposit_sources_and_bills_take_a_month_range_a_category_and_a_wide_sear
 
 
 def test_bills_and_accounts_lead_with_what_is_scanned_first(root, modules):
-    """Bills: Due, Status, Amount, then the name (the link and the phone title); Accounts: the name, then the balance."""
+    """Bills: Due, Status, Amount, then the name (the link and the phone title)."""
     fd = modules("finance_data")
     today = D.date(2035, 2, 10)
     with db(root) as con:
@@ -58,31 +58,5 @@ def test_bills_and_accounts_lead_with_what_is_scanned_first(root, modules):
         row = [r for r in b["rows"] if "Order Test Water" in r["cells"]][0]
         assert row["list"]["title"] == "Order Test Water" and row["list"]["amount"] == "$12.50", "the phone row is still named by the bill"
         assert row["pills"] == {1: "warn"} or 1 in row["pills"], "Status keeps its pill"
-        a = fd.accounts(con, today, {})["blocks"][0]
-        if a["rows"]:
-            assert a["cols"][:2] == ["Account", "Reported"] and a["title_ix"] == 0
 
 
-def test_net_worth_by_month_from_reported_balances(root, modules):
-    """Money > Keep > Accounts: each month's latest balance per account, cards owed, oldest month with any balance first."""
-    fd = modules("finance_data")
-    today = D.date(2041, 3, 10)
-    with db(root) as con:
-        chk = con.execute("INSERT INTO accounts(name, type, last4) VALUES ('NW checking', 'checking', '1111')").lastrowid
-        card = con.execute("INSERT INTO accounts(name, type, last4) VALUES ('NW card', 'credit', '2222')").lastrowid
-        inv = con.execute("INSERT INTO accounts(name, type, last4) VALUES ('NW broker', 'investment', '3333')").lastrowid
-        for acct, day, bal in ((chk, "2041-01-31", 1000), (card, "2041-01-31", 200), (chk, "2041-02-28", 1500),
-                               (inv, "2041-02-15", 5000), (chk, "2041-03-05", 1200), (card, "2041-03-05", 300)):
-            con.execute("INSERT INTO account_balances(account_id, as_of, balance, kind) VALUES (?,?,?, 'statement')",
-                        (acct, day, bal))
-        con.commit()
-        mine = [h for h in fd.net_worth_history(con, today, months=4)]
-        # balances of other tests' accounts are dated before 2041 and count too; compare month to month
-        by = {h["month"]: h for h in mine}
-        assert list(by)[-3:] == ["Jan 2041", "Feb 2041", "Mar 2041"]
-        assert by["Feb 2041"]["net"] - by["Jan 2041"]["net"] == 500 + 5000, "checking up 500, the broker counted from Feb"
-        assert by["Mar 2041"]["net"] - by["Feb 2041"]["net"] == -300 - 100, "checking down 300, the card owes 100 more"
-        assert by["Mar 2041"]["owed"] - by["Jan 2041"]["owed"] == 100
-        blk = [b for b in fd.accounts(con, today, {})["blocks"] if b["heading"] == "Net worth by month"][0]
-        assert blk["cols"][:5] == ["Month", "Cash", "Investments", "Cards and loans owed", "Net worth"]
-        assert blk["rows"][0]["cells"][0] == "Mar 2041" and blk["rows"][0]["cells"][-1].startswith("-"), "newest first"

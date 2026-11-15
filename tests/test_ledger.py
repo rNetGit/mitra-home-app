@@ -111,12 +111,12 @@ def test_paging_and_empty_state(root, modules):
         assert none["ledger"]["rows"] == [] and "Nothing matches" in none["ledger"]["empty"]
 
 
-def test_ledger_is_a_part_of_look_back(modules):
+def test_ledger_sits_under_all_accounts(modules):
     fd = modules("finance_data")
     assert ("ledger", "Ledger") in fd.parts()
-    grp = dict(fd.groups())
-    assert grp["Look back"][0] == ("ledger", "Ledger"), "Ledger leads Look back"
-    assert fd.part_of("ledger") == "ledger" and fd.group_of("ledger") == "Look back" and fd.title("ledger") == "Ledger"
+    tabs = {k: ps for k, _, ps in fd.tabs()}
+    assert tabs["all"] == [("all", "All accounts"), ("ledger", "Ledger")]
+    assert fd.part_of("ledger") == "ledger" and fd.tab_of("ledger") == "all" and fd.title("ledger") == "Ledger"
 
 
 def test_a_hand_edit_sets_category_and_type_and_rules_leave_it_alone(root, modules):

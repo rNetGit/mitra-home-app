@@ -73,7 +73,7 @@ def test_every_records_and_finance_part_has_help_and_the_panel_follows_it(web, m
     py = Path(modules("records_edit").__file__).read_text(encoding="utf-8")
     parts = [f"records:{d}:{s}" for d, ss in records.SECTIONS.items() if d != "money" for s, _ in ss
              if (d, s) not in rd.ELSEWHERE]
-    parts += [f"finance:{p}" for _g, ps in fd.groups() for p, _ in ps]
+    parts += [f"finance:{p}" for _k, _g, ps in fd.tabs() for p, _ in ps if p not in fd.OWN_PAGES and p not in dict(fd.OUTLOOK)]
     for key in parts + ["records", "finance"]:
         e = ht.get(key)
         assert e and e["sections"], f"no help for {key}"

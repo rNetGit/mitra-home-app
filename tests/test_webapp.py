@@ -195,7 +195,7 @@ def test_finance_numbers_match_trends(web, root, modules):
     con.commit()
     con.close()
     _login(c)
-    html = c.get("/money?months=6").text
+    html = c.get("/money?part=month&ym=2026-09").text  # the Overview's month card lives on This month now
     assert "$5,000" in html and "$1,500" in html and "$3,500" in html
 
 
@@ -785,7 +785,7 @@ def test_records_lists_detail_and_search_are_escaped(web, modules):
     assert r.status_code == 200 and "<x>" not in r.text
     r = c.get("/records?domain=money&section=bills")  # Finance parts open in the web app's Finance page
     assert r.status_code == 303 and r.headers["location"] == "/money?part=bills"
-    assert c.get("/records?domain=money&section=evil").headers["location"] == "/money?part=home"
+    assert c.get("/records?domain=money&section=evil").headers["location"] == "/money?part=books"
 
 
 def test_records_home_needs_a_look_and_phone_rows(web, modules):
@@ -1072,7 +1072,7 @@ def test_finance_account_add_last4_only(web, modules):
     assert "exactly four digits" in r.text and "hx-redirect" not in r.headers
     r = _post(c, "/records/add", token, part="money/accounts", name="Joint checking", kind="checking", last4="6789",
               owner="Ann")
-    assert r.headers["hx-redirect"] == "/money?part=accounts"
+    assert r.headers["hx-redirect"] == "/money?part=books"
     assert _one(modules, "SELECT type, last4, owner FROM accounts WHERE name='Joint checking'") == ("checking", "6789", "Ann")
     assert "already ends in 6789" in _post(c, "/records/add", token, part="money/accounts", name="Other", kind="savings",
                                            last4="6789").text
@@ -1363,14 +1363,12 @@ def test_every_finance_part_opens(web, modules):
     for p, _title in fd.parts():
         r = c.get(f"/money?part={p}")
         assert r.status_code == 200, p
-        assert 'aria-current="true">' + _title + "</a>" in r.text, p
-    r = c.get("/money?part=<script>")  # unknown part: the Money overview
-    assert r.status_code == 200 and "<script>" not in r.text and "what is still to come" in r.text
-    assert r.text.count('class="flane"') == 3 and "Pay" in r.text and "Keep" in r.text and "Look back" in r.text
-    assert 'class="fparts"' not in r.text, "R1: each lane carries its own parts, no second list of them"
-    for gone in ("cards", "cashflow"):  # R3 / R4: merged into the Ledger and Trends; old links land on the overview
+        assert 'aria-current="true">' + html.escape(fd.title(fd.part_of(p))) + "</a>" in r.text, p
+    r = c.get("/money?part=<script>")  # unknown part: Accounts
+    assert r.status_code == 200 and "<script>" not in r.text and "Every account, same as the bank." in r.text
+    for gone in ("cards", "cashflow", "home", "accounts"):  # merged or replaced: old links land on Accounts
         r = c.get(f"/money?part={gone}")
-        assert r.status_code == 200 and "what is still to come" in r.text, gone
+        assert r.status_code == 200 and "Every account, same as the bank." in r.text, gone
 
 
 def test_finance_bills_filters_links_and_escaping(web, modules):
@@ -1402,9 +1400,7 @@ def test_every_finance_view_builds(modules):
         assert set(v) >= {"tiles", "notes", "blocks", "md", "filters"}, p
         for b in v["blocks"]:
             assert all(len(r["cells"]) == len(b["cols"]) for r in b["rows"]), (p, b["heading"])
-    assert fd.part_of("evil") == "home" and fd.part_of("bills") == "bills"
-    o = fd.overview(dt.date.today())
-    assert [l["group"] for l in o["lanes"]] == ["Pay", "Keep", "Look back"] and all(l["first"] for l in o["lanes"])
+    assert fd.part_of("evil") == "books" and fd.part_of("bills") == "bills" and fd.part_of("home") == "books"
     row = fd.list_row(["name", "vendor", "amount", "due_date", "status"],
                       {"name": "Water", "vendor": "Water", "amount": 41.25, "due_date": "2020-03-04", "status": "overdue"},
                       {"amount"})
@@ -1760,10 +1756,12 @@ def test_finance_and_this_month_live_in_money(web):
     assert c.get("/month?ym=<x>").headers["location"] == "/money?part=month"
     page = c.get("/money", params={"part": "month"}).text
     tabs = page.split('class="pchips mtabs"', 1)[1].split("</nav>", 1)[0]
-    assert re.findall(r'>([A-Za-z ]+)</a>', tabs) == ["Accounts", "All accounts", "Overview", "Statement", "Home costs", "Spending", "Bills", "Regular", "Pay", "Keep", "Look back"]
+    assert re.findall(r'>([^<]+)</a>', tabs) == ["Accounts", "All accounts", "Spending &amp; income", "Bills &amp; plan",
+                                                  "Tax &amp; records"]
     assert "<h1>Money</h1>" in page and "All categories" in page, "This month stays (story card + every category)"
     bills = c.get("/money", params={"part": "bills"}).text
-    assert 'class="pchip on" aria-current="true">Pay</a>' in bills and 'class="fchips"' in bills
+    assert 'class="pchip on" aria-current="true">Bills &amp; plan</a>' in bills and 'class="fchips"' in bills
+    assert 'class="on" aria-current="true">Bill list</a>' in bills
 
 
 def test_an_install_without_a_view_setting_shows_everything(web, root, modules):
@@ -1853,13 +1851,15 @@ def test_standard_view_money_is_the_outlook(web, root, modules):
     _set_view(root, modules, "simple")
     page = c.get("/money").text
     tabs = page.split('class="pchips mtabs"', 1)[1].split("</nav>", 1)[0]
-    assert re.findall(r'>([A-Za-z ]+)</a>', tabs) == ["Accounts", "All accounts", "Overview", "Statement", "Home costs", "Spending", "Bills", "Regular"]
-    assert "All money pages" in page and 'href="/money?part=ledger"' in page and 'class="mo-sum"' in page
+    assert re.findall(r'>([^<]+)</a>', tabs) == ["Accounts", "All accounts", "Spending &amp; income", "Bills &amp; plan"]
+    assert "Every account, same as the bank." in page, "Money opens on Accounts in both views"
     for p, needle in (("spending", "Spending as in the Ledger"), ("paid", "Open on the bill list"), ("regular", "Subscriptions")):
         r = c.get(f"/money?part={p}")
         assert r.status_code == 200 and needle in r.text and ' style="' not in r.text.split("<main>", 1)[1], p
     bills = c.get("/money?part=bills").text
-    assert 'class="pchip on" aria-current="true">Pay</a>' in bills, "an Advanced page opened in Standard shows its lane"
+    assert 'class="pchip on" aria-current="true">Bills &amp; plan</a>' in bills
+    tax = c.get("/money?part=tax").text
+    assert 'class="pchip on" aria-current="true">Tax &amp; records</a>' in tax, "a Tax & records page opened in Standard shows its tab"
     _set_view(root, modules, "advanced")
     month = c.get("/money?part=month").text
     for gone in ("Spending against the plan", "Bills, next 30 days", "House and car", "Renewals and papers"):
@@ -1934,7 +1934,7 @@ def test_deposits_say_what_a_source_is_and_paypal_has_a_page(web, modules):
         ("investment_transfer", "investing")
     page = c.get("/money?part=paypal").text
     assert "PayPal charges with no statement line" in page and "PAYPAL INST XFER" in page
-    assert 'href="/money?part=paypal"' in c.get("/money?part=receipts").text, "PayPal sits in the Pay chips"
+    assert 'href="/money?part=paypal"' in c.get("/money?part=receipts").text, "PayPal sits in the Tax & records chips"
 
 
 def test_month_page_remembers_a_merchant_and_goes_back_to_the_month(web, modules):
@@ -1958,7 +1958,7 @@ def test_month_page_remembers_a_merchant_and_goes_back_to_the_month(web, modules
 
 def test_ledger_page_filters_and_period(web):
     """Money > Ledger: adults only; one form (period, dates, account, category, type, amount, words); a period alone fills
-    the dates; the Look back chips list it first."""
+    the dates; it sits under All accounts."""
     c, _, _ = web
     _login(c)
     r = c.get("/money?part=ledger")
@@ -1966,9 +1966,8 @@ def test_ledger_page_filters_and_period(web):
     for needle in ("data-ledger", 'name="period"', 'name="from"', 'name="to"', 'name="account"', 'name="cat"', 'name="type"',
                    'name="min"', 'name="max"', 'name="q"', "Uncategorized", "Reset"):
         assert needle in r.text, needle
-    look_back = r.text.split('class="fchips" aria-label="Look back"', 1)[1].split("</nav>", 1)[0]
-    assert re.findall(r'>([A-Za-z -]+)</a>', look_back)[:5] == ["Ledger", "Deposit sources", "Trends", "Missing statements",
-                                                                 "Price rises"], "Ledger leads Look back (R5, R7, R8)"
+    chips = r.text.split('class="fchips" aria-label="All accounts"', 1)[1].split("</nav>", 1)[0]
+    assert re.findall(r'>([A-Za-z -]+)</a>', chips) == ["All accounts", "Ledger"], "the Ledger sits under All accounts"
     today = dt.date.today()
     monday = today - dt.timedelta(days=today.weekday())
     w = c.get("/money?part=ledger&period=week").text
@@ -2100,9 +2099,7 @@ def test_finance_rows_open_in_a_window_with_next_and_edit_in_place(web, modules)
     bad = _post(c, f"/money/row/edit?part=bills&{qs}", token, table="bills", id=str(ids[0]), op="paid", when="not a date")
     assert bad.status_code == 200 and "hx-trigger" not in bad.headers and 'role="alert"' in bad.text and 'class="txm"' in bad.text
     assert _post(c, "/money/row/edit?part=bills", token, table="bills", id=str(ids[0]), op="nonsense").status_code == 400
-    accounts_page = c.get("/money?part=accounts").text
-    assert f'hx-get="/money/row/accounts/{acc}?part=accounts"' in accounts_page
-    ar = c.get(f"/money/row/accounts/{acc}?part=accounts")
+    ar = c.get(f"/money/row/accounts/{acc}?part=accounts")  # an old link to the Keep > Accounts row still opens it
     assert ar.status_code == 200 and "RW Row Account" in ar.text
     assert c.get("/money/row/not_a_table/1").status_code == 404
     assert "not there any more" in c.get("/money/row/bills/99999999?part=bills").text
