@@ -95,7 +95,7 @@ HELP = {
                 "a family event at a time (dinner 8 to 8:30 PM, a party) or a yearly date: the same page, "
                 "[Add a family event or a yearly date], or tell Chat \"family dinner today 8 to 8:30 pm\";",
                 "a doctor, school or pet date: Family > People > Life items, [Add an item];",
-                "a bill: drop it in the Inbox, or Money > Pay > Bills. Or just tell Chat.",
+                "a bill: drop it in the Inbox, or Money > Bills & plan > Bill list. Or just tell Chat.",
             ]),
             ("Change or correct", [
                 "Change the record it comes from (Family, or Money for bills). The calendar updates by itself.",
@@ -164,7 +164,7 @@ HELP = {
         "sections": [
             ("Fill it", [
                 "Spending comes from your bank and card statements: drop them in the Inbox ([Add or scan]).",
-                "Budget lines: Money > Keep > Budget and loans ([Set or remove a budget line]). Bills paid and what "
+                "Budget lines: Money > Bills & plan > Budget and loans ([Set or remove a budget line]). Bills paid and what "
                 "comes every month: Money > Bills and Money > Regular.",
             ]),
             ("Read the card", [
@@ -511,14 +511,16 @@ PARTS = {
                                        "coverages are read from it."],
                                   change=[OPEN, LOOK]),
     # Finance
-    "finance": _e("Money", "Overview shows this month (in, spent, saved, left) and anything that needs a look. "
-                  "Spending, Bills and Regular are the quick outlook: spending by category against last month and a "
-                  "year ago, bills paid this month against last, and what keeps coming every month. In the Advanced "
-                  "view three lanes follow: Pay (bill list, receipts, subscriptions), Keep (accounts, budget, loans) "
-                  "and Look back (the Ledger, trends, statements, taxes); inside a lane a second row switches between "
-                  "its parts. In the Standard view they are folded under All money pages.",
-                  add=["Statements, bills and receipts go in the Inbox ([Add or scan]). Parts with a form have it at "
-                       "the top (subscriptions, receipts, budget, loans, accounts)."],
+    "finance": _e("Money", "Accounts (where Money opens) lists every account once, grouped like the bank: bank, "
+                  "cards, investments, home and property, life insurance, mortgage and loans, with what you have, what "
+                  "you owe and net worth; open one for its register and whether it matches the bank. All accounts reads "
+                  "every account as one by day, week or month, with the Ledger next to it. Spending & income holds This "
+                  "month, Statement, Spending, Home costs, Trends, Income sources and Price spikes; Bills & plan holds the "
+                  "bills, Regular, Subscriptions, Budget and loans and Card benefits; Tax & records holds tax papers, home "
+                  "office, year-end, receipts, PayPal, phone bills, Amazon and Statement watch. Under each tab a second "
+                  "row switches between its pages. The Standard view leaves Tax & records out.",
+                  add=["Statements, bills and receipts go in the Inbox ([Add or scan]). Pages with a form have it on the "
+                       "page (an account on Accounts; subscriptions, receipts, budget, loans on theirs)."],
                   change=["Where rows open: " + OPEN[:1].lower() + OPEN[1:]]),
     "finance:bills": _e("Bills", "Bills due this month (or the months you pick), paid or not.",
                         add=["Drop the bill in the Inbox, or tell Chat. Steady charges in your statements also become "
@@ -548,12 +550,12 @@ PARTS = {
                            change=[LOOK, "A charge in the wrong category: fix it in the Ledger."]),
     "finance:paid": _e("Bills", "Bills paid this month next to last month, per payee: paid, still to come, or new.",
                        add=["Drop the statements in the Inbox; a bill on the bill list shows under **Open on the bill list**."],
-                       change=[LOOK, "Mark a bill paid on the bill list (Money > Pay > Bills)."]),
+                       change=[LOOK, "Mark a bill paid on the bill list (Money > Bills & plan > Bill list)."]),
     "finance:regular": _e("Regular", "What comes every month: home and utilities, loans and insurance, subscriptions, "
                           "with the total a month and a year.",
                           add=["Found in the statements (paid in two of the last four months), your subscriptions and "
                                "the bill list."],
-                          change=[LOOK, "Change or cancel a subscription in Money > Pay > Subscriptions."]),
+                          change=[LOOK, "Change or cancel a subscription in Money > Bills & plan > Subscriptions."]),
     "finance:ledger": _e("Ledger", "Every transaction from every account in one list, with the money flow worked out above it.",
                          add=["Drop the statements in the Inbox. For a checking account, drop the latest statement or activity "
                               "download; the page tells you which accounts are behind."],
@@ -600,7 +602,7 @@ PARTS = {
     "finance:deposits": _e("Deposit sources", "Where the money coming in comes from, by month.",
                            change=[LOOK, "**Where deposits come from**: pick what a source is (pay, interest, money back "
                                    "from investments, own money moved, a refund) and press [Remember]. Only pay and "
-                                   "interest count as income on Overview, in Trends and in the Ledger.",
+                                   "interest count as income on This month, in Trends and in the Ledger.",
                                    "The deposits themselves are lines of the Ledger: **See the pay in the Ledger**."]),
     "finance:budget": _e("Budget and loans", "Monthly limits per category, and your loans.",
                          add=["[Set or remove a budget line]: pick a category and a monthly limit (0 removes it). "
@@ -777,16 +779,18 @@ GLOSSARY = [
     "from and its history; the forms under it change or remove it (Change it > Save changes).",
     "Add tab (the Inbox): drop or scan a bill, statement, receipt, policy or photo and it is read and filed; the Inbox "
     "lists files waiting and questions to decide; Why? on a waiting file shows what was tried.",
-    "Money tab: Overview, Spending, Bills (paid this month against last), Regular (what comes every month); in the "
-    "Advanced view also Pay (bill list, receipts, subscriptions), Keep (accounts, budget, loans) and Look back (ledger, "
-    "deposit sources, trends, missing statements, price rises, tax, year-end).",
+    "Money tab: Accounts (every account grouped like the bank, net worth, each account's register and bank match), "
+    "All accounts (everything as one by day / week / month; the Ledger), Spending & income (This month, Statement, "
+    "Spending, Home costs, Trends, Income sources, Price spikes), Bills & plan (bills this month, bill list, Regular, "
+    "Subscriptions, Budget and loans, Card benefits) and Tax & records (tax papers, home office, year-end, receipts, "
+    "PayPal, phone bills, Amazon, Statement watch).",
     "Calendar: every due date, appointment, class, holiday and birthday from the records, read-only; add things where they live.",
     "Wallet (Family > Wallet): cards for the cars, IDs, policies and membership cards, with the plate and number last four.",
     "Settings: household profile, people and PINs, the agent (name, tone, brief time, hidden rows), Connections (AI, "
     "phones, Google, phone bot), Data (back up, export, restore, updates, Data check, Health check).",
     "A bill's status: due = not paid, overdue = past its date, paid; Mark paid / Mark as not paid on the bill's record or "
     "Paid on Today; a yearly bill rolls to next year when paid.",
-    "A charge in the wrong category: Money > Look back > Ledger, open the line, pick the category, Save; tick 'Do the same for "
+    "A charge in the wrong category: Money > All accounts > Ledger, open the line, pick the category, Save; tick 'Do the same for "
     "every line like this one' to make it a rule. Or in the Ledger pick category Uncategorized and Remember a shop's category.",
     "A charge or bill entered twice, a bill open long after its date: Settings > Data > Data check lists them with "
     "Remove / Paid / Keep; Undo on that page puts a removed copy back.",
@@ -794,10 +798,10 @@ GLOSSARY = [
     "Inbox can be filed by hand with File it by hand, or read again with Reprocess.",
     "A wrong name, birthday or school: Family, the pencil on the person's card, Change it; a new name is used everywhere "
     "from then on.",
-    "A missed statement month: Money > Look back > Missing statements names the account and month; drop the statement on Add.",
-    "Subscriptions: Money > Pay > Subscriptions; Keep or Cancel records the decision only (nothing is cancelled for you); "
+    "A missed statement month: Money > Tax & records > Statement watch names the account and month; drop the statement on Add.",
+    "Subscriptions: Money > Bills & plan > Subscriptions; Keep or Cancel records the decision only (nothing is cancelled for you); "
     "tracking on / off hides one from reminders.",
-    "Budget: Money > Keep > Budget and loans; a limit per category and how each line is going this month.",
+    "Budget: Money > Bills & plan > Budget and loans; a limit per category and how each line is going this month.",
     "Classes that repeat weekly: Family > People > Classes and activities. One-off dates, forms, appointments: Life "
     "items. Routine checkups (dental, physical, furnace filter): Checkups, marked done with a date.",
     "Holidays, festivals, days off school: Family > People > Holidays and dates; public holidays come from the country "

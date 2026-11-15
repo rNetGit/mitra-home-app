@@ -157,4 +157,6 @@ def test_pages(client, books):
     assert "Matches bank" in page and "Statement ended 2026-10-31" in page and "$2,036.09" in page
     assert re.search(r'href="/records\?ref=accounts%3A\d+"', page), "Edit account opens the record's edit form"
     assert "Off by $18.40" in c.get("/money/account/%d" % books["card"]).text
-    assert "not there any more" in c.get("/money/account/999999").text
+    gone = c.get("/money/account/999999")
+    assert gone.status_code == 303 and gone.headers["location"] == "/money?part=books"
+    assert "not there any more" in c.get("/money?part=books").text, "the message shows once on Accounts"

@@ -199,7 +199,12 @@ def overview(con, today, closed=False):
                 needs.append({"id": r["id"], "text": f"{r['name']}: off from the bank by {M.fmt(r['match']['gap'])}"})
             if r["due"] and g["key"] == "card" and r["balance"] and (dt.date.fromisoformat(r["due"]) - today).days <= 10:
                 needs.append({"id": r["id"], "text": f"{r['name']} due {r['due']}"})
-    return {"groups": groups, "have": round(have, 2), "owe": round(owe, 2), "net": round(have - owe, 2), "count": count,
+    try:
+        import keepup
+        as_of = keepup.data_as_of(con, today)
+    except Exception:  # the line is a help, never a reason for the page to fail
+        as_of = None
+    return {"as_of": as_of, "groups": groups, "have": round(have, 2), "owe": round(owe, 2), "net": round(have - owe, 2), "count": count,
             "accounts": sum(len(g["rows"]) for g in groups), "closed": len(shut), "needs": needs[:3],
             "more_needs": max(0, len(needs) - 3), "change": _month_change(con, today), "loose": unlinked_holdings(con)}
 

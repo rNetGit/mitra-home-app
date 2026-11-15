@@ -64,8 +64,8 @@
       </tbody>
       {% if st.budget_total %}<tfoot><tr><th>Budgeted</th><td class="num">{{ st.budget_total|money }}</td><td colspan="3"></td></tr></tfoot>{% endif %}
     </table>
-    <p class="muted small">Listed: every category with a budget line, and any that moved by 25% and $50 or more against {{ st.names.prev }}. Budget lines are set under Money &gt; Keep &gt; Budget and loans.</p>
-    {% else %}<p class="muted">No budget lines yet, and nothing moved much against {{ st.names.prev }}. Add budget lines under Money &gt; Keep &gt; Budget and loans.</p>{% endif %}
+    <p class="muted small">Listed: every category with a budget line, and any that moved by 25% and $50 or more against {{ st.names.prev }}. Budget lines are set under Money &gt; Bills &amp; plan &gt; Budget and loans.</p>
+    {% else %}<p class="muted">No budget lines yet, and nothing moved much against {{ st.names.prev }}. Add budget lines under Money &gt; Bills &amp; plan &gt; Budget and loans.</p>{% endif %}
   </div>
   </div>
 </section>
