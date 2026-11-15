@@ -883,7 +883,7 @@ async def setup_post(request: Request):
         return denied
     data = await A.form(request, limit=16384)
     op = data.get("op", "next")
-    if op not in ("next", "back", "goto", "later", "check"):
+    if op not in ("next", "back", "goto", "later", "check", "addrow", "remove", "paste"):
         return PlainTextResponse("Bad request", status_code=400)
     step, problems, typed, a = await run_in_threadpool(setup_data.submit, op, data.get("step", "0"), data)
     if op == "later":
@@ -910,7 +910,9 @@ def setup_done(request: Request):
     if setup_data.needed():
         return RedirectResponse("/setup", status_code=303)
     import chat_data
-    return A.page(request, "setup_done.html", msgs=setup_data.done_messages(), ai_on=chat_data.ai_ready())
+    import paths
+    return A.page(request, "setup_done.html", msgs=setup_data.done_messages(), ai_on=chat_data.ai_ready(),
+                  home=str(paths.HOME), inbox=str(paths.INBOX))
 
 
 @router.post("/setup/cancel")

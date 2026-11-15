@@ -51,14 +51,14 @@ def test_new_install_walks_through_setup_and_ends_open_mode(fresh):
     r = _step(c, token, 0, accept="1")
     assert "Step 2 of 6" in r.text and "Who lives with you, and where?" in r.text
     family = dict(family_name="The <b>Web</b> family", country="US", place="Austin", state="TX", climate="mild", currency="usd")
-    people = dict(people="Alex, adult, March 14 1980\nSam", name_1="Sam", role_1="child", papers="Alexander Q Web")
+    people = dict(people="Alex, adult, March 14 1980\nSam, child", papers="Alexander Q Web")
     # every step on the screen is still checked, each with its own sentence; a refused screen keeps what was typed
     r = _step(c, token, 1, **{**family, **people, "family_name": "  "})
     assert "Give the family a name" in r.text and "Step 2 of 6" in r.text and "Austin" in r.text
     assert "three-letter" in _step(c, token, 1, **{**family, **people, "currency": "DOLLARS"}).text
     assert "Add at least one adult" in _step(c, token, 1, **{**family, "people": "Sam, child"}).text
     r = _step(c, token, 1, op="check", **{**family, "people": "Alex, adult, March 14 1980\nSam"})
-    assert "Here is what I understood" in r.text and 'name="role_1"' in r.text and "March 14, 1980" in r.text
+    assert 'name="m_name_1"' in r.text and 'value="Sam"' in r.text and 'name="m_day_0"' in r.text and 'value="14"' in r.text
     assert "Step 2 of 6" in r.text, "checking the people does not move on"
     r = _step(c, token, 1, **family, **people)
     assert "Step 3 of 6" in r.text and "Your answers so far" in r.text

@@ -65,26 +65,24 @@
   </fieldset>
   <label>Currency the family uses<select name="currency" data-currency>{% for c, lbl in p.currencies %}<option value="{{ c }}" {{ 'selected' if c == p.currency }}>{{ lbl }}</option>{% endfor %}</select></label>
 {% elif p.name == 'People' %}
-  <div class="wz-howto wide">
-    <p>Put each person on a line of their own: <b>name, adult / child / pet, birthday</b>. The birthday is optional.</p>
-    <pre class="wz-example" aria-label="Example">Alex, adult, March 14 1980
-Sam, child, 5/2/2012
-Rex, pet</pre>
-    <p class="muted small">Adults sign in and see money; children get their own page without money. Any date style works:
-      March 14 1980, 3/14/1980 or 1980-03-14.</p>
+  <p class="muted small wide">One row per person. Adults sign in and see money; children get their own page without money; a pet only gets reminders. The birthday is optional; the year can stay empty.</p>
+  <div class="wide wz-rows" id="wz-rows">
+  {% for r in p.rows %}{% set i = loop.index0 %}
+  <div class="wz-row" role="group" aria-label="Person {{ loop.index }}">
+    <label class="wz-f-name">Name<input name="m_name_{{ i }}" maxlength="60" value="{{ r.name }}" autocomplete="off"{% if loop.first %} required{% endif %}></label>
+    <label class="wz-f-role">Role<select name="m_role_{{ i }}">{% if not r.role %}<option value="" selected>Choose…</option>{% endif %}{% for ro in p.roles %}<option value="{{ ro }}" {{ 'selected' if r.role == ro }}>{{ ro }}</option>{% endfor %}</select></label>
+    <label class="wz-f-month">Birthday month<select name="m_month_{{ i }}"><option value="">-</option>{% for mv, ml in p.months %}<option value="{{ mv }}" {{ 'selected' if r.month == mv }}>{{ ml }}</option>{% endfor %}</select></label>
+    <label class="wz-f-day">Day<input name="m_day_{{ i }}" type="number" min="1" max="31" inputmode="numeric" value="{{ r.day }}"></label>
+    <label class="wz-f-year">Year (optional)<input name="m_year_{{ i }}" type="number" min="1900" max="2100" inputmode="numeric" value="{{ r.year }}" placeholder="1980"></label>
+    <button type="button" class="btn alt wz-rm" aria-label="Remove person {{ loop.index }}" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "remove", "idx": i|string, "step": v.step|string}|tojson }}'>Remove</button>
   </div>
-  <label class="wide">Everyone in the household<textarea name="people" rows="5" maxlength="4000" placeholder="Alex, adult, March 14 1980&#10;Sam, child, 5/2/2012&#10;Rex, pet">{{ p.text }}</textarea></label>
-  {% if p.understood %}
-  <div class="wide"><p class="muted">Here is what I understood. Change a role if I guessed wrong.</p>
-  <ul class="checklist wz-people">
-  {% for m in p.understood %}
-    <li><span class="av sm av{{ loop.index0 % 6 }}" aria-hidden="true">{{ m.name|initial }}</span><span class="ctext"><b>{{ m.name }}</b> <span class="muted">· {{ m.birthday_text }}</span></span>
-      <input type="hidden" name="name_{{ loop.index0 }}" value="{{ m.name }}">
-      <select name="role_{{ loop.index0 }}" aria-label="Role of {{ m.name }}">{% for r in p.roles %}<option value="{{ r }}" {{ 'selected' if m.role == r }}>{{ r }}</option>{% endfor %}</select></li>
   {% endfor %}
-  </ul></div>
-  {% endif %}
-  <div class="wide"><button type="button" class="btn alt" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "check", "step": v.step|string}|tojson }}'>Check what I typed</button></div>
+  </div>
+  <div class="wide">{% if p.can_add %}<button type="button" class="btn alt" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "addrow", "step": v.step|string}|tojson }}'>Add another person</button>{% endif %}</div>
+  <details class="wide wz-more"><summary>Rather paste a list?</summary>
+    <label>One person per line: name, adult / child / pet, birthday. They are added as rows above.<textarea name="people" rows="4" maxlength="4000" placeholder="Alex, adult, March 14 1980&#10;Sam, child, 5/2/2012&#10;Rex, pet"></textarea></label>
+    <button type="button" class="btn alt" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "paste", "step": v.step|string}|tojson }}'>Add these people</button>
+  </details>
   <details class="wide wz-more"><summary>Full names as printed on bills and policies (optional)</summary>
     <label>One per line. They are hidden before anything goes to an AI.<textarea name="papers" rows="2" maxlength="4000" placeholder="Alexander Q Patel">{{ p.papers }}</textarea></label>
   </details>
@@ -96,7 +94,7 @@ Rex, pet</pre>
   <label>{{ lbl }}: next due date (owners, optional)<input type="date" name="tax_{{ k }}" value="{{ val }}"></label>
   {% endfor %}
   <label class="check wide"><input type="checkbox" name="home_office" value="1" {{ 'checked' if v.a.home_office }}> Someone works for themselves or runs a business from home</label>
-  <p class="muted small wide">Seasonal reminders (furnace filter, smoke alarms, gutters...) use the {{ p.pack }} pack for {{ v.a.place or 'your area' }}.{% if p.taxes %} Leave a tax date empty if it is part of your mortgage payment.{% endif %}</p>
+  <p class="muted small wide">Seasonal reminders (furnace filter, smoke alarms, gutters...) use the “{{ p.pack }}” set for {{ v.a.place or 'your area' }}.{% if p.taxes %} Leave a tax date empty if it is part of your mortgage payment.{% endif %}</p>
 {% elif p.name == 'Cars' %}
   <label class="wide">Year, make and model, separated by commas, or "no car"<input name="cars" maxlength="1000" value="{{ p.text }}" placeholder="2019 Honda CR-V, 2015 Toyota Camry"></label>
 {% elif p.name == 'Traditions' %}
