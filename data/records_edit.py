@@ -563,8 +563,9 @@ def edit(user, table, op, rid, data):
         ok, msg = ea.home_contact_update(user, rid, **f)
         return ok, msg, False
     if table == "members":
-        ok, msg = ea.member_update(user, before["name"], role=f["role"], birthday=f["birthday"].strip(),
-                                   year=f["year"].strip(), new_name=f["name"].strip(), school=f["school"].strip(),
+        keep = data.get("birthday_keep") == "1"  # the form was drawn in privacy mode: the birthday and year stay as they are
+        ok, msg = ea.member_update(user, before["name"], role=f["role"], birthday=None if keep else f["birthday"].strip(),
+                                   year=None if keep else f["year"].strip(), new_name=f["name"].strip(), school=f["school"].strip(),
                                    grade=f["grade"].strip(), grad_year=f["grad_year"].strip(), relation=f["relation"].strip())
         return ok, msg, False
     if table == "recurring_items":

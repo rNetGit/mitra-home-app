@@ -496,6 +496,17 @@ def view_mode_set(user, mode):
     return True, "Showing the Simple view." if mode == "simple" else "Showing everything (Advanced)."
 
 
+def privacy_default_set(user, on):
+    """Settings > Household profile > Privacy: should a new sign-in start in privacy mode (stars for money totals and
+    birthdays)? Only new sign-ins follow it; a person already signed in keeps their own switch. -> (ok, message)."""
+    if not _is_adult(user):
+        return False, "Only adults can change this."
+    with config.family_edit() as cfg:
+        cfg["privacy"] = {**(cfg.get("privacy") or {}), "on_signin": bool(on)}
+    _audit(user, "privacy_default_set", "on" if on else "off")
+    return True, ("New sign-ins start in privacy mode." if on else "New sign-ins start with everything showing.")
+
+
 def update_check_set(user, on):
     """Settings > Data > Updates: "Check for new versions every day" (config updates.daily_check). Off = no network
     call at all from the daily task. -> (ok, message)."""

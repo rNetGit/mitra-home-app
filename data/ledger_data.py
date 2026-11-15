@@ -30,6 +30,7 @@ import sqlite3
 import urllib.parse
 
 import money as M
+import privacy
 
 PAGE = 50
 MAX_EXPORT = 100000
@@ -401,9 +402,9 @@ def sums(S):
     """How the tiles add up to every line: [(label, in, out)] per group and the total, as text. Nothing is left out, so the
     totals are the old Money in / Money out."""
     g = S["everything"]
-    rows = [(label, M.fmt(g[k][0]) if g[k][0] else "", M.fmt(g[k][1]) if g[k][1] else "") for k, label in SUM_ROWS if k in g]
-    rows += [(k.capitalize(), M.fmt(v[0]) if v[0] else "", M.fmt(v[1]) if v[1] else "") for k, v in g.items() if k not in dict(SUM_ROWS)]
-    return {"rows": rows, "in": M.fmt(sum(v[0] for v in g.values())), "out": M.fmt(sum(v[1] for v in g.values()))}
+    rows = [(label, privacy.fmt(g[k][0]) if g[k][0] else "", privacy.fmt(g[k][1]) if g[k][1] else "") for k, label in SUM_ROWS if k in g]
+    rows += [(k.capitalize(), privacy.fmt(v[0]) if v[0] else "", privacy.fmt(v[1]) if v[1] else "") for k, v in g.items() if k not in dict(SUM_ROWS)]
+    return {"rows": rows, "in": privacy.fmt(sum(v[0] for v in g.values())), "out": privacy.fmt(sum(v[1] for v in g.values()))}
 
 
 def _tiles(S, behind):
@@ -413,15 +414,15 @@ def _tiles(S, behind):
     spent, bills, invested = -S["spending"], -S["bills"], -S["invested"]
     left = S["income"] + S["spending"] + S["tax"]
     income = S["income"]
-    tiles = [("Income", M.fmt(income), "", "pay and interest" if income else "none in these dates"),
-             ("Spending", M.fmt(spent), "", f"{S['spend_n']} charges"),
-             ("Left over", M.fmt(left), "bad" if left < 0 else "good", "income less spending"),
-             ("Bills paid", M.fmt(bills), "", "part of spending"),
-             ("Invested", M.fmt(invested), "", "set aside"),
-             ("Between your accounts", M.fmt(S["moved"]), "", "matched, nets to $0"),
-             ("Card payments", M.fmt(S["cards"]), "", f"{M.fmt(S['cards_matched'])} matched")]
+    tiles = [("Income", privacy.fmt(income), "", "pay and interest" if income else "none in these dates"),
+             ("Spending", privacy.fmt(spent), "", f"{S['spend_n']} charges"),
+             ("Left over", privacy.fmt(left), "bad" if left < 0 else "good", "income less spending"),
+             ("Bills paid", privacy.fmt(bills), "", "part of spending"),
+             ("Invested", privacy.fmt(invested), "", "set aside"),
+             ("Between your accounts", privacy.fmt(S["moved"]), "", "matched, nets to $0"),
+             ("Card payments", privacy.fmt(S["cards"]), "", f"{privacy.fmt(S['cards_matched'])} matched")]
     if S["tax"]:
-        tiles.append(("Tax", M.fmt(-S["tax"]), "", "net of refunds"))
+        tiles.append(("Tax", privacy.fmt(-S["tax"]), "", "net of refunds"))
     tiles.append(("Lines", S["n"], "", ""))
     notes = []
     if behind:  # also when nothing matches: an account with no lines in these dates is the very case to explain
@@ -437,15 +438,15 @@ def _tiles(S, behind):
         notes.append(("warn", "No pay in these dates."))
     if S["card_spend"]:
         months = ", ".join(dt.date(int(m[:4]), int(m[5:7]), 1).strftime("%B %Y") for m in sorted(S["card_spend_months"]))
-        notes.append(("info", f"Card payments of {M.fmt(S['card_spend'])} count as spending: no card statement is filed for "
+        notes.append(("info", f"Card payments of {privacy.fmt(S['card_spend'])} count as spending: no card statement is filed for "
                               f"{months}. Add the card's statement and its own lines count instead."))
     one = []
     if S["moved_open_out"] or S["moved_open_in"]:
-        one.append(f"transfers {M.fmt(S['moved_open_out'] + S['moved_open_in'])}")
+        one.append(f"transfers {privacy.fmt(S['moved_open_out'] + S['moved_open_in'])}")
     if S["cards_open_in"]:
-        one.append(f"{M.fmt(S['cards_open_in'])} paid onto cards with no bank line")
+        one.append(f"{privacy.fmt(S['cards_open_in'])} paid onto cards with no bank line")
     if S["cards_open_out"]:
-        one.append(f"{M.fmt(-S['cards_open_out'])} paid from a bank with no card line")
+        one.append(f"{privacy.fmt(-S['cards_open_out'])} paid from a bank with no card line")
     if one:
         notes.append(("warn", "Other side not loaded: " + "; ".join(one) + "."))
     return tiles, notes
@@ -462,7 +463,7 @@ def type_chips(con, f, base):
     out = [("All", sum(n for n, _ in got.values()), "", link(""), not f["type"])]
     for k in [k for k, _ in TYPES] + sorted(set(got) - set(labels)):
         if k in got:
-            out.append((labels.get(k, k.replace("_", " ").capitalize()), got[k][0], M.fmt(got[k][1]), link(k), f["type"] == k))
+            out.append((labels.get(k, k.replace("_", " ").capitalize()), got[k][0], privacy.fmt(got[k][1]), link(k), f["type"] == k))
     return out
 
 
@@ -487,7 +488,7 @@ def ledger(con, args, today, fd):
     base = {k: v for k, v in (("from", f["from"]), ("to", f["to"]), ("q", f["q"]), ("min", f["min"]), ("max", f["max"]),
                               ("account", f["account"]), ("cat", f["cat"]), ("type", f["type"]), ("member", f["member"])) if v not in ("", None)}
     if f["type"]:  # one kind of line: plain in / out / net of exactly this list
-        tiles = [("In", M.fmt(money_in), ""), ("Out", M.fmt(money_out), ""), ("Total", M.fmt(money_in + money_out), ""), ("Lines", n, "")]
+        tiles = [("In", privacy.fmt(money_in), ""), ("Out", privacy.fmt(money_out), ""), ("Total", privacy.fmt(money_in + money_out), ""), ("Lines", n, "")]
         notes = []
     else:
         tiles, notes = _tiles(S, coverage(con, f, today))

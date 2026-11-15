@@ -24,6 +24,7 @@ import connections_data  # noqa: E402
 import dates  # noqa: E402
 import edit_actions as ea  # noqa: E402
 import maintenance_data  # noqa: E402
+import privacy  # noqa: E402
 import settings_data  # noqa: E402
 import settings_history  # noqa: E402
 import setup_data  # noqa: E402
@@ -107,7 +108,7 @@ def settings(request: Request, group: str = "", tab: str = ""):
     if g == settings_data.DEFAULT:
         ctx["o"] = settings_data.overview(today, view_mode.groups(settings_data.HOME_LANES))
     elif g == "household":
-        ctx.update(h=settings_data.household(today), packs=settings_data.packs(), tax=settings_data.tax_names(),
+        ctx.update(privacy_default=privacy.default_on(), h=settings_data.household(today), packs=settings_data.packs(), tax=settings_data.tax_names(),
                    leads=settings_data.leads(), trad=settings_data.traditions())
     elif g == "agent":
         ctx.update(a=settings_data.agent(), pins=settings_data.pins(), hidden=settings_data.hidden(today),
@@ -158,6 +159,16 @@ async def settings_view(request: Request):
         return denied
     ok, msg = admin_actions.view_mode_set(A.current_user(request), (await A.form(request)).get("mode", ""))
     return await settings_go(request, ok, msg, "home", full=True)
+
+
+@router.post("/settings/privacy")
+async def settings_privacy(request: Request):
+    """Household default for new sign-ins: privacy mode on or off (privacy.py). A signed-in person's own switch stays."""
+    denied = A.need_adult(request)
+    if denied:
+        return denied
+    ok, msg = admin_actions.privacy_default_set(A.current_user(request), (await A.form(request)).get("on") == "1")
+    return await settings_go(request, ok, msg, "household", "papers")
 
 
 @router.post("/settings/next")

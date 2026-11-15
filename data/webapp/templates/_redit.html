@@ -135,8 +135,9 @@
   <label>Expected graduation year (blank to clear)<input name="grad_year" type="number" min="1950" max="2100" step="1" value="{{ v.grad_year }}"></label>
   {% else %}<input type="hidden" name="school" value=""><input type="hidden" name="grade" value=""><input type="hidden" name="grad_year" value="">{% endif %}
   <label>Role<select name="role">{% for r in ch.roles %}<option value="{{ r }}" {{ 'selected' if v.role == r }}>{{ r }}</option>{% endfor %}</select></label>
-  <label>Birthday (MM-DD, blank to clear)<input name="birthday" maxlength="5" pattern="[0-9]{2}-[0-9]{2}" placeholder="04-23" value="{{ v.birthday }}"></label>
-  <label>Birth year (blank to clear)<input name="year" type="number" min="1900" max="2100" step="1" value="{{ v.year }}"></label>
+  {% if private_now() %}<p class="muted small wide">Birthday and birth year are hidden in privacy mode and stay as they are. Turn on Easy access in your user menu to change them.</p><input type="hidden" name="birthday_keep" value="1">
+  {% else %}<label>Birthday (MM-DD, blank to clear)<input name="birthday" maxlength="5" pattern="[0-9]{2}-[0-9]{2}" placeholder="04-23" value="{{ v.birthday }}"></label>
+  <label>Birth year (blank to clear)<input name="year" type="number" min="1900" max="2100" step="1" value="{{ v.year }}"></label>{% endif %}
   <button class="btn" type="submit">Save</button>
 </form>
 <p class="muted small">Changes are kept on this PC; an update never undoes them. A new name is used on every record from now on; papers already filed keep the old spelling, and {{ v.name }} signs in with the new name.</p>

@@ -22,6 +22,7 @@
 <body class="{{ 'has-bnav' if adult }}">
 {% macro more_items(skip=()) %}
         {% for key, label in more if key not in skip %}<a href="/{{ key }}" {% if active == key %}class="on" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
+        {% if can_private %}<button type="button" class="ghost" hx-post="/privacy" hx-vals='{"on": "{{ 0 if private else 1 }}"}' title="Privacy mode hides money totals, balances and birthdays"{% if private %} aria-pressed="true"{% endif %}>{{ 'Easy access: show figures' if private else 'Privacy mode: hide figures' }}</button>{% endif %}
         {% if help_key %}<button type="button" class="ghost" hx-get="/help/panel?key={{ help_key }}" hx-target="#helpp" hx-swap="innerHTML">Help on this page</button>{% endif %}
         <button type="button" class="ghost" data-theme-toggle data-mode="{{ theme }}">{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}</button>
         {% if signed_in %}<button type="button" class="ghost" hx-post="/logout">Log out{% if user.name %} ({{ user.name }}){% endif %}</button>{% endif %}
@@ -39,7 +40,7 @@
       {% endfor %}
       <span class="grow"></span>
       <details class="rmore">
-        <summary class="me{{ ' on' if active in more|map('first')|list and active not in rail_extra|map('first')|list }}" title="More"><span class="av {{ me_av[1] if me_av[1] != 'avn' else 'avall' }}" aria-hidden="true">{{ me_av[0] or '⋯' }}</span><span class="mename">{% if user.name %}<b>{{ user.name }}</b>{% endif %}<small>More</small></span></summary>
+        <summary class="me{{ ' on' if active in more|map('first')|list and active not in rail_extra|map('first')|list }}" title="More"><span class="av {{ me_av[1] if me_av[1] != 'avn' else 'avall' }}" aria-hidden="true">{{ me_av[0] or '⋯' }}</span><span class="mename">{% if user.name %}<b>{{ user.name }}</b>{% endif %}<small>{{ 'Private · More' if private and can_private else 'More' }}</small></span></summary>
         <div class="rmenu">{{ more_items(rail_extra|map('first')|list) }}</div>
       </details>
     {% else %}
@@ -55,6 +56,9 @@
   </nav>
 {% endif %}
   <main>
+{% if adult and private and can_private %}
+  <p class="privbar" role="status"><span aria-hidden="true">&#128274;</span> <b>Privacy mode.</b> Money totals, balances and birthdays show as stars. <button type="button" class="btn alt sm" hx-post="/privacy" hx-vals='{"on": "0"}'>Easy access</button></p>
+{% endif %}
 {% if adult and active != 'chat' %}
   <form class="askbar" role="search" hx-post="/chat/ask" hx-swap="none" hx-disabled-elt="find button" aria-label="Ask Mitra">
     <span class="mav" aria-hidden="true">M</span>
@@ -72,7 +76,7 @@
 {% endif %}
 {% if adult %}
   <details class="bmore pme">
-    <summary aria-label="More{% if user.name %} for {{ user.name }}{% endif %}"{% if active in more|map('first')|list %} class="on"{% endif %}><span class="av {{ me_av[1] if me_av[1] != 'avn' else 'avall' }}" aria-hidden="true">{{ me_av[0] or '⋯' }}</span></summary>
+    <summary aria-label="More{% if user.name %} for {{ user.name }}{% endif %}{% if private and can_private %}, privacy mode on{% endif %}"{% if active in more|map('first')|list %} class="on"{% endif %}><span class="av {{ me_av[1] if me_av[1] != 'avn' else 'avall' }}" aria-hidden="true">{{ me_av[0] or '⋯' }}</span></summary>
     <div class="sheet">{{ more_items() }}</div>
   </details>
   <nav class="bnav" aria-label="Main (phone)">
