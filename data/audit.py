@@ -73,6 +73,16 @@ def check_database(con, today):
     return out
 
 
+def same_statement_twice(con, ids):
+    """True when two or more of these transaction rows come from the SAME filed statement. A statement is imported
+    only when its lines add up to the cent, so a line it prints twice (three E-ZPass tolls on one day) is two real
+    charges. Only copies spread over different papers, or with no paper, can be a charge entered twice."""
+    q = ",".join("?" * len(ids))
+    r = db.one(con, f"SELECT MAX(n) AS n FROM (SELECT COUNT(*) AS n FROM transactions WHERE id IN ({q}) "
+                    "AND document_id IS NOT NULL GROUP BY document_id)", list(ids))
+    return bool(r and r["n"] and r["n"] > 1)
+
+
 def check_duplicate_txns(con, today):
     rows = db.rows(con, """
         SELECT account_id, txn_date, amount_cents, UPPER(TRIM(COALESCE(description, ''))) AS d,
@@ -83,6 +93,8 @@ def check_duplicate_txns(con, today):
     out = []
     for r in rows:
         ids = sorted(int(x) for x in str(r["ids"]).split(","))
+        if same_statement_twice(con, ids):
+            continue  # one statement prints it more than once: they are real charges, not a copy
         first = ids[0]
         out.append(_f(f"{r['account_id']}:{r['txn_date']}:{r['amount_cents']}:{r['d'][:40]}", "decide",
                       f"{(r['shown'] or 'A charge')[:60]} on {_d(r['txn_date'])} is listed {r['n']} times",
