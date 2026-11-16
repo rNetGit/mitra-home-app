@@ -3,7 +3,7 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
-## Unreleased
+## 0.151.0
 No migration.
 - Changed: **the setup asks for household members in fields, not one comma-separated box.** One row per person with a name, a role (adult / child / pet), a birthday month and day and an optional birth year. [Add another person] adds a row, [Remove] takes one away, and a wrong row gets a plain message naming the person ("Person 2 (Sam): that birthday is not a real date."). What you typed in the other boxes stays when a row is added or removed. A list can still be pasted ("Alex, adult, March 14 1980") under "Rather paste a list?" and becomes rows. The draft (`config/setup_draft.json`) never holds a PIN.
 - Changed: the setup's Home step names the seasonal set in words ("United States, mild winters") instead of its file name, and the "You are set up" page says where your files live (the household folder, its `inbox` and `archive`).
