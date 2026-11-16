@@ -985,6 +985,12 @@ details.sfold>summary:hover h2{color:var(--accent)}
 .wz-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px;align-items:end}
 .wz-fields>.wide,.wz-fields>fieldset.wide{grid-column:1/-1}
 .wz-people .av{flex:none}
+.wz-rows{display:flex;flex-direction:column;gap:.6rem}
+.wz-row{display:flex;flex-wrap:wrap;gap:.5rem;align-items:flex-end;padding:.5rem;border:1px solid var(--line);border-radius:10px}
+.wz-row label{display:flex;flex-direction:column;gap:.2rem;font-size:.85rem;flex:1 1 6rem;min-width:0}
+.wz-row .wz-f-name{flex:3 1 11rem}.wz-row .wz-f-month{flex:2 1 7rem}.wz-row .wz-f-day{flex:0 1 4.5rem}.wz-row .wz-f-year{flex:0 1 6rem}
+.wz-row input,.wz-row select{width:100%;min-width:0}
+.wz-row .wz-rm{flex:0 0 auto}
 .wz-more>summary{cursor:pointer;color:var(--text-2);min-height:44px;display:flex;align-items:center}
 .wz-ai{margin:0 0 14px}.wz-ai>summary{cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center;min-height:44px;list-style:none}
 .wz-ai>summary::-webkit-details-marker{display:none}

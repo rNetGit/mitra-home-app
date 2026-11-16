@@ -52,6 +52,7 @@ RULES = ["Statements and bills stay on this PC. You download them yourself; I ne
          "Answers are AI-assisted records, not tax, legal, medical, insurance or financial advice.",
          "Never paste a Claude, ChatGPT or Google sign-in token anywhere; only API keys, and only on the AI screen.",
          "Backups hold your full financial database: keep them on an encrypted drive."]
+MONTH_NAMES = [(str(i + 1), m.title()) for i, m in enumerate(fr.MONTHS)]
 PIN_MIN, PIN_MAX = 4, 64
 # The "Read your papers" screen: what an AI does, what it sees, what it costs. Plain words, shown before the choice.
 AI_DOES = ["Reads the bills, receipts and papers you drop in, works out what each one is and files it for you.",
@@ -88,8 +89,8 @@ STEP_HELP = {
     "Traditions": ("Why we ask", ["Festivals of the traditions you tick are added to the calendar each year.",
                                   "Only the tradition's name, the year and the country are ever sent to an AI; the dates "
                                   "wait in the Inbox until an adult accepts them.", "Skip it with [Continue] if none."]),
-    "People": ("How to type it", ["Each person on a line of their own: name, adult / child / pet, birthday (optional).",
-                                  "Press [Check what I typed] to see how it was read, and fix a role in the list.",
+    "People": ("How to fill it in", ["One row per person: name, adult / child / pet, birthday (optional; the year can stay empty).",
+                                  "[Add another person] adds a row. A long list can be pasted instead.",
                                   "Full names as printed on papers are optional; they are hidden before anything goes to an AI."]),
     "Home": ("Why we ask", ["Owners get home upkeep reminders and, in the US, the school and property tax dates.",
                             "Renters skip the owner jobs. [Skip] if you would rather not say."]),
@@ -108,8 +109,8 @@ SCREEN_HELP = {
     "Welcome": STEP_HELP["Welcome"],
     "Your family": ("How to fill it in", ["The family name shows on the briefs and the emergency sheet.",
                                           "The country picks public holidays, tax papers, the date format and the currency.",
-                                          "Each person on a line of their own: name, adult / child / pet, birthday (optional). "
-                                          "[Check what I typed] reads it back so you can fix a role.",
+                                          "One row per person: name, adult / child / pet, and a birthday if you like (the year can stay empty). "
+                                          "[Add another person] adds a row; [Remove] takes one away.",
                                           "Full names as printed on papers are optional; they are hidden before anything "
                                           "goes to an AI."]),
     "Your home": ("Why we ask", ["Owners get home upkeep reminders and, in the US, the school and property tax dates.",
@@ -198,6 +199,14 @@ def currency_choices(current=""):
     return out
 
 
+def _pack_title(seasonal_packs, key):
+    """The seasonal pack's own title ("US, mild climate"), not its file key (us_mild), for the Home step's sentence."""
+    try:
+        return str((seasonal_packs.load_packs().get(key) or {}).get("title") or key.replace("_", " ")).split(" (")[0]
+    except Exception:  # noqa: BLE001 (a broken local pack file must not stop the setup page)
+        return key.replace("_", " ")
+
+
 def _part(a, name, typed, code, prof):
     """One step's fields on a screen: {"name", "title", ...what its fields need}."""
     v = {"name": name, "title": PART_TITLE.get(name, name)}
@@ -215,19 +224,16 @@ def _part(a, name, typed, code, prof):
         v.update(choices=TRADITIONS, chosen=set(have), other=", ".join(t for t in have if t not in TRADITIONS),
                  lookup=bool(a.get("traditions_lookup", True)), ai_note=traditions.ai_ready())
     elif name == "People":
-        text = typed.get("people", fr.people_text(a.get("members")))
-        understood = fr.parse_people(text, prof.get("date_order", "mdy"))[0] if text.strip() else []
-        for i, m in enumerate(understood):
-            if typed.get(f"name_{i}") == m["name"] and typed.get(f"role_{i}") in si.ROLES:
-                m["role"] = typed[f"role_{i}"]
-            m["birthday_text"] = birthday_text(m.get("birth_month_day"), m.get("birth_year"))
-        v.update(text=text, roles=si.ROLES, understood=understood,
-                 papers=typed.get("papers", "\n".join(a.get("paper_names") or [])))
+        rows = typed["rows"] if "rows" in typed else fr.member_rows(a.get("members"))
+        if not rows or not fr._row_empty(rows[-1]):  # one spare row at the end, the first one an adult
+            rows = rows + [fr.blank_row("adult" if not rows else "")]
+        v.update(rows=rows, roles=si.ROLES, months=MONTH_NAMES, can_add=len(rows) < fr.MAX_ROWS,
+                 papers=typed.get("papers", chr(10).join(a.get("paper_names") or [])))
     elif name == "Home":
         import seasonal_packs
         v.update(taxes=[(k, lbl, (a.get("home_taxes") or {}).get(k, "")) for k, lbl in HOME_TAXES.get(code, HOME_TAXES_OTHER)],
                  tenures=list(TENURE_TEXT.items()),
-                 pack=seasonal_packs.recommend(code, a.get("climate") or "cold"))
+                 pack=_pack_title(seasonal_packs, seasonal_packs.recommend(code, a.get("climate") or "cold")))
     elif name == "Cars":
         v["text"] = typed.get("cars", fr.vehicles_text(a.get("vehicles")))
     elif name == "Logins":
@@ -295,14 +301,12 @@ def _take(a, name, d):
         return out
     if name == "People":
         order = (country.load(a.get("country") or "US") or {}).get("date_order", "mdy")
-        members, problems = fr.parse_people(str(d.get("people", ""))[:4000], order)
-        for i, m in enumerate(members):  # the role a person picked under "Here is what I understood"
-            if d.get(f"name_{i}") == m["name"] and d.get(f"role_{i}") in si.ROLES:
-                m["role"] = d[f"role_{i}"]
+        rows, paste_problems = fr.rows_from_form(d, d.get("people", ""), order)
+        members, problems = fr.rows_to_members(rows)
         a["members"] = members
         import pii
         a["paper_names"], paper_probs = pii.clean_paper_names(str(d.get("papers", ""))[:4000])
-        return problems + paper_probs + si.validate("People", a)
+        return paste_problems + problems + paper_probs + (si.validate("People", a) if not problems else [])
     if name == "Home":
         a["tenure"] = d.get("tenure") if d.get("tenure") in ("own", "rent") else ""
         a["home_office"] = d.get("home_office") == "1"
@@ -349,8 +353,8 @@ def _save(a, screen):
 
 
 def submit(op, screen, d):
-    """One button on a screen: 'next', 'back', 'goto' (an earlier screen, from "Your answers so far"), 'check' (read the
-    people back) or 'later' -> (screen to show, problems, typed, answers to show). Every step on the screen is checked
+    """One button on a screen: 'next', 'back', 'goto' (an earlier screen, from "Your answers so far"), 'check' (check
+    the people without moving on), 'addrow' / 'remove' / 'paste' (change the person rows, nothing saved) or 'later' -> (screen to show, problems, typed, answers to show). Every step on the screen is checked
     as before; 'next' saves the draft only when all of them are fine, 'later' and 'back' save what was typed if it is
     fine and never refuse. A refused screen shows what was typed, not the saved draft."""
     a, _ = state()
@@ -360,9 +364,27 @@ def submit(op, screen, d):
         screen = 0
     before = dict(a)
     problems = []
+    if op in ("addrow", "remove", "paste"):  # change the person rows only: nothing is refused or saved
+        for name in SCREENS[screen][1]:  # what was typed in the other boxes stays (shown, not saved)
+            if name != "People":
+                _take(a, name, d)
+        order = (country.load(a.get("country") or "US") or {}).get("date_order", "mdy")
+        rows, problems = fr.rows_from_form(d, d.get("people", ""), order)
+        if op == "remove":
+            try:
+                rows = [r for i, r in enumerate(rows) if i != int(d.get("idx", -1))]
+            except (TypeError, ValueError):
+                pass
+        elif op == "addrow":
+            rows = (rows + [fr.blank_row("" if rows else "adult")])[:fr.MAX_ROWS] if rows and not fr._row_empty(rows[-1]) else rows
+        typed = {k: str(v) for k, v in d.items() if k in ("papers", "cars", "on")}
+        typed["rows"] = rows
+        return screen, problems, typed, a
     for name in SCREENS[screen][1]:
         problems += _take(a, name, d)
-    typed = {k: str(v) for k, v in d.items() if k in ("people", "papers", "cars", "on") or k.startswith(("name_", "role_"))}
+    typed = {k: str(v) for k, v in d.items() if k in ("papers", "cars", "on")}
+    if any(n == "People" for n in SCREENS[screen][1]):
+        typed["rows"] = fr.rows_from_form(d, d.get("people", ""))[0]
     if op in ("back", "goto"):
         a = a if not problems else before
         try:

@@ -4,6 +4,10 @@ people with a role and a birthday, cars, own / rent. No web code here, so the ru
 
     parse_people(text, date_order)   "Alex, adult, March 14 1980; Sam (child, 5/2/2012); Rex the dog" -> (members, problems)
     people_text(members)             the same members written back as lines the parser reads again (for a prefilled re-run)
+    rows_from_form(d, extra_text)    the setup page's person rows (m_name_N, m_role_N, m_month_N, m_day_N, m_year_N) plus an
+                                     optional pasted list -> (rows, problems); one row = {name, role, month, day, year} strings
+    rows_to_members(rows)            rows -> (members, problems) with plain row-numbered messages; empty rows are skipped
+    member_rows(members)             saved members -> rows (to fill the form)
     parse_vehicles(text)             "2019 Honda CR-V, 2015 Toyota Camry" -> (vehicles, problems); "no car" -> ([], [])
     vehicles_text(vehicles)          written back the same way
     parse_tenure(text)               "we own it" / "renting" -> "own" | "rent" | ""
@@ -199,3 +203,77 @@ def parse_tenure(text):
     if re.search(r"\b(own|owned|owner|mortgage|bought)\b", t):
         return "own"
     return ""
+
+
+# ---- one row per person (the setup page's member fields) ---------------------------------------------------------
+MAX_ROWS = 20
+_ROW_KEY = re.compile(r"^m_name_(\d{1,3})$")
+
+
+def blank_row(role=""):
+    return {"name": "", "role": role, "month": "", "day": "", "year": ""}
+
+
+def member_rows(members):
+    out = []
+    for m in members or []:
+        bd = m.get("birth_month_day") or ""
+        out.append({"name": m.get("name", ""), "role": m.get("role", "adult"),
+                    "month": str(int(bd[:2])) if bd else "", "day": str(int(bd[3:])) if bd else "",
+                    "year": str(m["birth_year"]) if m.get("birth_year") else ""})
+    return out
+
+
+def _row_empty(r):
+    return not any((r.get(k) or "").strip() for k in ("name", "month", "day", "year"))
+
+
+def rows_from_form(d, extra_text="", date_order="mdy"):
+    """The person rows a form sent, in screen order, plus the people found in a pasted list (appended as rows).
+    -> (rows, problems); problems are only about the pasted text. Nothing is validated here beyond that."""
+    idx = sorted(int(m.group(1)) for k in d for m in [_ROW_KEY.match(str(k))] if m)
+    rows = [{"name": str(d.get(f"m_name_{i}", ""))[:80], "role": str(d.get(f"m_role_{i}", ""))[:10],
+             "month": str(d.get(f"m_month_{i}", ""))[:2], "day": str(d.get(f"m_day_{i}", ""))[:2],
+             "year": str(d.get(f"m_year_{i}", ""))[:4]} for i in idx[:MAX_ROWS]]
+    problems = []
+    if (extra_text or "").strip():
+        found, problems = parse_people(str(extra_text)[:4000], date_order)
+        rows += member_rows(found)
+    return rows[:MAX_ROWS], problems
+
+
+def rows_to_members(rows):
+    """-> (members, problems). A member is {name, role, birth_month_day, birth_year}, as parse_people makes. Rows with
+    nothing in them are skipped (the page always shows a spare one)."""
+    members, problems = [], []
+    for n, r in enumerate(rows, 1):
+        if _row_empty(r):
+            continue
+        who = (r.get("name") or "").strip()
+        lead = f"Person {n}" + (f" ({who})" if who else "")
+        m = {"name": who, "role": (r.get("role") or "").strip(), "birth_month_day": "", "birth_year": None}
+        mon, day, year = ((r.get(k) or "").strip() for k in ("month", "day", "year"))
+        if bool(mon) != bool(day):
+            problems.append(f"{lead}: a birthday needs both a month and a day (or leave both empty).")
+            continue
+        if mon:
+            if not (mon.isdigit() and day.isdigit() and si.valid_birthday(mon, day)):
+                problems.append(f"{lead}: that birthday is not a real date.")
+                continue
+            m["birth_month_day"] = si.md_text(mon, day)
+        if year:
+            if not (year.isdigit() and len(year) == 4):
+                problems.append(f"{lead}: the birth year is four digits, such as 1978.")
+                continue
+            m["birth_year"] = int(year)
+        p = ""
+        if not m["role"]:
+            p = "choose adult, child or pet."
+        else:
+            p = si.member_problem(m, [x["name"] for x in members])
+            p = (p[:1].lower() + p[1:]) if p else ""
+        if p:
+            problems.append(f"{lead}: {p}")
+            continue
+        members.append(m)
+    return members, problems
