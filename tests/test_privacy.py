@@ -185,3 +185,30 @@ def test_kid_cannot_change_the_default(world):
     kid = _login(world, "Kid", "0000")
     r = kid.post("/settings/privacy", headers={"X-CSRF-Token": _token(kid)}, data={"on": "0"})
     assert r.status_code in (200, 403) and world["config"].family()["privacy"]["on_signin"] is True
+
+
+def test_setup_member_rows_hide_saved_birthdays_and_keep_them(world, modules):
+    fr = modules("first_run")
+    saved = [{"name": "Ann", "role": "adult", "birth_month_day": "03-14", "birth_year": 1985}]
+    # a row drawn in privacy mode has no birthday inputs, only m_keep_N: saving must not erase the birthday
+    rows, _ = fr.rows_from_form({"m_name_0": "Ann", "m_role_0": "adult", "m_keep_0": "Ann"}, "", "mdy", saved)
+    members, problems = fr.rows_to_members(rows)
+    assert not problems and members[0]["birth_month_day"] == "03-14" and members[0]["birth_year"] == 1985
+    # a form that does send birthday inputs (privacy off) wins over the saved one
+    rows, _ = fr.rows_from_form({"m_name_0": "Ann", "m_role_0": "adult", "m_month_0": "", "m_day_0": "", "m_year_0": "",
+                                 "m_keep_0": "Ann"}, "", "mdy", saved)
+    assert fr.rows_to_members(rows)[0][0]["birth_month_day"] == ""
+    # the page: private -> no birthday inputs on a saved row; Easy access -> they are back
+    sd = modules("setup_data")
+    p = modules("privacy")
+    tok = p.set_current(True)
+    try:
+        v = _people(sd, saved)
+    finally:
+        p.reset(tok)
+    assert v["rows"][0]["keep"] == "Ann" and not v["rows"][0]["month"] and not v["rows"][0]["year"]
+    assert _people(sd, saved)["rows"][0]["month"] == "3"
+
+
+def _people(sd, saved):
+    return next(x for x in sd.view({"members": saved}, 1)["parts"] if x["name"] == "People")
