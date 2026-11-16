@@ -89,6 +89,12 @@
     <button class="btn" type="submit">Save the names</button>
   </form>
 </section>
+<section class="card" id="privacy-default"><h2>Privacy mode</h2>
+  <p class="muted small">Each person who signs in starts in privacy mode: money totals, bank balances, net worth and birthdays show as stars, so the screen can be shown to friends, family and children. The amounts on single transactions stay. A person turns it off for their own sign-in from their name in the menu (Easy access).</p>
+  <form hx-post="/settings/privacy" hx-trigger="change" hx-disabled-elt="find input">
+    <label class="check"><input type="checkbox" name="on" value="1" {{ 'checked' if privacy_default }}> <span>New sign-ins start in privacy mode</span></label>
+  </form>
+</section>
 </div>
 {{ sp('traditions') }}
 <section class="card"><h2>Traditions and holidays</h2>

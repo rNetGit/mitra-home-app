@@ -22,6 +22,7 @@ import db
 import ledger_data
 import money as M
 import paths
+import privacy
 import records as R
 import rule_match
 
@@ -134,8 +135,8 @@ def outlook(today, part=None):
         return {}
     try:
         if part:
-            return getattr(WM, OUTLOOK_VIEWS[part])(con, today)
-        return {name: getattr(WM, name)(con, today) for name in OUTLOOK_VIEWS.values()}
+            return privacy.mask_tree(getattr(WM, OUTLOOK_VIEWS[part])(con, today))  # wall_money gives ready-made text
+        return privacy.mask_tree({name: getattr(WM, name)(con, today) for name in OUTLOOK_VIEWS.values()})
     except sqlite3.OperationalError as e:
         if not db.missing(e):
             raise
@@ -157,6 +158,8 @@ def _rows(con, sql, params=()):
 def _cell(col, v, money_cols):
     if v is None or v == "":
         return ""
+    if privacy.hidden_col(col) and isinstance(v, (int, float)):
+        return privacy.STARS  # a balance or a holding's value: hidden while private
     if col in money_cols and isinstance(v, (int, float)):
         return M.fmt(v)
     if isinstance(v, str) and ISO.match(v):
@@ -213,7 +216,7 @@ def list_row(cols, raw, money_cols):
         if v is None or v == "":
             continue
         if c in money_cols and isinstance(v, (int, float)):
-            meta.append(f"{R.column_label(c)} {M.fmt(v)}")
+            meta.append(f"{R.column_label(c)} {privacy.fmt(v) if privacy.hidden_col(c) else M.fmt(v)}")
         elif isinstance(v, (int, float)) and not isinstance(v, bool):
             meta.append(f"{R.column_label(c)} {R._value(c, v)}")
         else:
@@ -365,8 +368,8 @@ def bills(con, today, args):
             {"bill": r["name"], "every": r["frequency"], "expected": r["amount"], "last_charge": str(r["last"] or ""),
              "next_expected": str(r["next"] or ""), "open_bill": f"due {r['open_bill']['due']}" if r["open_bill"] else "none"}
             for r in tracked], "", money=("expected",)))
-    return {"tiles": [("Bills", len(rows), ""), ("Unpaid", M.fmt(unpaid, 0), "warn" if unpaid else ""),
-                      ("Paid", M.fmt(paid, 0), "")],
+    return {"tiles": [("Bills", len(rows), ""), ("Unpaid", privacy.fmt(unpaid, 0), "warn" if unpaid else ""),
+                      ("Paid", privacy.fmt(paid, 0), "")],
             "notes": notes, "blocks": blocks,
             "filters": {"range": True, "from": frm, "to": to, "months": months, "cats": cats, "cat": cat, "q": text,
                         "search": "Search name, vendor or category"}}
@@ -439,7 +442,7 @@ def paypal(con, today, args):
     waiting = sum(1 for r in rows if r["status"] == "waiting")
     notes = [] if rows else [("info", "This fills in once a PayPal statement (PDF) is filed: drop it in the Inbox. "
                                       "It is read without AI and each payment is matched to its card or bank charge.")]
-    return {"tiles": [("Payments", len(rows), ""), ("Paid through PayPal", M.fmt(sum(r["total"] or 0 for r in rows), 0), ""),
+    return {"tiles": [("Payments", len(rows), ""), ("Paid through PayPal", privacy.fmt(sum(r["total"] or 0 for r in rows), 0), ""),
                       ("Matched", sum(1 for r in rows if r["status"] == "matched"), ""),
                       ("Waiting for a charge", waiting, "warn" if waiting else "")],
             "notes": notes,
@@ -471,8 +474,8 @@ def mobile(con, today, args):
               "total": round(sum(w.get(p) or 0 for p in people), 2)} for w in sorted(wide.values(), key=lambda w: w["month"],
                                                                                      reverse=True)]
     billrows = _rows(con, "SELECT id, bill_date, carrier, bill_total FROM mobile_bills ORDER BY bill_date DESC")
-    return {"tiles": [(f"Phone bill, {newest}", M.fmt(net, 0), ""), ("Lines", lines, ""),
-                      ("Per line", M.fmt(net / max(lines, 1), 0), "")],
+    return {"tiles": [(f"Phone bill, {newest}", privacy.fmt(net, 0), ""), ("Lines", lines, ""),
+                      ("Per line", privacy.fmt(net / max(lines, 1), 0), "")],
             "notes": [("info", "Each person's net = their lines' charges, device payments and taxes, plus an equal share of "
                                "the account-wide credits and charges.")],
             "blocks": [block("Net cost per person, month by month", table, "", money=tuple(people) + ("total",)),
@@ -507,7 +510,7 @@ def subs(con, today, args):
             notes.append(("bad", f"{r['name']} was marked cancelled but charged {r['last_date']} on {r['paid_with']}."))
         elif r["decision"] == "cancel" and r["status"] == "active":
             notes.append(("warn", f"Cancel {r['name']} before the next charge (about {r['next']}, "
-                                  f"{M.fmt(r['last_amount'])} on {r['paid_with']})."))
+                                  f"{privacy.fmt(r['last_amount'])} on {r['paid_with']})."))
         if r["price_note"] and r["status"] == "active":
             notes.append(("info", f"Price change: {r['name']} {r['price_note']}."))
     unrev = [r for r in trk if r["decision"] == "unreviewed" and r["status"] == "active" and r["tracked_active"]]
@@ -532,8 +535,8 @@ def subs(con, today, args):
          "last": str(c["last"]), "next_est": str(c["next"]), "per_year": c["per_year"],
          "still_active": "yes" if c["active"] else "stopped?"} for c in cands],
         "None seen.", cols=["merchant", "frequency", "amount", "per_year", "still_active"], money=("per_year",)))
-    return {"tiles": [("Still charging", sm["count"], ""), ("Per month", M.fmt(sm["per_month"], 0), ""),
-                      ("Per year", M.fmt(sm["per_year"], 0), ""),
+    return {"tiles": [("Still charging", sm["count"], ""), ("Per month", privacy.fmt(sm["per_month"], 0), ""),
+                      ("Per year", privacy.fmt(sm["per_year"], 0), ""),
                       ("Not reviewed yet", len(unrev), "warn" if unrev else "")],
             "notes": notes, "blocks": blocks}
 
@@ -543,7 +546,7 @@ def amazon(con, today, args):
     rows, sm = AM.rows(con, today), AM.summary(con)
     notes = []
     if sm:
-        notes.append(("info", f"{sm['orders']} orders, {M.fmt(sm['orders_total'])}; {sm['matched']} of {sm['payable']} "
+        notes.append(("info", f"{sm['orders']} orders, {privacy.fmt(sm['orders_total'])}; {sm['matched']} of {sm['payable']} "
                               "chargeable orders matched to a card charge. Unmatched orders were paid with a card whose "
                               "statements are not imported yet."))
     elif not config.pack("amazon"):
@@ -689,18 +692,18 @@ def goal_rows(con, today):
         elif due_d:
             months = (due_d.year - today.year) * 12 + due_d.month - today.month
             if months <= 0:
-                note = f"{M.fmt(left, 0)} still to save; the date has passed"
+                note = f"{privacy.fmt(left, 0)} still to save; the date has passed"
                 behind = True
             else:
                 monthly = round(left / months, 2)
-                note = f"{M.fmt(monthly, 0)} a month to reach it by {due_d:%b %Y}"
+                note = f"{privacy.fmt(monthly, 0)} a month to reach it by {due_d:%b %Y}"
                 start = dates.parse(str(created)[:10]) or today
                 span = (due_d - start).days
                 if span > 0:
                     mark = max(0, min(100, round((today - start).days / span * 100)))
                     behind = pct < mark
         else:
-            note = f"{M.fmt(left, 0)} to go"
+            note = f"{privacy.fmt(left, 0)} to go"
         if bal is not None:
             note += f" (balance on {as_of})"
         out.append({"id": gid, "name": name, "target": target, "saved": saved, "due": due or "", "pct": pct,
@@ -727,20 +730,20 @@ def budget(con, today, args):
          "expected_by_now": r["expected"], "projected": r["projected"], "used": f"{r['pct']:.0f}%"} for r in p["lines"]],
         "No budget lines yet. Set one with the form above or tell Chat.",
         money=("spent", "limit", "expected_by_now", "projected"),
-        bars=[{"label": r["label"], "value": M.fmt(r["spent"], 0), "of": M.fmt(r["limit"], 0),
+        bars=[{"label": r["label"], "value": privacy.fmt(r["spent"], 0), "of": privacy.fmt(r["limit"], 0),
                "pct": max(0, min(100, round(r["pct"] or 0))), "tone": tone.get(r["status"], ""),
                "mark": max(0, min(100, round((r["expected"] or 0) / r["limit"] * 100))) if r["limit"] else None,
-               "note": LIGHT[r["status"]] + (f", heading for {M.fmt(r['projected'], 0)}" if r["status"] != "green" and r["projected"] else "")}
+               "note": LIGHT[r["status"]] + (f", heading for {privacy.fmt(r['projected'], 0)}" if r["status"] != "green" and r["projected"] else "")}
               for r in p["lines"]]))
     try:
         v = B.variance(con, last)
     except sqlite3.Error:
         v = []
     blocks.append(block(f"Budget against actual, {last}", [
-        {"category": c, "limit": lim, "actual": a, "result": ("over " if o > 0 else "under ") + M.fmt(abs(o))}
+        {"category": c, "limit": lim, "actual": a, "result": ("over " if o > 0 else "under ") + privacy.fmt(abs(o))}
         for c, lim, a, o in v], "No budget lines yet.", money=("limit", "actual"),
-        bars=[{"label": c, "value": M.fmt(a, 0), "of": M.fmt(lim, 0), "pct": max(0, min(100, round(a / lim * 100))) if lim else 100,
-               "tone": "bad" if o > 0 else "ok", "mark": None, "note": ("over by " if o > 0 else "under by ") + M.fmt(abs(o), 0)}
+        bars=[{"label": c, "value": privacy.fmt(a, 0), "of": privacy.fmt(lim, 0), "pct": max(0, min(100, round(a / lim * 100))) if lim else 100,
+               "tone": "bad" if o > 0 else "ok", "mark": None, "note": ("over by " if o > 0 else "under by ") + privacy.fmt(abs(o), 0)}
               for c, lim, a, o in v], fold=True))
     try:
         sug = B.suggest(con, today)
@@ -759,7 +762,7 @@ def budget(con, today, args):
         "No loans recorded.", "loans"))
     goals = goal_rows(con, today)
     blocks.append(block("Savings goals", [], "No savings goals yet. Add one with the form above.",
-        bars=[{"label": g["name"], "value": M.fmt(g["saved"], 0), "of": M.fmt(g["target"], 0), "pct": g["pct"],
+        bars=[{"label": g["name"], "value": privacy.fmt(g["saved"], 0), "of": privacy.fmt(g["target"], 0), "pct": g["pct"],
                "tone": "ok" if g["pct"] >= 100 else "warn" if g["behind"] else "", "mark": g["mark"],
                "note": g["note"]} for g in goals]))
     if goals:
@@ -771,8 +774,8 @@ def budget(con, today, args):
     for r in loans:
         plan = LN.payoff_plan(r["balance"], r["rate_pct"], r["payment"], today=today)
         for p in plan:
-            sooner.append({"loan": r["name"], "a_month": M.fmt((r["payment"] or 0) + p["extra"], 0)
-                           + (f" (+{M.fmt(p['extra'], 0)})" if p["extra"] else " (now)"),
+            sooner.append({"loan": r["name"], "a_month": privacy.fmt((r["payment"] or 0) + p["extra"], 0)
+                           + (f" (+{privacy.fmt(p['extra'], 0)})" if p["extra"] else " (now)"),
                            "paid_off": f"{p['paid_off']:%b %Y}", "interest_left": p["interest"],
                            "sooner": f"{p['months_sooner']} months" if p["extra"] and p["months_sooner"] else "",
                            "interest_saved": p["interest_saved"] if p["extra"] else None})
@@ -788,10 +791,10 @@ def benefits(con, today, args):
     notes, blocks = [], []
     for b in rows:
         basis = "billing cycle" if b["reset_basis"] == "statement" else "month"
-        name = f"{b['acct']} x{b['last4']}: {b['name']} ({M.fmt(b['amount'], 0)} per {basis})"
+        name = f"{b['acct']} x{b['last4']}: {b['name']} ({privacy.fmt(b['amount'], 0)} per {basis})"
         if b["current_open"]:
             notes.append(("warn", f"{name}: not used yet this {basis}; use it before {b['period_end']:%b %d}."))
-        blocks.append(block(f"{name} · received {b['received_n']} ({M.fmt(b['received'])}), missed {b['lost_n']}",
+        blocks.append(block(f"{name} · received {b['received_n']} ({privacy.fmt(b['received'])}), missed {b['lost_n']}",
                             [{"billing_cycle": x["label"], "status": x["state"], "credit_received": x["credit"],
                               "qualifying_spend": x["spend"]} for x in reversed(b["periods"])], "",
                             money=("credit_received", "qualifying_spend")))
@@ -892,6 +895,11 @@ def download(part, today, args):
     return None
 
 
+# parts whose every figure is a plan or a total, not one payment: all of their ready-made text is masked in privacy mode
+# (privacy.py). The lists of single bills, subscriptions, receipts and the Ledger keep the amount of each line.
+PRIVATE_PARTS = ("budget", "year_end", "tax", "home_office", "benefits")
+
+
 def view(part, today, args):
     """One part's read-only view (see the module text). An older database without a table shows a note, not an error."""
     base = {"tiles": [], "notes": [], "blocks": [], "md": None, "filters": {}}
@@ -907,7 +915,7 @@ def view(part, today, args):
     try:
         v = {**base, **fn(con, today, args)}
         v["side"] = part in SIDE_PANEL and bool(v["tiles"])
-        return v
+        return privacy.mask_tree(v) if part in PRIVATE_PARTS else v
     except sqlite3.OperationalError as e:
         if not db.missing(e):
             raise

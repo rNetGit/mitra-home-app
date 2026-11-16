@@ -29,7 +29,7 @@
   <section class="card" aria-label="Bills, {{ b.names.prev }} and {{ b.names.now }}">
     <div class="mo-b mo-h"><span>Bill</span><span class="num">{{ b.names.prev }}</span><span class="num now">{{ b.names.now }}</span></div>
     {% for r in b.rows %}
-    <div class="mo-b {{ r.state }}"><div><b>{{ r.name }}</b>{% if r.note %}<small class="mo-note">{{ r.note }}</small>{% endif %}</div>
+    <div class="mo-b {{ r.state }}"><div><b>{{ r.name }}</b>{% if r.note %}<small class="mo-note">{{ r.note|mtext }}</small>{% endif %}</div>
       <span class="num">{% if r.prev_text %}{{ r.prev_text }}<small>{{ r.prev_on }}</small>{% else %}<small>—</small>{% endif %}</span>
       <span class="num">{% if r.now_text %}<b>{{ r.now_text }}</b><small>{{ r.now_on }}</small>{% else %}<span class="chip-s t-warn">Not yet</span>{% endif %}</span></div>
     {% else %}<p class="muted">No bills in the statements for these two months yet.</p>{% endfor %}

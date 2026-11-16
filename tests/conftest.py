@@ -33,6 +33,7 @@ FAMILY = {
                 {"name": "Sam", "role": "child", "birth_month_day": "09-02"},
                 {"name": "Biscuit", "role": "pet"}],
     "packs": {}, "tasks_registered": False,
+    "privacy": {"on_signin": False},  # the real default is on (privacy.py); the older tests read figures off pages
 }
 DRY = {"AIFA_DRY_RUN": "1"}  # onboard.py: never touch Task Scheduler / cron, never ping Claude
 # The real Task Scheduler / crontab of the PC running the tests is never touched, in this process or a child one

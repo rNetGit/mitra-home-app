@@ -27,12 +27,15 @@ def create(user, now=None, bind=""):
     """Start a session for {'name','role'}; returns its token. `bind` = the PIN fingerprint it was made with."""
     now = _now() if now is None else now
     token = secrets.token_urlsafe(32)
+    import privacy  # imported here: this module stays free of the app's settings until a session starts
+    private = privacy.default_on()  # the household default for a new sign-in (Settings > Household profile)
     with _lock:
         _purge(now)
         while len(_store) >= MAX_SESSIONS:
             oldest = min(_store, key=lambda t: _store[t]["seen"])
             del _store[oldest]
-        _store[token] = {"user": dict(user), "csrf": secrets.token_urlsafe(24), "born": now, "seen": now, "bind": bind}
+        _store[token] = {"user": dict(user), "csrf": secrets.token_urlsafe(24), "born": now, "seen": now, "bind": bind,
+                         "private": private}
     return token
 
 

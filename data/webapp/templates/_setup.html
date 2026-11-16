@@ -71,9 +71,10 @@
   <div class="wz-row" role="group" aria-label="Person {{ loop.index }}">
     <label class="wz-f-name">Name<input name="m_name_{{ i }}" maxlength="60" value="{{ r.name }}" autocomplete="off"{% if loop.first %} required{% endif %}></label>
     <label class="wz-f-role">Role<select name="m_role_{{ i }}">{% if not r.role %}<option value="" selected>Choose…</option>{% endif %}{% for ro in p.roles %}<option value="{{ ro }}" {{ 'selected' if r.role == ro }}>{{ ro }}</option>{% endfor %}</select></label>
+    {% if r.keep %}<input type="hidden" name="m_keep_{{ i }}" value="{{ r.keep }}"><p class="muted small wz-f-month">Birthday hidden (privacy mode). It stays as saved.</p>{% else %}
     <label class="wz-f-month">Birthday month<select name="m_month_{{ i }}"><option value="">-</option>{% for mv, ml in p.months %}<option value="{{ mv }}" {{ 'selected' if r.month == mv }}>{{ ml }}</option>{% endfor %}</select></label>
     <label class="wz-f-day">Day<input name="m_day_{{ i }}" type="number" min="1" max="31" inputmode="numeric" value="{{ r.day }}"></label>
-    <label class="wz-f-year">Year (optional)<input name="m_year_{{ i }}" type="number" min="1900" max="2100" inputmode="numeric" value="{{ r.year }}" placeholder="1980"></label>
+    <label class="wz-f-year">Year (optional)<input name="m_year_{{ i }}" type="number" min="1900" max="2100" inputmode="numeric" value="{{ r.year }}" placeholder="1980"></label>{% endif %}
     <button type="button" class="btn alt wz-rm" aria-label="Remove person {{ loop.index }}" hx-post="/setup" hx-include="closest form" hx-target="#setup" hx-swap="innerHTML" hx-vals='{{ {"op": "remove", "idx": i|string, "step": v.step|string}|tojson }}'>Remove</button>
   </div>
   {% endfor %}

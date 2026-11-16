@@ -190,6 +190,9 @@ BIRTHDAY_COLS = ("birthday", "birth_month_day")
 
 
 def _value(col, v):
+    import privacy
+    if privacy.hidden_col(col) and v not in (None, ""):  # privacy mode (web pages only): a date of birth or a balance
+        return privacy.STARS
     if col == "season" and isinstance(v, str) and re.fullmatch(r"\d\d-\d\d to \d\d-\d\d", v):  # "03-01 to 04-15" -> "Mar 1 to Apr 15"
         import dates
         a, b = v.split(" to ")

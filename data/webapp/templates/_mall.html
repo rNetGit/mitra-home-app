@@ -23,11 +23,11 @@
     <tbody>{% for d in a.days %}
       <tr class="bk-month aa-day"><td colspan="3">{{ d.label }}</td><td class="num">{{ '+' if d.net > 0 }}{{ (d.net)|money2 }}</td></tr>
       {% for it in d['items'] %}{% if it.kind in ('moved', 'loan') %}
-      <tr class="aa-moved"><td>⇄ {{ it.desc }}</td><td class="bk-wide"><span class="aa-ac">{{ it['from'].name if it['from'] else '?' }}</span> → <span class="aa-ac">{{ it['to'].name if it['to'] else '?' }}</span></td><td class="bk-wide">{{ it.category }}</td><td class="num">{{ (it.amount)|money2 }}</td></tr>
+      <tr class="aa-moved"><td>⇄ {{ it.desc }}</td><td class="bk-wide"><span class="aa-ac">{{ it['from'].name if it['from'] else '?' }}</span> → <span class="aa-ac">{{ it['to'].name if it['to'] else '?' }}</span></td><td class="bk-wide">{{ it.category }}</td><td class="num">{{ (it.amount)|amt2 }}</td></tr>
       {% elif it.kind == 'moved1' %}
-      <tr class="aa-moved"><td>⇄ {{ it.desc }}</td><td class="bk-wide"><span class="aa-ac">{{ it.acct.name if it.acct else '?' }}</span> {{ '→ elsewhere' if it.out else '← from elsewhere' }}</td><td class="bk-wide">Moved</td><td class="num">{{ (it.amount)|money2 }}</td></tr>
+      <tr class="aa-moved"><td>⇄ {{ it.desc }}</td><td class="bk-wide"><span class="aa-ac">{{ it.acct.name if it.acct else '?' }}</span> {{ '→ elsewhere' if it.out else '← from elsewhere' }}</td><td class="bk-wide">Moved</td><td class="num">{{ (it.amount)|amt2 }}</td></tr>
       {% else %}
-      <tr><td>{{ it.desc }}</td><td class="bk-wide">{% if it.acct %}<a class="aa-ac" href="/money/account/{{ it.acct.id }}">{{ it.acct.name }}{{ ' x' ~ it.acct.last4 if it.acct.last4 }}</a>{% endif %}</td><td class="bk-wide">{{ it.category }}</td><td class="num{{ ' bk-in' if it.amount > 0 }}">{{ '+' if it.amount > 0 }}{{ (it.amount)|money2 }}</td></tr>
+      <tr><td>{{ it.desc }}</td><td class="bk-wide">{% if it.acct %}<a class="aa-ac" href="/money/account/{{ it.acct.id }}">{{ it.acct.name }}{{ ' x' ~ it.acct.last4 if it.acct.last4 }}</a>{% endif %}</td><td class="bk-wide">{{ it.category }}</td><td class="num{{ ' bk-in' if it.amount > 0 }}">{{ '+' if it.amount > 0 }}{{ (it.amount)|amt2 }}</td></tr>
       {% endif %}{% endfor %}
     {% endfor %}</tbody>
   </table></div>

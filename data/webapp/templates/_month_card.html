@@ -106,7 +106,7 @@
     {% for c in m.all %}
     <details class="mcat">
       <summary><i class="dot s{{ loop.index0 % 7 if loop.index0 < 6 else 6 }}" aria-hidden="true"></i><span>{{ c.category|capitalize }}</span><small class="muted">{{ c.n }} · {{ c.pct|round|int }}%</small><b>{{ c.amount|money }}</b></summary>
-      <div class="mrowsx">{% for t in c['items'] %}<div class="mrow" data-d="{{ t.date }}" data-a="{{ t.amount }}"><span class="muted">{{ t.date[5:] }}</span><span>{{ t.payee }}</span><span class="n">{{ t.amount|money2 }}</span></div>{% endfor %}</div>
+      <div class="mrowsx">{% for t in c['items'] %}<div class="mrow" data-d="{{ t.date }}" data-a="{{ t.amount }}"><span class="muted">{{ t.date[5:] }}</span><span>{{ t.payee }}</span><span class="n">{{ t.amount|amt2 }}</span></div>{% endfor %}</div>
       {% if c.category == 'uncategorized' %}
       {% if m.loose %}
       <p class="muted sm">Name a category once and every charge from that merchant, now and later, gets it.</p>

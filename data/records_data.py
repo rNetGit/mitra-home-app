@@ -14,6 +14,7 @@ import config
 import dates
 import pathlib
 import db
+import privacy
 import finance_data as FD
 import home_contacts as hc
 import member_info as mi
@@ -242,7 +243,7 @@ def list_row(cols, raw, today, title=None, right=None):
     rv = raw.get(right) if right else None
     rtext = FD.short_date(rv[:10], today) + (rv[10:16].replace("T", " ") if len(rv) > 10 else "") if isinstance(rv, str) else ""
     if right == "birthday" and dates.valid_md(rv):  # "03-14" -> "Mar 14"
-        rtext = dates.md_text(rv, short=True)
+        rtext = privacy.hide(dates.md_text(rv, short=True))
     text = str(R._value(title, raw.get(title))) if title and raw.get(title) not in (None, "") else ""
     text = text[:1].upper() + text[1:]
     return {"title": text, "av": next((ch.upper() for ch in text if ch.isalpha()), "?"), "right": rtext, "pill": pill, "tone": tone, "meta": " · ".join(meta[:4])}
@@ -252,6 +253,8 @@ def _cell(col, v, today):
     """One table cell on a PC: dates short (Oct 9), money formatted, the rest as records shows it."""
     if v in (None, ""):
         return ""
+    if privacy.hidden_col(col):
+        return privacy.STARS
     if col in MONEY and col not in R.MONEY_COLS and isinstance(v, (int, float)):
         return FD.M.fmt(v)
     if isinstance(v, str) and ISO.match(v):
@@ -498,7 +501,7 @@ def detail(user, ref):
             if src:
                 paper = {"id": src["id"], "label": src["label"], "here": bool(R.source_file(src["path"])),
                          "path": bool(src["path"]), "view": view_mime(src["path"]) is not None}
-            one = {"label": d["label"], "fields": [(field_name(k), field_value(v)) for k, v in d["fields"]], "paper": paper,
+            one = {"label": d["label"], "fields": [(field_name(k), field_value(privacy.field(k, v))) for k, v in d["fields"]], "paper": paper,
                    "history": R.history(table, ids[0], name=d["row"].get("name"))}
             return {"table": table, "one": one, "group": None, "domain": d["domain"], "section": d["section"]}
         group = [(R.ref_str(table, [i]), n) for i in ids for n in [R.label(con, table, i, user)] if n]

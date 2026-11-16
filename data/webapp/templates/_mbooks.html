@@ -7,7 +7,7 @@
   <div class="kpi"><span>Net worth</span><b>{{ (b.net)|money }}</b>{% if b.change is not none %}<i>{{ '+' if b.change >= 0 }}{{ (b.change)|money }} since the 1st</i>{% endif %}</div>
   <div class="kpi"><span>Matches bank</span><b>{{ b.count.ok }} of {{ b.accounts }}</b><i>{{ b.count.off }} off · {{ b.count.sync + b.count.none }} nothing to compare yet</i></div>
 </div>
-{% if b.needs %}<p class="bk-look"><b>Needs a look:</b>{% for n in b.needs %} <a class="pill warn" href="/money/account/{{ n.id }}">{{ n.text }}</a>{% endfor %}{% if b.more_needs %} <span class="muted">+{{ b.more_needs }} more</span>{% endif %}</p>{% endif %}
+{% if b.needs %}<p class="bk-look"><b>Needs a look:</b>{% for n in b.needs %} <a class="pill warn" href="/money/account/{{ n.id }}">{{ n.text|mtext }}</a>{% endfor %}{% if b.more_needs %} <span class="muted">+{{ b.more_needs }} more</span>{% endif %}</p>{% endif %}
 {% for g in b.groups %}
 <details class="card bk-grp" open>
   <summary class="bk-head"><b>{{ g.label }}</b> <span class="muted small">{{ g.rows|length }} account{{ 's' if g.rows|length != 1 }}</span><span class="bk-total{{ ' bk-owed' if g.owed }}">{{ 'owe ' if g.owed }}{{ (g.total)|money2 }}</span></summary>

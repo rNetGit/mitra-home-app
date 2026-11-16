@@ -228,13 +228,20 @@ def _row_empty(r):
     return not any((r.get(k) or "").strip() for k in ("name", "month", "day", "year"))
 
 
-def rows_from_form(d, extra_text="", date_order="mdy"):
+def rows_from_form(d, extra_text="", date_order="mdy", saved=None):
     """The person rows a form sent, in screen order, plus the people found in a pasted list (appended as rows).
-    -> (rows, problems); problems are only about the pasted text. Nothing is validated here beyond that."""
+    -> (rows, problems); problems are only about the pasted text. Nothing is validated here beyond that.
+    `saved` = the household's current members: a row drawn in privacy mode has no birthday inputs, only `m_keep_N` (the
+    saved name), and takes that person's saved birthday so a save never erases it."""
     idx = sorted(int(m.group(1)) for k in d for m in [_ROW_KEY.match(str(k))] if m)
     rows = [{"name": str(d.get(f"m_name_{i}", ""))[:80], "role": str(d.get(f"m_role_{i}", ""))[:10],
              "month": str(d.get(f"m_month_{i}", ""))[:2], "day": str(d.get(f"m_day_{i}", ""))[:2],
              "year": str(d.get(f"m_year_{i}", ""))[:4]} for i in idx[:MAX_ROWS]]
+    by_name = {m.get("name"): m for m in saved or []}
+    for i, r in zip(idx, rows):
+        keep = str(d.get(f"m_keep_{i}", ""))[:80]
+        if keep and f"m_month_{i}" not in d and keep in by_name:
+            r.update(member_rows([by_name[keep]])[0], name=r["name"], role=r["role"], keep=keep)
     problems = []
     if (extra_text or "").strip():
         found, problems = parse_people(str(extra_text)[:4000], date_order)

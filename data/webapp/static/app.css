@@ -1374,3 +1374,7 @@ a.kchip{color:inherit;text-decoration:none}a.kchip:hover,a.kchip:focus-visible{f
 .bbank{margin:12px 0 4px;font-size:1rem}
 .bacct{list-style:none;margin:0;padding:0}.bacct li{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:6px 0;border-bottom:1px solid var(--line)}
 .bacct li:last-child{border-bottom:0}
+
+.privbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 12px;padding:8px 12px;border:1px solid var(--line);border-radius:var(--radius);background:var(--accent-soft);color:var(--text);font-size:.9rem}
+.privbar .btn{margin-left:auto}
+@media (max-width:760px){.privbar{padding-right:60px;min-height:48px}}

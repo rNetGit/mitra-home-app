@@ -12,6 +12,7 @@ import brand
 import dates
 import country
 import first_run as fr
+import privacy
 import setup_interview as si
 
 SECTIONS = si.SECTIONS
@@ -225,6 +226,9 @@ def _part(a, name, typed, code, prof):
                  lookup=bool(a.get("traditions_lookup", True)), ai_note=traditions.ai_ready())
     elif name == "People":
         rows = typed["rows"] if "rows" in typed else fr.member_rows(a.get("members"))
+        if privacy.active():  # a birthday already saved is not drawn: the row says so and keeps it (m_keep_N)
+            rows = [dict(r, keep=r.get("keep") or r["name"], month="", day="", year="") if any(r.get(k) for k in ("month", "day", "year")) else r
+                    for r in rows]
         if not rows or not fr._row_empty(rows[-1]):  # one spare row at the end, the first one an adult
             rows = rows + [fr.blank_row("adult" if not rows else "")]
         v.update(rows=rows, roles=si.ROLES, months=MONTH_NAMES, can_add=len(rows) < fr.MAX_ROWS,
@@ -301,7 +305,7 @@ def _take(a, name, d):
         return out
     if name == "People":
         order = (country.load(a.get("country") or "US") or {}).get("date_order", "mdy")
-        rows, paste_problems = fr.rows_from_form(d, d.get("people", ""), order)
+        rows, paste_problems = fr.rows_from_form(d, d.get("people", ""), order, a.get("members"))
         members, problems = fr.rows_to_members(rows)
         a["members"] = members
         import pii

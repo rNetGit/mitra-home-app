@@ -57,7 +57,7 @@
     <table class="mst-t mst-v nocards">
       <thead><tr><th>Category</th><th class="num">Budget</th><th class="num">Actual</th><th class="num">Over / under</th><th class="num">{{ st.names.prev[:3] }}</th></tr></thead>
       <tbody>{% for r in st.variance %}
-        <tr><td>{{ r.category|capitalize }}{% if r.reason %}<br><small class="muted">{{ r.reason }}</small>{% endif %}</td>
+        <tr><td>{{ r.category|capitalize }}{% if r.reason %}<br><small class="muted">{{ r.reason|mtext }}</small>{% endif %}</td>
           <td class="num">{{ cell(r.limit) }}</td><td class="num">{{ r.now|money }}</td>
           <td class="num">{% if r.over is none %}<span class="muted">-</span>{% else %}<span class="{{ 'up' if r.over > 0 else 'down' }}">{{ '+' if r.over > 0 else '-' }}{{ r.over|abs|money }}</span>{% endif %}</td>
           <td class="num">{{ cell(r.prev) }}</td></tr>{% endfor %}

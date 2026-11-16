@@ -20,6 +20,7 @@ import db
 import edit_actions as ea
 import help_text
 import llm
+import privacy
 import money
 import paths
 
@@ -321,6 +322,9 @@ def message(state, user, today, text, ready):
     say(state, "user", text)
     if howto(state, text, ready):
         return
+    if privacy.active():  # privacy mode (privacy.py): money and birthday answers wait for Easy access
+        say(state, "assistant", privacy.CHAT_REFUSED)
+        return
     if ready:
         ask(state, user, text)
         return
@@ -339,6 +343,9 @@ def chip(state, user, today, snap, key, ready):
     if text is None or key == "connect":
         return False
     say(state, "user", text)
+    if privacy.active() and key != "howto":
+        say(state, "assistant", privacy.CHAT_REFUSED)
+        return True
     if key == "due":
         say(state, "assistant", due_week(today), due_week_refs(user, today, snap["items"]))
     elif key == "owe":

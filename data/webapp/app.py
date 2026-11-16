@@ -57,9 +57,9 @@ import inbox_upload
 import kid_data
 import look
 import maintenance_data
-import money
 import notes_data
 import paths
+import privacy
 import records
 import records_data
 import records_edit
@@ -121,8 +121,14 @@ async def config_broken(request: Request, exc: config.Broken):
         return JSONResponse({"error": "config_broken"}, status_code=503)
     return HTMLResponse(f'<p class="notice bad" role="alert">{html.escape(str(exc))}</p>', status_code=409)
 templates = Jinja2Templates(directory=HERE / "templates")
-templates.env.filters["money"] = lambda v: money.fmt(v, 0)
-templates.env.filters["money2"] = lambda v: money.fmt(v, 2)
+# |money / |money2 are stars while privacy is on (privacy.py); |amt / |amt2 are for the amount of one transaction line
+templates.env.filters["money"] = privacy.money_filter(0)
+templates.env.filters["money2"] = privacy.money_filter(2)
+templates.env.filters["amt"] = privacy.raw_filter(0)
+templates.env.filters["amt2"] = privacy.raw_filter(2)
+templates.env.filters["mask"] = privacy.mask_filter
+templates.env.filters["mtext"] = privacy.mask_text  # a sentence with figures in it
+templates.env.globals["private_now"] = privacy.active
 templates.env.filters["pct"] = lambda v: "" if v is None else f"{v:+.0f}%"
 templates.env.filters["sd"] = lambda v: finance_data.short_date(str(v)[:10]) if v else ""  # 2026-10-05 -> Oct 5
 templates.env.filters["day"] = lambda v: dates.day_text(v) if v else ""  # 2026-10-23 -> Fri, Oct 23
@@ -259,6 +265,14 @@ def current_user(request):
     return None
 
 
+def privacy_on(request):
+    """Is privacy mode on for this request's person (privacy.py)? Pages and APIs without a session: off."""
+    if request.url.path.startswith(("/static/", "/api/", "/wall", "/healthz")):
+        return False  # the phone API and the wall have their own scopes and PIN; static files carry no figures
+    s = session_of(request)
+    return privacy.effective(s, s["user"]) if s else False
+
+
 def csrf_token(request):
     s = session_of(request)
     return s["csrf"] if s else ""
@@ -302,7 +316,8 @@ def page(request, name, status=200, **ctx):
             "rail_extra": [x for x in RAIL_EXTRA if x[0] in {k for k, _ in view_mode.pages(PAGES)}],
             "simple": view_mode.is_simple(), "version": _version(), "brand": brand.PRODUCT,
             "csrf": s["csrf"] if s else "", "theme": look.mode_for(user), "signed_in": bool(s) and not s.get("open"),
-            "can_logout": bool(auth.users()), **chrome(user),
+            "can_logout": bool(auth.users()), "private": privacy.active(), "can_private": bool(s) and not s.get("open") and bool(user) and user.get("role") == "adult",
+            **chrome(user),
             "help_key": help_text.key_for(ctx.get("active"), ctx) if user and user.get("role") == "adult" else ""}
     r = templates.TemplateResponse(request, name, {**base, **ctx}, status_code=status)
     if new:
@@ -365,7 +380,11 @@ async def guard(request: Request, call_next):
         elif request.url.path != "/login":  # no session exists yet at sign-in; its form has no token to send
             if not sessions.csrf_ok(session_of(request), request.headers.get("x-csrf-token")):
                 return PlainTextResponse("Missing or wrong security token. Reload the page.", status_code=403)
-    r = await call_next(request)
+    tok = privacy.set_current(privacy_on(request))  # this request's pages are built with or without the masks
+    try:
+        r = await call_next(request)
+    finally:
+        privacy.reset(tok)
     framed = (request.url.path == "/settings/wall/preview"  # the pages shown in a frame of this site: the Settings preview window
               or (request.url.path.startswith("/records/paper/") and request.url.path.endswith("/view")))  # and the paper viewer
     r.headers["Content-Security-Policy"] = CSP.replace("frame-ancestors 'none'", "frame-ancestors 'self'") if framed else CSP
@@ -427,6 +446,24 @@ def logout(request: Request):
     return r
 
 
+@app.post("/privacy")
+async def privacy_toggle(request: Request):
+    """The user menu's "Easy access" switch: this sign-in only (the household default is in Settings). Adults only; the
+    guard already checked the CSRF token. `on` = 1 turns privacy on, 0 off."""
+    s, user = session_of(request), current_user(request)
+    if s is None or user is None or s.get("open"):
+        return Response(status_code=400)
+    if user.get("role") != "adult":
+        return Response(status_code=403)  # a child's page is always private
+    s["private"] = (await form(request)).get("on") == "1"
+    if s["private"]:
+        chat_data.clear(chat_state(request))  # earlier answers about money must not stay on the Chat page
+    admin_actions._audit(user, "privacy_session", "on" if s["private"] else "off")
+    back = urllib.parse.urlsplit(request.headers.get("referer") or "")
+    target = back.path + ("?" + back.query if back.query else "") if back.path.startswith("/") and not back.path.startswith("//") else "/"
+    return Response(status_code=204, headers={"HX-Redirect": target})  # an HTMX post: the same page again, drawn the other way
+
+
 @app.post("/theme")
 async def set_theme(request: Request):
     user = current_user(request)
@@ -455,9 +492,11 @@ def home(request: Request):
     s = session_of(request)
     flash, undo = (s.pop("today_flash", None) if s else None) or (None, None)
     words, words_later = _brief_words(v, ctx.today)
+    words = privacy.mask_text(words)  # the AI wording may quote figures
     return page(request, "today.html", words=words, words_later=words_later, active="home", v=v, today=ctx.today, flash=flash, undo=undo, upd_line=update_line(user), rew_line=rewards_line(user), wall_line=wall_line(user),
                 briefings=BRIEFINGS, wx_line=weather.line(), keep=keepup.rows(user, ctx.today),
-                brief=today_data.brief_items(v), brief_more=today_data.brief_more(v, (weather.wall_view() or {}).get("rain") or ""))
+                brief=privacy.mask_tree(today_data.brief_items(v)),
+                brief_more=privacy.mask_tree(today_data.brief_more(v, (weather.wall_view() or {}).get("rain") or "")))
 
 
 def _brief_words(v, today):
@@ -730,6 +769,8 @@ def finance_download(request: Request, part: str = ""):
     denied = need_adult(request)
     if denied:
         return denied
+    if privacy.active():  # tax pack, year-end and the Ledger carry real figures: not while privacy mode is on
+        return PlainTextResponse(privacy.DOWNLOAD_REFUSED, status_code=403)
     got = finance_data.download(finance_data.part_of(part), dates.today(), dict(request.query_params))
     if got is None:
         return PlainTextResponse("Nothing to download here.", status_code=404)
@@ -790,6 +831,8 @@ async def brief_doc_file(request: Request, kind: str):
         return denied
     if kind not in dict(BRIEFINGS):
         return PlainTextResponse("Not found", status_code=404)
+    if privacy.active() and kind in privacy.MONEY_DOCS:
+        return PlainTextResponse(privacy.DOWNLOAD_REFUSED, status_code=403)
     ok, _title, text, _name = await run_in_threadpool(admin_actions.briefing, current_user(request), kind)
     if not ok:
         return PlainTextResponse("That document could not be made just now.", status_code=404)
@@ -878,6 +921,9 @@ async def today_doc(request: Request):
     kind = data.get("kind", "")
     if kind not in dict(BRIEFINGS):
         return PlainTextResponse("Not found", status_code=404)
+    if privacy.active() and kind in privacy.MONEY_DOCS:  # these list amounts due
+        doc = {"title": dict(BRIEFINGS)[kind], "html": "<p>" + privacy.DOWNLOAD_REFUSED + "</p>", "kind": kind}
+        return page(request, "_doc.html", doc=doc, **doc_extras(kind))
     ok, title, text, _name = await run_in_threadpool(admin_actions.briefing, current_user(request), kind)
     doc = {"title": title, "html": render_md(text), "kind": kind} if ok else None
     return page(request, "_doc.html", doc=doc, **doc_extras(kind))
