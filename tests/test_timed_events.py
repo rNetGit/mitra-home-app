@@ -121,7 +121,7 @@ def test_the_records_add_form_adds_one(root, modules):
     ok, msg = re_.add(ADULT, ("people", "dates"), {"table": "events", "name": "Bad", "date": "2027-05-09",
                                                     "start_time": "20:00", "end_time": "19:00", "repeats": "once"})
     assert not ok and "after it starts" in msg
-    block = next(b for b in rd.blocks("people", "dates", D.date(2027, 1, 1)) if b["heading"].startswith("Family events"))
+    block = next(b for b in rd.blocks("people", "dates", D.date(2027, 1, 1)) if b["heading"].startswith("Events"))
     assert any("18:30-19:30" in r["cells"] for r in block["rows"])
 
 
@@ -136,5 +136,5 @@ def test_the_dates_page_offers_the_form(root, modules):
     c = TestClient(app_mod.app, base_url="http://127.0.0.1:8601", follow_redirects=False)
     c.post("/login", data={"name": "Ann", "pin": "1234"})
     page = c.get("/records", params={"domain": "people", "section": "dates"}).text
-    assert 'id="add-events"' in page and "Add a family event or a yearly date" in page and 'name="start_time"' in page
+    assert 'id="add-events"' in page and "Add an event or a yearly date" in page and 'name="start_time"' in page
     assert "#add-events" in c.get("/add").text, "the Family event tile"

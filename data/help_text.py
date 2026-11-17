@@ -93,7 +93,7 @@ HELP = {
                 "a weekly class or sport: Family > People > Classes and activities, [Add a weekly class or activity];",
                 "a holiday or a day off school: Family > People > Holidays and dates;",
                 "a family event at a time (dinner 8 to 8:30 PM, a party) or a yearly date: the same page, "
-                "[Add a family event or a yearly date], or tell Chat \"family dinner today 8 to 8:30 pm\";",
+                "[Add an event or a yearly date (general, family, business, volunteer ...)], or tell Chat \"family dinner today 8 to 8:30 pm\";",
                 "a doctor, school or pet date: Family > People > Life items, [Add an item];",
                 "a bill: drop it in the Inbox, or Money > Bills & plan > Bill list. Or just tell Chat.",
             ]),
@@ -817,7 +817,7 @@ GLOSSARY = [
     "items. Routine checkups (dental, physical, furnace filter): Checkups, marked done with a date.",
     "Holidays, festivals, days off school: Family > People > Holidays and dates; public holidays come from the country "
     "pack and are not stored. Family events with nobody in particular (dinner at 8, a party; with a start and end time "
-    "or all day) and yearly dates (anniversaries): the same page, Add a family event or a yearly date; a visit for one "
+    "or all day) and yearly dates (anniversaries): the same page, Add an event or a yearly date (general, family, business, volunteer ...), with a kind, who it is for and adults only; a visit for one "
     "person is an appointment.",
     "Mitra Wall: a paired tablet showing Today, Week / Month, Chores, Lists, Meals and a resting clock with photos; "
     "set up and the wall screen (clock, photos, night hours) in Settings > Phones > Mitra Wall; children's jobs, stars "

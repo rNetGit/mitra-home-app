@@ -11,6 +11,12 @@ from money import fmt as _fmt  # noqa: E402
 import paths  # noqa: E402
 
 
+def _event_title(r):
+    """An event's title with the person it is for and its kind: 'Soccer fundraiser (Sam) · Volunteer'."""
+    t = r["name"] + (f" ({r['member']})" if r["member"] else "")
+    return t + (f" · {r['category']}" if r["category"] and r["category"] != "General" else "")
+
+
 def _rows(con, sql, params=()):
     con.row_factory = sqlite3.Row
     try:
@@ -89,7 +95,7 @@ def collect_items(con, today, horizon, raw=False):
         d = _d(r["maturity_date"])
         if d and d >= today - dt.timedelta(days=3):
             add(d, "Investment", f"{r['name']} matures", "Reinvest or withdraw?", val, ("investments", r["id"]))
-    for r in _rows(con, "SELECT id, name, event_date, recurs_yearly, start_time, end_time FROM events"):
+    for r in _rows(con, "SELECT id, name, event_date, recurs_yearly, start_time, end_time, category, member FROM events"):
         base = _d(r["event_date"])
         if not base:
             continue
@@ -98,7 +104,7 @@ def collect_items(con, today, horizon, raw=False):
         detail = (r["start_time"] + (f"-{r['end_time']}" if r["end_time"] else "")) if at else ""
         if not r["recurs_yearly"]:
             if today <= base:
-                add(base, "Event", r["name"], detail, ref=("events", r["id"]), at=at)
+                add(base, "Event", _event_title(r), detail, ref=("events", r["id"]), at=at)
             continue
         for y in (today.year, today.year + 1):
             try:
@@ -106,7 +112,7 @@ def collect_items(con, today, horizon, raw=False):
             except ValueError:
                 d = dt.date(y, 2, 28)
             if today <= d:
-                add(d, "Event", r["name"], detail, ref=("events", r["id"]), at=at)
+                add(d, "Event", _event_title(r), detail, ref=("events", r["id"]), at=at)
     try:
         import benefits as _ben
         for b in _ben.status(con, today):

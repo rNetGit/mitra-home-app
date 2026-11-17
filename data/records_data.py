@@ -72,8 +72,9 @@ BLOCKS = {
          "below."),
         ("Waiting for review in the Inbox", "calendar_days", "SELECT id, day AS date, name, COALESCE(label, source) AS "
          "source FROM calendar_days WHERE status = 'proposed' ORDER BY day", "Nothing waits for review."),
-        ("Family events, anniversaries and yearly dates", "events", "SELECT id, name, event_date AS date, "
-         "COALESCE(start_time || COALESCE('-' || end_time, ''), '') AS time, CASE recurs_yearly "
+        ("Events, anniversaries and yearly dates", "events", "SELECT id, name, event_date AS date, "
+         "COALESCE(start_time || COALESCE('-' || end_time, ''), '') AS time, COALESCE(category, '') AS kind, "
+         "COALESCE(member, 'whole family') || CASE adults_only WHEN 1 THEN ' (adults only)' ELSE '' END AS \"for\", CASE recurs_yearly "
          "WHEN 1 THEN 'every year' ELSE 'once' END AS repeats FROM events ORDER BY substr(event_date, 6), start_time",
          "No family events or yearly dates yet. Add one below, or tell Chat, e.g. \"family dinner Friday 8 to 8:30 pm\".")],
     ("people", "profiles"): [

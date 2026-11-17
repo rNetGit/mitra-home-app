@@ -2,7 +2,7 @@
 {% block title %}Manage calendar · {{ brand }}{% endblock %}
 {% block main %}
 <header class="head"><div><h1>Manage calendar</h1>
-  <p class="sub">Family events, holidays and days off: add, change or remove them here. <a href="/calendar">Back to the calendar</a></p></div></header>
+  <p class="sub">Family events, holidays and days off: add, change or remove them here. <a href="/calendar">Back to the calendar</a>. Wrong festivals? <a href="/settings?group=household&amp;tab=traditions">Change your traditions</a>.</p></div></header>
 {% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
 <section class="card" id="cm-add">
   <h2>Add</h2>
@@ -25,7 +25,7 @@
   {% for r in items %}
   <div class="brow cm-row{{ ' dim' if r.past }}" data-source="{{ r.source }}">
     <div class="bmain"><b>{{ r.date.strftime('%a %b') }} {{ r.date.day }}</b> · {{ r.title }}
-      <small class="muted"><span class="kchip {{ kclass(r.kind) }}">{{ r.kind }}</span>{% if r.who %} · {{ r.who }}{% endif %}{% if r.repeats %} · every year{% endif %}{% if r.source == 'built in' %} · built in, read-only{% elif r.source == 'other' %} · read-only copy{% endif %}</small></div>
+      <small class="muted"><span class="kchip {{ kclass(r.kind) }}">{{ r.kind }}</span>{% if r.who %} · {{ r.who }}{% endif %}{% if r.repeats %} · every year{% endif %}{% if r.adults_only %} · adults only{% endif %}{% if r.source == 'built in' %} · built in, read-only{% elif r.source == 'other' %} · read-only copy{% endif %}</small></div>
     {% if r.editable %}
     <div class="optrow">
       <a class="btn alt" href="{{ link(r.ref) }}">Edit</a>

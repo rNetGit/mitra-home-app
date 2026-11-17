@@ -71,12 +71,46 @@ def appointment_add(actor, who, when, provider=None, purpose=None, followup=None
     return f"Added the appointment for {name} on {when}."
 
 
+EVENT_CATEGORIES = ("General", "Family", "Business", "Volunteer", "School", "Faith", "Social")
+
+
+def event_categories():
+    """The labels an event may carry: the built-in ones, then the ones this household added (family.json
+    event_categories)."""
+    extra = config.family().get("event_categories") or []
+    return list(EVENT_CATEGORIES) + [c for c in extra if isinstance(c, str) and c not in EVENT_CATEGORIES]
+
+
+def _event_category(value):
+    """'' -> None (no label); a built-in or earlier label keeps its spelling; a new label is checked and remembered."""
+    name = " ".join(str(value or "").split())
+    if not name:
+        return None
+    for c in event_categories():
+        if c.lower() == name.lower():
+            return c
+    name = _clean(v.text(30), name, "kind")
+    if not re.match(r"^[^\W\d_][\w .,'&/-]*$", name, re.UNICODE):
+        raise EditError("kind: use letters and numbers only")
+    with config.family_edit() as cfg:
+        have = list(cfg.get("event_categories") or [])
+        if len(have) >= 20:
+            raise EditError("kind: 20 own kinds is the most; use one of those")
+        cfg["event_categories"] = have + [name]
+    return name
+
+
+def _event_who(con, who):
+    return _member_name(con, who) if str(who or "").strip() else None
+
+
 @edits
-def event_add(actor, name, date, yearly=None, start_time=None, end_time=None):
+def event_add(actor, name, date, yearly=None, start_time=None, end_time=None, category=None, who=None, adults_only=False):
     """A date to remember (anniversary, tax filing, renewal) or a family event at a time of day (family dinner 8 to
     8:30 PM; nobody in particular: a visit for one person is appointment_add). yearly = it comes round every year on
     that day; left out = every year for a date, once for an event with a time. A date sent as 'YYYY-MM-DD HH:MM' gives
-    the start time when start_time is not given."""
+    the start time when start_time is not given. category = a label (General, Business, Volunteer ... or the household's
+    own); who = the person it is for (blank = the whole family); adults_only = children and the wall do not see it."""
     _adult(actor)
     name = _clean(v.text(80), name, "what")
     date = str(date if date is not None else "").strip()
@@ -95,8 +129,10 @@ def event_add(actor, name, date, yearly=None, start_time=None, end_time=None):
                           (name, date, start or "")).fetchone()
         if dup:
             raise EditError("already recorded: that date" + (" and time" if start else ""))
-        cur = con.execute("INSERT INTO events(name, event_date, recurs_yearly, start_time, end_time) VALUES (?,?,?,?,?)",
-                          (name, date, 1 if yearly else 0, start, end))
+        who = _event_who(con, who)
+        cur = con.execute("INSERT INTO events(name, event_date, recurs_yearly, start_time, end_time, category, member, adults_only) "
+                          "VALUES (?,?,?,?,?,?,?,?)",
+                          (name, date, 1 if yearly else 0, start, end, _event_category(category), who, 1 if adults_only else 0))
         _log(actor, "event_add", f"id={cur.lastrowid}")
     return f"Added {name} on {date}" + (f", {dates.time_span(start, end)}" if start else "") + "."
 
@@ -166,7 +202,7 @@ def appointment_drop(actor, appt_id):
 
 
 @edits
-def event_update(actor, event_id, name, date, yearly=None, start_time=None, end_time=None):
+def event_update(actor, event_id, name, date, yearly=None, start_time=None, end_time=None, category=None, who=None, adults_only=False):
     """Correct a family event or yearly date: same checks as event_add. yearly left out = every year for a date, once for
     an event with a time."""
     _adult(actor)
@@ -185,8 +221,10 @@ def event_update(actor, event_id, name, date, yearly=None, start_time=None, end_
         if con.execute("SELECT 1 FROM events WHERE lower(name)=lower(?) AND event_date=? AND COALESCE(start_time, '')=? AND id!=?",
                        (name, date, start or "", event_id)).fetchone():
             raise EditError("already recorded: that date" + (" and time" if start else ""))
-        con.execute("UPDATE events SET name=?, event_date=?, recurs_yearly=?, start_time=?, end_time=? WHERE id=?",
-                    (name, date, 1 if yearly else 0, start, end, event_id))
+        con.execute("UPDATE events SET name=?, event_date=?, recurs_yearly=?, start_time=?, end_time=?, category=?, member=?, "
+                    "adults_only=? WHERE id=?",
+                    (name, date, 1 if yearly else 0, start, end, _event_category(category), _event_who(con, who),
+                     1 if adults_only else 0, event_id))
         _log(actor, "event_update", f"id={event_id}")
     return f"Saved {name} on {date}" + (f", {dates.time_span(start, end)}" if start else "") + "."
 
@@ -575,7 +613,7 @@ RENAME_COLUMNS = (("saved_items", "owner"), ("life_items", "member"), ("appointm
                   ("recurring_items", "who"), ("seasonal_tasks", "who"), ("chat_links", "member"), ("chat_invites", "member"),
                   ("device_pairings", "member"), ("devices", "member"), ("policy_drivers", "name"),
                   ("mobile_bill_lines", "person"), ("mobile_bill_lines", "member"), ("activity_schedules", "member"),
-                  ("calendar_days", "member"), ("member_info", "member"), ("transactions", "cardholder"),
+                  ("calendar_days", "member"), ("events", "member"), ("member_info", "member"), ("transactions", "cardholder"),
                   ("accounts", "owner"), ("vehicles", "owner"), ("vehicles", "primary_driver"),
                   ("policy_vehicles", "assigned_driver"), ("lists", "created_by"), ("list_items", "assigned_to"),
                   ("list_items", "added_by"), ("list_items", "done_by"), ("chat_log", "member"), ("recipes", "added_by"),

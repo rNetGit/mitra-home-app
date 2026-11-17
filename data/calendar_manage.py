@@ -36,7 +36,7 @@ def parse_range(start, end, today):
 
 def rows(start, end, names=None, today=None):
     """Every calendar item between start and end (inclusive), by date: [{date, kind, title, ref, source, editable, who,
-    past, repeats}]; source says where it lives (see above). Filter the list with pick()."""
+    past, repeats, adults_only}]; source says where it lives (see above). Filter the list with pick()."""
     import db
     import paths
     import today_data
@@ -48,11 +48,12 @@ def rows(start, end, names=None, today=None):
             names = [n for n, _ in today_data.members_now()]
         except Exception:  # noqa: BLE001 (a missing database leaves the filter on names only)
             names = []
-    yearly = set()
+    yearly, adult = set(), set()
     try:
         con = db.connect(paths.DB, readonly=True)
         try:
             yearly = {r[0] for r in con.execute("SELECT id FROM events WHERE recurs_yearly=1")}
+            adult = {r[0] for r in con.execute("SELECT id FROM events WHERE adults_only=1")}
         finally:
             con.close()
     except Exception:  # noqa: BLE001
@@ -66,7 +67,8 @@ def rows(start, end, names=None, today=None):
             source = "editable" if table in EDITABLE else "record" if ref else "built in" if k in BUILT_IN else "other"
             out.append({"date": d, "kind": k, "title": t, "ref": ref, "source": source, "editable": source == "editable",
                         "who": today_data.person_of({"title": t, "kind": k}, names) or "", "past": d < today,
-                        "repeats": table == "events" and rid.isdigit() and int(rid) in yearly})
+                        "repeats": table == "events" and rid.isdigit() and int(rid) in yearly,
+                        "adults_only": table == "events" and rid.isdigit() and int(rid) in adult})
         d += dt.timedelta(days=1)
     return fold_shopping(out)
 

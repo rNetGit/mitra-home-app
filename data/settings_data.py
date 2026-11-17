@@ -205,6 +205,8 @@ def traditions():
 def traditions_save(user, d):
     if d.get("op") == "now":
         return aa.traditions_now(user)
+    if d.get("op") == "festivals_clear":
+        return aa.festivals_clear(user)
     return aa.traditions_set(user, str(d.get("names", ""))[:600], d.get("lookup") in ("1", "on", "yes"))
 
 

@@ -46,6 +46,10 @@ def test_traditions_are_checked_and_kept_only_in_family_json(root, modules, T):
 def test_the_look_up_sends_only_tradition_year_and_country(root, T, mock_llm):
     mock_llm.use("anthropic")
     mock_llm.set(json.dumps(DIWALI))
+    c0 = __import__("db").connect(root / "data" / "family.db")
+    c0.execute("DELETE FROM calendar_days WHERE source='pack'")
+    c0.commit()
+    c0.close()
     n, msg = T.fetch(2027, "Hindu (Telugu)")
     assert n == 3, msg
     sent = json.dumps(mock_llm.seen[-1]["body"])
@@ -67,16 +71,19 @@ def test_the_yearly_step_asks_once_and_next_year_from_october(root, T, mock_llm)
     mock_llm.use("anthropic")
     con = __import__("db").connect(root / "data" / "family.db")
     try:
-        assert T.due(D.date(2027, 9, 30), con) == [("Christian", 2027)], "Hindu 2027 was asked already"
-        assert ("Christian", 2028) in T.due(D.date(2027, 10, 1), con) and ("Hindu (Telugu)", 2028) in T.due(D.date(2027, 10, 1), con)
+        assert T.due(D.date(2027, 9, 30), con) == [], "Hindu 2027 was asked already; Christian is worked out here, never asked"
+        assert T.due(D.date(2027, 10, 1), con) == [("Hindu (Telugu)", 2028)]
     finally:
         con.close()
     mock_llm.set(json.dumps({"days": []}))
-    out = T.auto(D.date(2027, 9, 30))
-    assert out and "No new dates for Christian 2027" in out[0]
+    out = T.auto(D.date(2027, 10, 1))
+    assert out and "No new dates for Hindu (Telugu) 2028" in out[0]
     con = __import__("db").connect(root / "data" / "family.db")
     try:
-        assert T.due(D.date(2027, 9, 30), con) == [], "an empty answer is remembered: not asked every morning"
+        assert T.due(D.date(2027, 10, 1), con) == [], "an empty answer is remembered: not asked every morning"
+        assert con.execute("SELECT COUNT(*) FROM calendar_days WHERE source='pack' AND label='Christian'").fetchone()[0] >= 7
+        con.execute("DELETE FROM calendar_days WHERE source='pack'")  # keep the next test on the asked-for days only
+        con.commit()
     finally:
         con.close()
 
@@ -175,3 +182,62 @@ def test_the_settings_card_saves_traditions(root, modules):
     assert r.status_code in (200, 204, 303), r.text[:300]
     assert read_family(root)["traditions"] == ["Jewish"]
     sessions.clear()
+
+
+def test_built_in_days_are_right():
+    import sys
+    sys.path.insert(0, str(__import__("pathlib").Path(__file__).resolve().parents[1] / "data"))
+    import traditions_builtin as B
+    pick = lambda t, y: {n.split(" (")[0]: d for d, _e, _k, n in B.rows(t, y)}  # noqa: E731
+    assert [str(B.easter(y)) for y in (2026, 2027, 2028)] == ["2026-04-05", "2027-03-28", "2028-04-16"]
+    j = pick("Jewish", 2026)
+    assert (j["Rosh Hashanah"], j["Yom Kippur"], j["Passover"], j["Purim"], j["Shavuot"], j["Hanukkah"]) ==         ("2026-09-12", "2026-09-21", "2026-04-02", "2026-03-03", "2026-05-22", "2026-12-05")
+    assert pick("Jewish", 2027)["Purim"] == "2027-03-23" and pick("Jewish", 2028)["Rosh Hashanah"] == "2028-09-21"
+    m = pick("Muslim", 2026)  # the moon-sighting date can differ by a day
+    for name, want in (("Eid al-Fitr", "2026-03-20"), ("Eid al-Adha", "2026-05-27")):
+        assert abs((D.date.fromisoformat(m[name]) - D.date.fromisoformat(want)).days) <= 1, (name, m[name])
+    assert all(n.endswith("(approx.)") for _d, _e, _k, n in B.rows("Muslim", 2026))
+    assert pick("Christian", 2026)["Good Friday"] == "2026-04-03" and pick("Lunar New Year", 2027)["Lunar New Year"] == "2027-02-06"
+    assert B.rows("Hindu (Telugu)", 2026) and B.rows("Buddhist", 2026) == [] and not B.covers("Hindu") and B.covers("Muslim")
+
+
+def test_taking_a_tradition_off_drops_its_days_and_the_starter_list_can_go(root, modules, T):
+    aa, paths = modules("admin_actions"), modules("paths")
+    import sqlite3
+    T.save(["Hindu", "Muslim"], False)
+    con = sqlite3.connect(paths.DB)
+    con.execute("DELETE FROM calendar_days WHERE source='tradition'")
+    for day, name, label, st in (("2027-11-01", "Diwali", "Hindu", "active"), ("2027-11-02", "Dhanteras", "Hindu", "proposed"),
+                                 ("2027-03-10", "Eid al-Fitr", "Muslim", "active")):
+        con.execute("INSERT INTO calendar_days(day, kind, name, source, label, status) VALUES (?, 'festival', ?, 'tradition', ?, ?)",
+                    (day, name, label, st))
+    con.commit()
+    ok, msg = aa.traditions_set(ADULT, "Muslim", False)
+    assert ok and "2 days from Hindu" in msg, msg
+    rows = dict(con.execute("SELECT name, status FROM calendar_days WHERE source='tradition'").fetchall())
+    assert rows == {"Eid al-Fitr": "active"}
+    con.close()
+    f = paths.CONFIG / "festivals.json"
+    f.write_text("[]", encoding="utf-8")
+    assert aa.festivals_clear(KID)[0] is False and f.exists()
+    ok, msg = aa.festivals_clear(ADULT)
+    assert ok and not f.exists() and (paths.CONFIG / "festivals.json.removed").exists()
+
+
+def test_adding_a_tradition_brings_its_days_at_once_and_a_re_add_starts_clean(root, modules, T):
+    aa, paths = modules("admin_actions"), modules("paths")
+    import sqlite3
+    T.save([], False)
+    con = sqlite3.connect(paths.DB)
+    con.execute("DELETE FROM calendar_days WHERE source IN ('tradition', 'pack')")
+    con.commit()
+    ok, msg = aa.traditions_set(ADULT, "Muslim", False)
+    assert ok and "added for Muslim" in msg, msg
+    n = con.execute("SELECT COUNT(*) FROM calendar_days WHERE source='pack' AND label='Muslim' AND status='active'").fetchone()[0]
+    assert n >= 5
+    ok, msg = aa.traditions_set(ADULT, "", False)
+    assert ok and f"{n} days from Muslim taken off" in msg, msg
+    assert con.execute("SELECT COUNT(*) FROM calendar_days WHERE label='Muslim'").fetchone()[0] == 0
+    ok, msg = aa.traditions_set(ADULT, "Muslim", False)
+    assert con.execute("SELECT COUNT(*) FROM calendar_days WHERE label='Muslim' AND status='active'").fetchone()[0] == n
+    con.close()

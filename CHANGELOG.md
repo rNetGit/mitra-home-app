@@ -3,6 +3,13 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
+## Unreleased
+Migration 072 (events: kind, person, adults only).
+- Changed: **Add an event says what it is for.** Records > People > Holidays and dates > "Add an event or a yearly date" now asks for a **Kind** (General, Family, Business, Volunteer, School, Faith, Social, none, or type your own: it is kept for next time), **For** (the whole family or one person) and **Adults only** (hidden from a child's page, the Mitra Wall and a child's phone). The Calendar and Today show the person and the kind ("Food drive (Alex) · Volunteer"); on the wall an event for one person sits in that person's lane. Events added before stay as they were: whole family, no kind, everyone sees them. The phone's quick-add and Chat can send the same three fields.
+- New: **festival days worked out on the PC, no AI needed.** Ticking Christian (Ash Wednesday to Pentecost, Christmas), Muslim (Ramadan, both Eids, Islamic New Year, Ashura, Mawlid; marked "(approx.)" because the moon-sighting day can differ), Jewish (Rosh Hashanah to Hanukkah, Purim, Passover, Shavuot) or Lunar New Year adds that year's days at once, and next year's from October; Hindu and Sikh get their biggest days for 2026-2028 and the AI look-up adds the rest. Other traditions still need the AI look-up. The look-up for a tradition you just added now runs when you save, not the next morning.
+- Fixed: **a tradition taken off Settings > Household profile > Traditions and holidays now takes its days off the calendar** (waiting in the Inbox or already added); the card says how many, and adding it back starts clean.
+- Changed: the **Festival calendar** option says what it is (a starter list of Hindu and Telugu festivals for 2026-27), and Traditions and holidays has **Take the starter festival list off** for a family whose festivals are different (the file is renamed, not deleted). Manage calendar links to the traditions list.
+
 ## 0.151.0
 No migration.
 - Changed: **the setup asks for household members in fields, not one comma-separated box.** One row per person with a name, a role (adult / child / pet), a birthday month and day and an optional birth year. [Add another person] adds a row, [Remove] takes one away, and a wrong row gets a plain message naming the person ("Person 2 (Sam): that birthday is not a real date."). What you typed in the other boxes stays when a row is added or removed. A list can still be pasted ("Alex, adult, March 14 1980") under "Rather paste a list?" and becomes rows. The draft (`config/setup_draft.json`) never holds a PIN.

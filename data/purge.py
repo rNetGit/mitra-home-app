@@ -45,7 +45,7 @@ OWNED = [("saved_items", "owner", "audience='private'"), ("life_items", "member"
          ("seasonal_tasks", "who"), ("chat_links", "member"), ("chat_invites", "member"),
          ("device_pairings", "member"), ("policy_drivers", "name"),
          ("mobile_bill_lines", "person"), ("mobile_bill_lines", "member"), ("activity_schedules", "member"),
-         ("calendar_days", "member"), ("member_info", "member"), ("wallet_cards", "member"), ("vaccinations", "member"), ("routines", "member"),
+         ("calendar_days", "member"), ("events", "member"), ("member_info", "member"), ("wallet_cards", "member"), ("vaccinations", "member"), ("routines", "member"),
          ("reward_claims", "member"), ("rewards", "member"), ("members", "name")]
 # (table, column): the name is cleared, the row stays (shared money data, shared lists)
 SHARED = [("transactions", "cardholder"), ("accounts", "owner"), ("vehicles", "owner"), ("vehicles", "primary_driver"),

@@ -55,7 +55,7 @@ EDIT_PARTS = {("people", "people"), ("people", "life"), ("people", "classes"), (
               ("vehicles", "vehicles"), ("papers", "ids"), ("home", "lists"), ("home", "meals")}
 ADD_TITLE = {"life_items": "Add an item", "activity_schedules": "Add a weekly class or activity",
              "calendar_days": "Add a holiday, festival or day off school",
-             "events": "Add a family event or a yearly date", "members": "Add a person or pet", "member_info": "Add a fact (contact, allergy, doctor, school)", "vaccinations": "Add a vaccination", "home_contacts": "Add a plumber, furnace company, garage ...", "subscriptions": "Add a subscription",
+             "events": "Add an event or a yearly date (general, family, business, volunteer ...)", "members": "Add a person or pet", "member_info": "Add a fact (contact, allergy, doctor, school)", "vaccinations": "Add a vaccination", "home_contacts": "Add a plumber, furnace company, garage ...", "subscriptions": "Add a subscription",
              "receipts": "Add a receipt by hand", "budget": "Set or remove a budget line", "loans": "Add a loan",
              "savings_goals": "Add a savings goal", "home_office_profile": "Set up your home office",
              "accounts": "Add an account", "home_assets": "Add a thing to the inventory", "vehicles": "Add a vehicle",
@@ -75,7 +75,7 @@ FIELDS = {"life_items": ("domain", "title", "who", "provider", "due", "every", "
           "activity_schedules": ("title", "who", "provider", "start_time", "end_time", "term_start", "term_end", "school_days",
                                  "skip") + tuple("d_" + d.lower() for d in activities.DAYS),
           "calendar_days": ("day", "end", "name", "kind", "who"),
-          "events": ("name", "date", "start_time", "end_time", "repeats"),
+          "events": ("name", "date", "start_time", "end_time", "repeats", "category", "category_new", "who", "adults_only"),
           "appointments": ("who", "date", "time", "provider", "purpose", "followup"),
           "member_info": ("who", "category", "label", "value"),
           "vaccinations": ("who", "vaccine", "given", "next_due", "provider", "notes"),
@@ -267,7 +267,7 @@ def choices():
             "week_end": (dates.today() + dt.timedelta(days=6)).isoformat(),
             "weekdays": [(d.lower(), activities.SHORT[d]) for d in activities.DAYS],
             "info_categories": list(mi.CATEGORIES), "trades": list(hc.TRADES), "contact_names": hc.names(), "info_labels": {c: list(l) for c, l in mi.LABELS.items()},
-            "day_kinds": [("holiday", "holiday"), ("festival", "festival"), ("closure", "no school"),
+            "event_categories": ea.event_categories(), "day_kinds": [("holiday", "holiday"), ("festival", "festival"), ("closure", "no school"),
                           ("early", "early dismissal")]}
 
 
@@ -302,9 +302,10 @@ def values(table, rid):
         return r and {"name": r["name"], "day": r["day"], "end": r["end_day"] or "", "kind": r["kind"],
                       "who": r["member"] or HOUSEHOLD}
     if table == "events":
-        r = _one("SELECT name, event_date, recurs_yearly, start_time, end_time FROM events WHERE id=?", (rid,))
+        r = _one("SELECT name, event_date, recurs_yearly, start_time, end_time, category, member, adults_only FROM events WHERE id=?", (rid,))
         return r and {"name": r["name"], "date": r["event_date"], "start_time": r["start_time"] or "",
-                      "end_time": r["end_time"] or "", "repeats": "yearly" if r["recurs_yearly"] else "once"}
+                      "end_time": r["end_time"] or "", "repeats": "yearly" if r["recurs_yearly"] else "once",
+                      "category": r["category"] or "", "who": r["member"] or HOUSEHOLD, "adults_only": bool(r["adults_only"])}
     if table == "appointments":
         r = _one("SELECT person, provider, purpose, appt_datetime, followup_due FROM appointments WHERE id=?", (rid,))
         return r and {"who": r["person"] or "", "date": str(r["appt_datetime"])[:10], "time": str(r["appt_datetime"])[11:16],
@@ -466,6 +467,12 @@ def _who(s):
     return None if s in ("", HOUSEHOLD) else s
 
 
+def _event_kind(f):
+    """The event's label: the typed own kind when the pick says 'Other', else the picked label (blank = none)."""
+    pick = str(f.get("category") or "").strip()
+    return str(f.get("category_new") or "").strip() if pick == "__new" else pick
+
+
 def _activity_form(f):
     """activity_add / activity_update arguments from the class form (the day boxes become 'MO,WE')."""
     days = ",".join(d for d in activities.DAYS if f.get("d_" + d.lower()) in ("1", "on", "yes"))
@@ -510,7 +517,8 @@ def edit(user, table, op, rid, data):
     if table == "events":
         if op == "save":
             ok, msg = ea.event_update(user, rid, f["name"], f["date"].strip(), yearly=f["repeats"] == "yearly",
-                                      start_time=f["start_time"].strip() or None, end_time=f["end_time"].strip() or None)
+                                      start_time=f["start_time"].strip() or None, end_time=f["end_time"].strip() or None,
+                                      category=_event_kind(f), who=_who(f["who"]), adults_only=f["adults_only"] in ("1", "on", "yes"))
             return ok, msg, False
         if data.get("sure") not in ("1", "on", "yes"):
             return False, "Tick 'Yes, remove this event' first.", False
@@ -705,7 +713,8 @@ def add(user, part, data):
                                    _who(f["who"]))
     if table == "events":
         return ea.event_add(user, f["name"], f["date"].strip(), yearly=f["repeats"] == "yearly",
-                            start_time=f["start_time"].strip() or None, end_time=f["end_time"].strip() or None)
+                            start_time=f["start_time"].strip() or None, end_time=f["end_time"].strip() or None,
+                            category=_event_kind(f), who=_who(f["who"]), adults_only=f["adults_only"] in ("1", "on", "yes"))
     if table == "home_contacts":
         return ea.home_contact_add(user, **f)
     if table == "vaccinations":

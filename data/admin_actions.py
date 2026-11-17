@@ -10,6 +10,7 @@ import datetime as dt
 import json
 import os
 import pathlib
+import sqlite3
 import subprocess
 import sys
 import time
@@ -19,6 +20,7 @@ ROOT = HERE.parent
 sys.path.insert(0, str(HERE))
 import paths  # noqa: E402
 import config  # noqa: E402
+import db  # noqa: E402
 import brand  # noqa: E402
 
 CONFIG = paths.CONFIG / "family.json"
@@ -346,7 +348,7 @@ def pin_set(user, name, pin, again, current=""):
 
 # ---------- running on its own, optional packs, tax papers (first-run gaps the wizard used to cover)
 PACK_LABELS = {  # onboard.PACKS key -> (title, plain-language note)
-    "festivals": ("Festival calendar", "Festival dates on Today and the Calendar. A starter list is added for you to edit."),
+    "festivals": ("Festival calendar (starter list)", "Adds a starter list of Hindu and Telugu festivals for 2026-27 (Navratri, Diwali ...) for you to edit or remove. Other traditions: use Traditions and holidays instead."),
     "contracts": ("Work contracts", "End-date alerts, timesheet hours, hybrid schedule and monthly invoices."),
     "amazon": ("Amazon orders", "Match Amazon order history to card charges."),
     "shopping": ("Shopping lists", "Things to buy by a target date."),
@@ -581,19 +583,61 @@ def traditions_set(user, text, lookup):
         return False, "Only adults can change this."
     import traditions as T
     names = [x.strip() for x in str(text or "").replace(",", "\n").splitlines() if x.strip()]
+    before = T.get()["traditions"]
     try:
         clean = T.save(names, lookup)
     except T.TraditionError as e:
         return False, str(e)
     _audit(user, "traditions_set", f"n={len(clean)} lookup={bool(lookup) and bool(clean)}")
+    gone = [t for t in before if t.lower() not in {c.lower() for c in clean}]
+    cleared = _drop_tradition_days(gone) if gone else 0
+    note = (f" {cleared} day{'s' if cleared != 1 else ''} from " + ", ".join(gone) + " taken off the calendar.") if cleared else ""
     if not clean:
-        return True, "Saved: no traditions."
-    msg = "Saved: " + ", ".join(clean) + "."
+        return True, "Saved: no traditions." + note
+    msg = "Saved: " + ", ".join(clean) + "." + note
+    added = [t for t in clean if t.lower() not in {b.lower() for b in before}]
+    if added:  # a tradition just added: its days now, not at tomorrow's task
+        msg += " " + " ".join(T.sync(added))
     if lookup:
         why = T.ai_ready()
-        msg += (f" The yearly look-up waits until {why}." if why else
-                " Their dates are looked up with your AI the next morning and wait in the Inbox for you.")
+        if why:
+            msg += f" The yearly look-up waits until {why}."
+        elif not added:
+            msg += " Their dates are looked up with your AI the next morning and wait in the Inbox for you."
+        else:
+            msg += " Anything the AI found waits in the Inbox for you."
     return True, msg
+
+
+def _drop_tradition_days(names):
+    """A tradition taken off the list: its days (looked up or worked out, waiting or added) are removed, so adding the
+    tradition back later starts clean. -> how many."""
+    import traditions as T
+    con = db.connect(paths.DB, timeout=10)
+    try:
+        return T.remove_days(names, con)
+    except sqlite3.Error as e:
+        import log
+        log.get("web").warning("traditions: could not remove days: %s", e)
+        return 0
+    finally:
+        con.close()
+
+
+def festivals_clear(user):
+    """Settings > Traditions: take the starter festival list off (config/festivals.json, the Hindu / Telugu list the
+    Festival calendar pack copies). The file is renamed festivals.json.removed, never deleted. -> (ok, message)."""
+    if not _is_adult(user):
+        return False, "Only adults can change this."
+    src = paths.CONFIG / "festivals.json"
+    if not src.exists():
+        return True, "There is no festival list to remove."
+    dst = paths.CONFIG / "festivals.json.removed"
+    if dst.exists():
+        dst.unlink()
+    src.rename(dst)
+    _audit(user, "festivals_clear", "festivals.json -> .removed")
+    return True, "The starter festival list is off the calendar. Add your own days under Records > People > Holidays and dates."
 
 
 def traditions_now(user):

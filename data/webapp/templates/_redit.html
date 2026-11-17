@@ -50,6 +50,10 @@
 <h3>Change it</h3>
 <form class="nform" hx-post="{{ edit_url|default('/records/edit') }}" hx-target="{{ edit_target|default('#redit') }}" hx-swap="innerHTML" hx-vals='{{ dict(base, op="save")|tojson }}'>
   <label>What<input name="name" maxlength="80" required value="{{ v.name }}"></label>
+  <label>Kind<select name="category"><option value="">no kind</option>{% for c in ch.event_categories %}<option value="{{ c }}" {{ 'selected' if v.category == c }}>{{ c }}</option>{% endfor %}<option value="__new">Other: type my own ...</option></select></label>
+  <label>Your own kind (if "Other")<input name="category_new" maxlength="30" value=""></label>
+  <label>For<select name="who"><option value="household">the whole family</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }} only</option>{% endfor %}</select></label>
+  <label class="check"><input type="checkbox" name="adults_only" value="1" {{ 'checked' if v.adults_only }}> Adults only</label>
   <label>Date<input name="date" type="date" min="1990-01-01" max="2100-12-31" required value="{{ v.date }}"></label>
   <label>Starts (blank = all day)<input name="start_time" type="time" value="{{ v.start_time }}"></label>
   <label>Ends<input name="end_time" type="time" value="{{ v.end_time }}"></label>

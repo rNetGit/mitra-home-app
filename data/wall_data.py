@@ -198,7 +198,8 @@ def _collect(con, start, end, names, today=None, todo=False):
             allday.append(item)
         else:
             timed.append({**item, "start": t, "end": e if e and e > t else t + DEFAULT_MINUTES})
-    for name, when, yearly, t0, t1 in _rows(con, "SELECT name, event_date, recurs_yearly, start_time, end_time FROM events"):
+    for name, when, yearly, t0, t1, member in _rows(con, "SELECT name, event_date, recurs_yearly, start_time, end_time, member FROM events "
+                                                     "WHERE adults_only = 0"):
         base = _d(when)
         t, e = _hm(t0), _hm(t1)
         if not base:
@@ -211,7 +212,7 @@ def _collect(con, start, end, names, today=None, todo=False):
             except ValueError:
                 d = dt.date(y, 2, 28)
             if start <= d <= end:
-                who = _who_in(name, names)
+                who = member if member in names else _who_in(name, names)
                 item = {"date": d, "title": name, "who": [who] if who else [], "kind": "Event"}
                 if t is None:
                     allday.append(item)

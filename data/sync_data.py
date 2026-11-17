@@ -128,9 +128,11 @@ SOURCES = {
                       "limited": ("id", "person", "provider", "purpose", "appt_datetime"),
                       "wall": ("id", "person", "purpose", "appt_datetime")},
                      lambda r, d: _adult(d) or _wall(d) or _mine(d, r["person"]), None),
-    "events": ("events", "calendar", {"adult": ("id", "name", "event_date", "recurs_yearly", "start_time", "end_time"),
-                                      "wall": ("id", "name", "event_date", "recurs_yearly", "start_time", "end_time")},
-               lambda r, d: True, None),
+    "events": ("events", "calendar", {"adult": ("id", "name", "event_date", "recurs_yearly", "start_time", "end_time",
+                                                  "category", "member", "adults_only"),
+                                      "wall": ("id", "name", "event_date", "recurs_yearly", "start_time", "end_time",
+                                               "category", "member")},
+               lambda r, d: _adult(d) or not r["adults_only"], None),
     "activities": ("activity_schedules", "calendar",
                    {"adult": ("id", "member", "title", "provider", "weekdays", "start_time", "end_time", "term_start",
                               "term_end", "skip_dates", "school_days", "status"),
@@ -307,7 +309,7 @@ def _fetch(con, name, dev, ids):
     """{rowid: row dict (only the role's columns) or None (gone or not for this phone)} for these rowids."""
     table, _, cols, _, _ = SOURCES[name]
     want = _columns(con, table, cols[dev["role"]])
-    extra = [c for c in ("status", "audience", "owner", "member", "person", "domain", "list_id")
+    extra = [c for c in ("status", "audience", "owner", "member", "person", "domain", "list_id", "adults_only")
              if c not in want and c in {r[1] for r in con.execute(f"PRAGMA table_info({table})")}]
     out, seen = {i: None for i in ids}, {}
     ids = list(ids)
@@ -504,7 +506,8 @@ def _apply(actor, op, o):
     if op == "event_add":  # a family event, at a time of day when the phone sends one (events.start_time / end_time)
         return ea.event_add(actor, _str(o.get("name"), 200) or "", _str(o.get("date"), 20) or "",
                             _bool(o.get("yearly"), False), start_time=_str(o.get("time"), 10),
-                            end_time=_str(o.get("end"), 10))
+                            end_time=_str(o.get("end"), 10), category=_str(o.get("category"), 30),
+                            who=_str(o.get("who"), 80), adults_only=_bool(o.get("adults_only"), False))
     if op == "appointment_add":
         return ea.appointment_add(actor, _str(o.get("who"), 80) or "", _str(o.get("when"), 30) or "",
                                   _str(o.get("provider"), 200), _str(o.get("purpose"), 200))
