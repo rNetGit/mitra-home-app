@@ -74,6 +74,7 @@ from edit_family import (  # noqa: E402,F401
     calendar_day_update,
     calendar_days_decide,
     event_add,
+    event_categories,
     event_drop,
     event_move,
     event_update,

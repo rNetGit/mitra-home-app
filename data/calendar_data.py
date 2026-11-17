@@ -62,12 +62,16 @@ def load_events(y0, y1, refs=None):
             add(d, "Bill", f"{v or n} {money(a)}" + (" ✓" if s == "paid" else ""), f"bills:{i}")
         for i, _p, pr, pu, d in _rows(con, "SELECT id, person, provider, purpose, appt_datetime FROM appointments"):
             add(d, "Appointment", f"{pu or 'Appt'} – {pr or ''} {str(d)[11:16]}".strip(), f"appointments:{i}")
-        for i, n, d, rec, t0, t1 in _rows(con, "SELECT id, name, event_date, recurs_yearly, start_time, end_time FROM events"):
+        for i, n, d, rec, t0, t1, cat, who in _rows(con, "SELECT id, name, event_date, recurs_yearly, start_time, end_time, category, member FROM events"):
             try:
                 base = dt.date.fromisoformat(str(d)[:10])
             except ValueError:
                 continue
             n = f"{n} {dates.time_span(t0, t1)}" if t0 else n  # a family event at a time: 'Family dinner 8:00–8:30 PM'
+            if who:
+                n += f" ({who})"
+            if cat and cat != "General":
+                n += f" · {cat}"
             for y in range(y0, y1 + 1):
                 if rec or y == base.year:
                     try:

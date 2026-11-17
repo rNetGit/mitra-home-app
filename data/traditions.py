@@ -147,6 +147,9 @@ def fetch(year, tradition, con=None):
     n = 0
     try:
         for day, end, kind, name in days:
+            if con.execute("SELECT 1 FROM calendar_days WHERE day=? AND lower(name)=lower(?) AND status!='dropped'",
+                           (day, name)).fetchone():
+                continue  # this PC already has that day (built in, or added by hand)
             n += con.execute("INSERT OR IGNORE INTO calendar_days(day, end_day, kind, name, source, label, status) "
                              "VALUES (?,?,?,?, 'tradition', ?, 'proposed')", (day, end, kind, name, tradition)).rowcount
         con.commit()
@@ -163,7 +166,56 @@ def due(today, con):
     if not st["lookup"]:
         return []
     years = [today.year] + ([today.year + 1] if (today.month, today.day) >= NEXT_YEAR_FROM else [])
-    return [(t, y) for t in st["traditions"] for y in years if not asked(con, t, y)]
+    import traditions_builtin as B
+    return [(t, y) for t in st["traditions"] if not B.covers(t) for y in years if not asked(con, t, y)]
+
+
+def years_due(today):
+    return [today.year] + ([today.year + 1] if (today.month, today.day) >= NEXT_YEAR_FROM else [])
+
+
+def apply_builtin(tradition, year, con):
+    """Add the days this PC can work out for a tradition (traditions_builtin.py) as active days of source 'pack', label =
+    the tradition. A day already there is left alone. -> how many were added."""
+    import traditions_builtin as B
+    n = 0
+    for day, end, kind, name in B.rows(tradition, year):
+        n += con.execute("INSERT OR IGNORE INTO calendar_days(day, end_day, kind, name, source, label, status) "
+                         "VALUES (?,?,?,?, 'pack', ?, 'active')", (day, end, kind, name, tradition)).rowcount
+    con.commit()
+    return n
+
+
+def remove_days(names, con):
+    """Take these traditions' days off the calendar (waiting, added or dropped, and the 'asked already' notes), so adding
+    one back later starts clean. -> how many real days were removed (not the notes)."""
+    n = 0
+    for t in names:
+        n += con.execute("DELETE FROM calendar_days WHERE source IN ('tradition', 'pack') AND lower(label)=lower(?) "
+                         "AND name != '(none found)'", (t,)).rowcount
+        con.execute("DELETE FROM calendar_days WHERE source='tradition' AND lower(label)=lower(?) AND name='(none found)'", (t,))
+    con.commit()
+    return n
+
+
+def sync(names, today=None, ask=True):
+    """For traditions just added (or at the daily task): the built-in days now, then, when the yearly look-up is on and an
+    AI is ready, the AI's days for what the built-in list does not cover (they wait in the Inbox). -> [messages]."""
+    today = today or dates.today()
+    msgs = []
+    con = db.connect(paths.DB, timeout=10)
+    try:
+        for t in names:
+            n = sum(apply_builtin(t, y, con) for y in years_due(today))
+            if n:
+                msgs.append(f"{n} day{'s' if n != 1 else ''} added for {t}.")
+        if ask and get()["lookup"] and not ai_ready():
+            for t, y in [x for x in due(today, con) if x[0] in names]:
+                n, msg = fetch(y, t, con)
+                msgs.append(msg)
+    finally:
+        con.close()
+    return msgs
 
 
 def auto(today=None):
@@ -171,6 +223,9 @@ def auto(today=None):
     today = today or dates.today()
     con = db.connect(paths.DB, timeout=10)
     try:
+        for t in get()["traditions"]:  # the days this PC works out itself: no AI, no switch needed
+            for y in years_due(today):
+                apply_builtin(t, y, con)
         todo = due(today, con)
         if not todo:
             return []

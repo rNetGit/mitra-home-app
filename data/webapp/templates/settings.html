@@ -106,8 +106,13 @@
     {% if trad.ai %}<p class="muted small">The look-up needs an AI: {{ trad.ai }}.</p>{% endif %}
     <button class="btn" type="submit">Save</button>
   </form>
+  <p class="muted small">Christian, Muslim, Jewish and Lunar New Year days (and the biggest Hindu and Sikh days) are worked out on this PC and added the moment you save: no AI needed. Muslim dates are marked (approx.): the moon-sighting day can differ, so confirm locally. Taking a tradition off this list takes its days off the calendar; adding it back brings them again.</p>
   {% if trad.lookup and not trad.ai %}
   <form class="nform" hx-post="/settings/traditions" hx-vals='{"op": "now"}'><button class="btn alt" type="submit">Look up the dates now</button></form>
+  {% endif %}
+  {% if trad.festivals_file %}
+  <p class="muted small">A starter festival list (Hindu and Telugu festivals for 2026-27) is on the calendar from the Festival calendar option. If it is not your family's, take it off here.</p>
+  <form class="nform" hx-post="/settings/traditions" hx-vals='{"op": "festivals_clear"}'><button class="btn alt" type="submit">Take the starter festival list off</button></form>
   {% endif %}
 </section>
 </div>

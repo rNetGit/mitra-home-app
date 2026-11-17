@@ -85,8 +85,10 @@ TABLES = {
         means="Each time a routine checkup or home task was done, with the provider.",
         date="done_date", links={"item_id": "recurring_items.id"}),
     "events": dict(
-        means="Family dates and events with nobody in particular: anniversaries, tax filing, passport renewal (every "
-              "year) and one-off family events, some at a time of day (family dinner 20:00-20:30).",
+        means="Dates and events: anniversaries, tax filing, passport renewal (every year) and one-off events, some at a "
+              "time of day (family dinner 20:00-20:30). member = who it is for (NULL = the whole family); category = a "
+              "label (General, Family, Business, Volunteer ... or the household's own); adults_only 1 = hidden from "
+              "children and the wall.",
         date="event_date (the next or first occurrence; recurs_yearly = 1 means every year on that month and day); "
              "start_time / end_time HH:MM 24-hour, NULL start_time = all day",
         notes="A visit for one person is in appointments, a class every week in activity_schedules."),
