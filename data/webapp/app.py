@@ -448,7 +448,7 @@ def logout(request: Request):
 
 @app.post("/privacy")
 async def privacy_toggle(request: Request):
-    """The user menu's "Easy access" switch: this sign-in only (the household default is in Settings). Adults only; the
+    """The Money page's "Easy access" switch: this sign-in only (the household default is in Settings). Adults only; the
     guard already checked the CSRF token. `on` = 1 turns privacy on, 0 off."""
     s, user = session_of(request), current_user(request)
     if s is None or user is None or s.get("open"):

@@ -4,7 +4,8 @@
 {# Money (PLAN_money_books slice 5): tabs from finance_data.tabs(), the chips of the open tab under them. #}
 {% set sub = {'books': 'Every account, same as the bank.', 'all': 'All accounts as one: what happened by day, week or month.', 'month': today.strftime('%B %Y') ~ ': where the money went, category by category.', 'homecosts': 'What the house costs to run: rent or mortgage, upkeep, utilities, home insurance.', 'statement': 'One month as a home income statement: income, expenses by kind, and what moved.', 'spending': 'Spending by category: this month, last month and the same month a year ago.', 'paid': 'Bills paid this month next to last month, per payee.', 'regular': 'What keeps coming every month: home, loans and insurance, subscriptions.'} %}
 {% set outlook = ('spending', 'paid', 'regular') %}
-<header class="head"><div><h1>Money</h1><p class="sub">{% for k, lbl, ps in mtabs if k == mtab %}{{ sub[part] if part in sub else (lbl ~ (' · ' ~ ptitle if ps|length > 1 else '')) }}{% endfor %}</p></div></header>
+<header class="head"><div><h1>Money</h1><p class="sub">{% for k, lbl, ps in mtabs if k == mtab %}{{ sub[part] if part in sub else (lbl ~ (' · ' ~ ptitle if ps|length > 1 else '')) }}{% endfor %}</p></div>
+{% if can_private %}<button type="button" class="btn alt sm privtoggle" hx-post="/privacy" hx-vals='{"on": "{{ 0 if private else 1 }}"}' title="Privacy mode hides money totals, balances and birthdays"{% if private %} aria-pressed="true"{% endif %}><span aria-hidden="true">{{ '&#128274;' if private else '&#128065;' }}</span> {{ 'Easy access: show figures' if private else 'Privacy mode: hide figures' }}</button>{% endif %}</header>
 <nav class="pchips mtabs" aria-label="Money">{% for k, lbl, ps in mtabs %}
   <a href="{{ furl(ps[0][0]) }}" class="pchip{{ ' on' if k == mtab }}"{% if k == mtab %} aria-current="true"{% endif %}>{{ lbl }}</a>{% endfor %}
 </nav>

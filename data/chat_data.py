@@ -247,6 +247,8 @@ def new_state():
 
 
 def say(state, who, text, refs=None):
+    if who == "assistant":
+        text = privacy.mask_text(text)  # privacy mode: the answer may carry figures; they show as stars
     state["hist"].append({"who": who, "text": str(text), "refs": list(refs or [])[:6]})
     del state["hist"][:-HIST_MAX]
 
@@ -322,7 +324,7 @@ def message(state, user, today, text, ready):
     say(state, "user", text)
     if howto(state, text, ready):
         return
-    if privacy.active():  # privacy mode (privacy.py): money and birthday answers wait for Easy access
+    if privacy.active() and privacy.chat_refused(text):  # privacy mode: birthdays wait for Easy access; figures show as stars
         say(state, "assistant", privacy.CHAT_REFUSED)
         return
     if ready:
@@ -343,9 +345,6 @@ def chip(state, user, today, snap, key, ready):
     if text is None or key == "connect":
         return False
     say(state, "user", text)
-    if privacy.active() and key != "howto":
-        say(state, "assistant", privacy.CHAT_REFUSED)
-        return True
     if key == "due":
         say(state, "assistant", due_week(today), due_week_refs(user, today, snap["items"]))
     elif key == "owe":
