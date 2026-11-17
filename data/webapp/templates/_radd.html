@@ -41,11 +41,11 @@
   <label>Kind<select name="category" data-newkind><option value="">no kind</option>{% for c in ch.event_categories %}<option value="{{ c }}" {{ 'selected' if (v.category or 'General') == c }}>{{ c }}</option>{% endfor %}<option value="__new">Other: type my own ...</option></select></label>
   <label>Your own kind (if "Other")<input name="category_new" maxlength="30" placeholder="Book club" value=""></label>
   <label>For<select name="who"><option value="household">the whole family</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }} only</option>{% endfor %}</select></label>
-  <label class="check"><input type="checkbox" name="adults_only" value="1" {{ 'checked' if v.adults_only }}> Adults only (not on a child's page, the wall or a child's phone)</label>
   <label>Day<input name="date" type="date" min="2000-01-01" max="2100-12-31" required value="{{ v.date or ch.today }}"></label>
   <label>Starts (optional)<input name="start_time" type="time" value="{{ v.start_time }}"></label>
   <label>Ends (optional)<input name="end_time" type="time" value="{{ v.end_time }}"></label>
   <label>Repeats<select name="repeats"><option value="once">once</option><option value="yearly" {{ 'selected' if v.repeats == 'yearly' }}>every year on this day</option></select></label>
+  <label class="check"><input type="checkbox" name="adults_only" value="1" {{ 'checked' if v.adults_only }}> Adults only (not on a child's page, the wall or a child's phone)</label>
   <p class="muted small">A meeting, a volunteer shift, a dinner, a yearly date. A doctor or dentist visit goes under Health; a class every week under Classes; a holiday, festival or school day off is the next button.</p>
 {% elif add.table == 'vaccinations' %}
   <label>For<select name="who" required><option value="">pick</option>{% for p in ch.people %}<option value="{{ p }}" {{ 'selected' if v.who == p }}>{{ p }}</option>{% endfor %}</select></label>
