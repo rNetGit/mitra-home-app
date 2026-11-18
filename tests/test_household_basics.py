@@ -29,3 +29,27 @@ def test_the_first_run_answers_can_be_corrected_later(root, modules):
     assert "household_basics_set" in audit and "Khan" not in audit
     ea.household_basics_set(ADULT, "Khan", "US", "")
     assert "tenure" not in read_family(root).get("household", {})
+
+
+def test_the_settings_card_shows_and_saves_the_answers(root, modules):
+    import re
+
+    from starlette.testclient import TestClient
+    auth, config = modules("auth"), modules("config")
+    app_mod, sessions = modules("webapp.app"), modules("webapp.sessions")
+    sessions.clear()
+    auth.THROTTLE.unlink(missing_ok=True)
+    fam = dict(config.family())
+    fam["dashboard_users"] = [{"name": "Ann", "role": "adult", "pin_hash": auth.hash_pin("1234")}]
+    config.write_json(root / "config" / "family.json", fam)
+    c = TestClient(app_mod.app, base_url="http://127.0.0.1:8601", follow_redirects=False)
+    c.post("/login", data={"name": "Ann", "pin": "1234"})
+    page = c.get("/settings?group=household").text
+    assert "Your answers" in page and 'name="family_name"' in page and 'name="tenure"' in page
+    tok = re.search(r'name="csrf-token" content="([^"]+)"', c.get("/").text).group(1)
+    r = c.post("/settings/basics", data={"family_name": "Rahman", "country": "US", "tenure": "own"},
+               headers={"X-CSRF-Token": tok, "HX-Request": "true"})
+    assert r.status_code in (200, 204, 303), r.text[:300]
+    assert read_family(root)["family_name"] == "Rahman"
+    assert "Rahman" in c.get("/settings?group=household").text
+    sessions.clear()
