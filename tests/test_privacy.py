@@ -154,8 +154,10 @@ def test_downloads_and_chat_wait_for_easy_access(world):
     assert c.get("/brief/doc/weekly_digest").status_code == 403
     assert c.get("/brief/doc/emergency").status_code != 403, "the emergency sheet has no figures"
     tok = _token(c)
+    c.post("/chat/say", data={"text": "When is the secret birthday?"}, headers={"X-CSRF-Token": tok})
+    assert "Privacy mode is on" in c.get("/chat").text, "a birthday question waits for Easy access"
     c.post("/chat/say", data={"text": "How big is the secret fund?"}, headers={"X-CSRF-Token": tok})
-    assert "Privacy mode is on" in c.get("/chat").text
+    assert "I found nothing" in c.get("/chat").text, "any other question is answered, not refused"
     _toggle(c, False)
     assert c.get("/money/download?part=ledger").status_code == 200
     # turning it back on clears the conversation
@@ -212,3 +214,21 @@ def test_setup_member_rows_hide_saved_birthdays_and_keep_them(world, modules):
 
 def _people(sd, saved):
     return next(x for x in sd.view({"members": saved}, 1)["parts"] if x["name"] == "People")
+
+
+def test_chat_answers_show_figures_as_stars_and_toggle_is_on_money(world, modules):
+    p, cd = modules("privacy"), modules("chat_data")
+    tok = p.set_current(True)
+    try:
+        st = cd.new_state()
+        cd.say(st, "assistant", "You paid $1,200.50 for rent on Friday.")
+        assert st["hist"][-1]["text"] == "You paid " + "\\*" * 5 + " for rent on Friday."
+        assert p.chat_refused("when is Sam's birthday?") and not p.chat_refused("what do we owe?")
+    finally:
+        p.reset(tok)
+    st = cd.new_state()
+    cd.say(st, "assistant", "You paid $1,200.50")
+    assert "$1,200.50" in st["hist"][-1]["text"], "privacy off: unchanged"
+    c = _login(world)
+    html = c.get("/money").text
+    assert 'hx-post="/privacy"' in html and "Easy access: show figures" in html

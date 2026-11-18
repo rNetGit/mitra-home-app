@@ -12,8 +12,8 @@ Masked: net worth and the "what you have / owe" figures, account balances and gr
 values, home and car equity, the Money Overview / This month / Statement / Trends / Home costs figures, budget and goal
 bars, the Today money card, and dates of birth (Family, Records). Not masked: the amount on one transaction line (the
 Ledger, an account's lines, a month's charges), the wall's own PIN-gated Money screen, and the phone API (a phone has
-its own scopes). Chat answers about money, the Ledger / tax / year-end downloads and the Money > Look back files
-wait until privacy is off.
+its own scopes). Chat answers money questions with stars for every figure and leaves birthday questions until privacy is off; the Ledger /
+tax / year-end downloads and the Money > Look back files wait until privacy is off.
 
 Never use the masks for text that is stored or sent anywhere: they are for pages only. Outside a web request the flag
 is off, so the briefs, reports, bots and the command line are unchanged.
@@ -33,8 +33,15 @@ HIDDEN_FIELDS = {"birth month day", "birth year", "birthday", "born", "balance",
 
 
 DOWNLOAD_REFUSED = "Privacy mode is on, and this document lists real figures. Turn on Easy access in your user menu first."
-CHAT_REFUSED = ("Privacy mode is on, so I will not answer questions about money or birthdays. Turn on Easy access in your "
-                "user menu (your name, bottom left on a PC or top right on a phone), then ask again.")
+CHAT_REFUSED = ("Privacy mode is on, so I leave birthdays and birth dates out. Turn on Easy access (top of the Money page, or "
+                "the bar at the top of any page), then ask again.")
+_BIRTH = re.compile(r"\b(birthdays?|birth ?dates?|dates? of birth|dob|born|how old)\b", re.I)
+
+
+def chat_refused(text):
+    """Does this chat question ask for a date of birth? Those wait for Easy access; everything else is answered, with every
+    money figure in the answer shown as stars."""
+    return bool(_BIRTH.search(text or ""))
 MONEY_DOCS = ("this_week", "weekly_digest", "family_meeting")  # the emergency sheet has no figures
 
 

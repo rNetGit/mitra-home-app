@@ -22,7 +22,6 @@
 <body class="{{ 'has-bnav' if adult }}">
 {% macro more_items(skip=()) %}
         {% for key, label in more if key not in skip %}<a href="/{{ key }}" {% if active == key %}class="on" aria-current="page"{% endif %}>{{ label }}</a>{% endfor %}
-        {% if can_private %}<button type="button" class="ghost" hx-post="/privacy" hx-vals='{"on": "{{ 0 if private else 1 }}"}' title="Privacy mode hides money totals, balances and birthdays"{% if private %} aria-pressed="true"{% endif %}>{{ 'Easy access: show figures' if private else 'Privacy mode: hide figures' }}</button>{% endif %}
         {% if help_key %}<button type="button" class="ghost" hx-get="/help/panel?key={{ help_key }}" hx-target="#helpp" hx-swap="innerHTML">Help on this page</button>{% endif %}
         <button type="button" class="ghost" data-theme-toggle data-mode="{{ theme }}">{{ 'Light mode' if theme == 'dark' else 'Dark mode' }}</button>
         {% if signed_in %}<button type="button" class="ghost" hx-post="/logout">Log out{% if user.name %} ({{ user.name }}){% endif %}</button>{% endif %}
