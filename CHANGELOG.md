@@ -3,6 +3,9 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
+## Unreleased
+- New: **Add event button on the Calendar.** Next to Manage calendar, it opens Manage calendar with the "Add an event or a yearly date" form already open.
+
 ## 0.152.0
 Migration 072 (events: kind, person, adults only).
 - Changed: **Privacy mode is one tap away on the Money page.** The button at the top right of Money ("Easy access: show figures" / "Privacy mode: hide figures") switches it for this sign-in; it is gone from the More menu (the bar at the top of every page still has Easy access).
