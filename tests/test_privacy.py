@@ -222,7 +222,7 @@ def test_chat_answers_show_figures_as_stars_and_toggle_is_on_money(world, module
     try:
         st = cd.new_state()
         cd.say(st, "assistant", "You paid $1,200.50 for rent on Friday.")
-        assert st["hist"][-1]["text"] == f"You paid {STARS} for rent on Friday."
+        assert st["hist"][-1]["text"] == "You paid " + "\\*" * 5 + " for rent on Friday."
         assert p.chat_refused("when is Sam's birthday?") and not p.chat_refused("what do we owe?")
     finally:
         p.reset(tok)

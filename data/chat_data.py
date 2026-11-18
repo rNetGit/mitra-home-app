@@ -249,6 +249,8 @@ def new_state():
 def say(state, who, text, refs=None):
     if who == "assistant":
         text = privacy.mask_text(text)  # privacy mode: the answer may carry figures; they show as stars
+        if privacy.active():
+            text = text.replace(privacy.STARS, "\\*" * len(privacy.STARS))  # chat text is markdown: keep the stars literal
     state["hist"].append({"who": who, "text": str(text), "refs": list(refs or [])[:6]})
     del state["hist"][:-HIST_MAX]
 
