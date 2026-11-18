@@ -77,7 +77,7 @@ def household(today):
     try:
         con = _ro()
     except sqlite3.Error:
-        return {"rows": [], "pct": 0, "next": None, "paper_names": ""}
+        return {"rows": [], "pct": 0, "next": None, "paper_names": "", "basics": basics()}
     try:
         rows = profile_gaps.meter(con, today)
         pct = profile_gaps.overall(con, today)
@@ -87,7 +87,28 @@ def household(today):
         con.close()
     nxt = next((r for r in rows if r["next"]), None)
     return {"rows": rows, "pct": pct, "next": nxt["label"] if nxt else None,
-            "paper_names": "\n".join((config.family().get("privacy") or {}).get("paper_names") or [])}
+            "paper_names": "\n".join((config.family().get("privacy") or {}).get("paper_names") or []),
+            "basics": basics()}
+
+
+def basics():
+    """The first-run answers shown (and editable) on the Household profile page."""
+    import country as C
+    fam = config.family()
+    code = C.normalize(fam.get("country") or "US")
+    reg = fam.get("region") or {}
+    return {"family_name": fam.get("family_name") or "", "country": code,
+            "countries": [(c, (C.load(c) or {}).get("name") or c) for c in C.codes()],
+            "tenure": (fam.get("household") or {}).get("tenure") or "",
+            "area": ", ".join(x for x in (reg.get("place"), reg.get("state"), reg.get("zip")) if x),
+            "traditions": ", ".join((fam.get("traditions") or [])[:6]),
+            "people": len(config.members())}
+
+
+def basics_save(user, d):
+    import edit_actions as ea
+    return ea.household_basics_set(user, str(d.get("family_name", "")), str(d.get("country", "")), str(d.get("tenure", "")))
+
 
 
 def answer_next(user, today):

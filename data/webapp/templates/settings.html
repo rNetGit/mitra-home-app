@@ -65,6 +65,22 @@
 
 {% elif group == 'household' %}
 {{ sp('profile') }}
+{% set b = h.basics %}
+<section class="card" id="basics"><h2>Your answers</h2>
+  <p class="muted small">What you told Mitra Home when you set it up. Change any of it here; nothing is asked again.</p>
+  <form class="nform" hx-post="/settings/basics" hx-disabled-elt="find button">
+    <label>Family name<input name="family_name" maxlength="120" required value="{{ b.family_name }}"></label>
+    <label>Country<select name="country">{% for c, n in b.countries %}<option value="{{ c }}" {{ 'selected' if c == b.country }}>{{ n }}</option>{% endfor %}</select></label>
+    <label>Home<select name="tenure"><option value="">Not said</option><option value="own" {{ 'selected' if b.tenure == 'own' }}>We own</option><option value="rent" {{ 'selected' if b.tenure == 'rent' }}>We rent</option></select></label>
+    <button class="btn" type="submit">Save</button>
+  </form>
+  <p class="muted small">Changing the country switches the public holidays and clears the city, state and ZIP code.</p>
+  <ul class="plain small">
+    <li>Home area: {{ b.area or 'not set' }} · <a href="/family/house">change</a></li>
+    <li>People: {{ b.people }} · <a href="/family?who=Everyone">edit on the Family page</a></li>
+    <li>Traditions: {{ b.traditions or 'none' }} · <a href="/settings?group=household#traditions">change</a></li>
+  </ul>
+</section>
 <section class="card"><h2>How complete is your profile</h2>
   <p><b>{{ h.pct }}%</b> filled in</p>
   {% if h['rows'] %}

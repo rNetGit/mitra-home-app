@@ -79,6 +79,7 @@ from edit_family import (  # noqa: E402,F401
     event_move,
     event_update,
     home_area_set,
+    household_basics_set,
     household_set,
     emergency_where_set,
     life_add,

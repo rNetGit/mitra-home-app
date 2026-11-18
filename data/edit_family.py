@@ -714,6 +714,44 @@ def household_set(actor, field, value):
     return {"own": "Saved: you own your home.", "rent": "Saved: you rent your home."}.get(value, "Saved.")
 
 
+@edits
+def household_basics_set(actor, family_name, country, tenure):
+    """The first-run answers that can be corrected later (Settings > Household profile): family name, country, own or
+    rent. A new country clears the city / state / ZIP (their shape differs by country); the holidays follow the country
+    on their own. Logged by field name."""
+    import country as C
+    _adult(actor)
+    family_name = _clean(v.text(120), family_name, "family name")
+    code = C.normalize(country or "US")
+    if code not in C.codes():
+        raise EditError("country: choose one from the list")
+    tenure = _opt(v.one_of(list(HOUSEHOLD["tenure"])), tenure, "own or rent") or ""
+    changed = []
+    with config.family_edit() as data:
+        if (data.get("family_name") or "") != family_name:
+            data["family_name"] = family_name
+            changed.append("family_name")
+        if C.normalize(data.get("country") or "US") != code:
+            data["country"] = code
+            reg = dict(data.get("region") or {})
+            reg.update(state="", zip="")
+            data["region"] = reg
+            changed.append("country")
+        hh = dict(data.get("household") or {})
+        if (hh.get("tenure") or "") != tenure:
+            if tenure:
+                hh["tenure"] = tenure
+            else:
+                hh.pop("tenure", None)
+            data["household"] = hh
+            changed.append("tenure")
+    _log(actor, "household_basics_set", "fields=" + (",".join(changed) or "none"))
+    if not changed:
+        return "Nothing changed."
+    note = " The state and ZIP code were cleared: add them again under Family > House." if "country" in changed else ""
+    return "Saved." + note
+
+
 _NOT_SECRET = re.compile(r"\b(password|passcode|pin)\s*(is|=|:)|\d{8,}", re.I)
 
 

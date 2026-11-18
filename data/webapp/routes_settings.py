@@ -184,6 +184,15 @@ async def settings_next(request: Request):
     return await settings_go(request, ok, msg, "household")
 
 
+@router.post("/settings/basics")
+async def settings_basics(request: Request):
+    denied = A.need_adult(request)
+    if denied:
+        return denied
+    ok, msg = await run_in_threadpool(settings_data.basics_save, A.current_user(request), await A.form(request))
+    return await settings_go(request, ok, msg, "household")
+
+
 @router.post("/settings/papers")
 async def settings_papers(request: Request):
     denied = A.need_adult(request)
