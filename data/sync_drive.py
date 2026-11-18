@@ -96,6 +96,7 @@ CSS = ("@page{size:95mm 180mm;margin:5mm}"
        ".card.bad{border-left-color:#c0392b;background:#fdf1f0}"
        ".top{display:flex;justify-content:space-between;gap:8px;font-weight:600}"
        ".amt{white-space:nowrap}.meta{font-size:9.5pt;color:#555;margin-top:1px}")
+PDF_WAIT_SECONDS = 30  # how long to wait for Edge to put the PDF on disk after it returns
 
 
 def _cards(m):
@@ -165,6 +166,15 @@ def md_to_pdf(md: Path, pdf: Path):
         subprocess.run([EDGE, "--headless", "--disable-gpu", "--no-pdf-header-footer", f"--user-data-dir={td}",
                         f"--print-to-pdf={pdf}", h.as_uri()],
                        check=True, timeout=90, capture_output=True)
+        # newer Edge versions return before the PDF is on disk (it appears a few seconds later): wait for it
+        waited, last = 0.0, -1
+        while waited < PDF_WAIT_SECONDS:
+            size = pdf.stat().st_size if pdf.exists() else 0
+            if size and size == last:  # there, and no longer growing
+                break
+            last = size
+            time.sleep(0.5)
+            waited += 0.5
     if not pdf.exists() or not pdf.stat().st_size:
         raise RuntimeError("Edge finished but wrote no PDF")
 
