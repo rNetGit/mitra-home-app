@@ -3,9 +3,11 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
-## Unreleased
+## 0.153.0
+No database changes.
 - New: **Scan from a scanner on your home network.** Add > Scan with a scanner finds scanners that support AirScan / Mopria / eSCL (or takes the address you type), then Scan puts each page, from the glass or the feeder, in the Inbox to be filed like any other paper. Only an address on your own network is used; nothing goes out to the internet.
 - New: **Add event button on the Calendar.** Next to Manage calendar, it opens Manage calendar with the "Add an event or a yearly date" form already open.
+- Fixed: **Drive briefs are now PDFs on Windows PCs with the newest Edge.** Edge answers before the PDF is on disk, so the brief stayed a .md; the push now waits up to 30 seconds for the file. Only matters with the Google Drive phone folder.
 
 ## 0.152.0
 Migration 072 (events: kind, person, adults only).
