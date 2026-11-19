@@ -121,6 +121,13 @@ def test_built_in_holidays_are_read_only_rows(web, modules):  # noqa: F811
     assert row and "Edit" not in row.group(0) and "Remove" not in row.group(0)
 
 
+def test_calendar_add_event_button_opens_the_event_form(web):  # noqa: F811
+    c, _, _ = web
+    _login(c)
+    assert 'href="/calendar/manage#add-events"' in c.get("/calendar").text
+    assert 'id="add-events"' in c.get("/calendar/manage").text, "the link's target must exist"
+
+
 # ---- chips on the calendar link to their record ------------------------------------------------------------------
 def test_calendar_chips_link_to_their_records(web, modules):  # noqa: F811
     c, _, _ = web

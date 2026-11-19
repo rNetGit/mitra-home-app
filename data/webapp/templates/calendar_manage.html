@@ -7,7 +7,7 @@
 <section class="card" id="cm-add">
   <h2>Add</h2>
   {% for add in adds %}
-  <details class="more-form"><summary class="btn alt">{{ add.title }}</summary>
+  <details class="more-form" id="add-{{ add.table }}"><summary class="btn alt">{{ add.title }}</summary>
     <div id="radd-{{ add.table }}">{% include "_radd.html" %}</div>
   </details>
   {% endfor %}
