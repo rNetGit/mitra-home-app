@@ -1162,6 +1162,7 @@ ADD_TILES = [("Person or pet", "/records?domain=people&section=people#add-member
              ("Card for the wallet", "/wallet#wadd", "card"),
              ("Dates from a photo", "/add/photo?kind=dates", "calendar"),
              ("Recipe from a photo", "/add/photo?kind=recipe", "brief"),
+             ("Scan with a scanner", "/add/scanner", "card"),
              ("Tell Chat", "/chat", "chat")]
 
 
@@ -1805,7 +1806,7 @@ def healthz():
 
 # The settings / setup and phone API routes live in routes_settings.py and routes_phone.py (audit A7); they read this
 # module's helpers at call time. Included last so the route order of what stays here is unchanged.
-from webapp import routes_family, routes_ledger, routes_phone, routes_photo, routes_rows, routes_settings, routes_wall  # noqa: E402
+from webapp import routes_family, routes_ledger, routes_phone, routes_photo, routes_rows, routes_scanner, routes_settings, routes_wall  # noqa: E402
 from webapp import routes_wall_api  # noqa: E402
 
 app.include_router(routes_settings.router)
@@ -1816,3 +1817,4 @@ app.include_router(routes_family.router)
 app.include_router(routes_wall.router)
 app.include_router(routes_wall_api.router)
 app.include_router(routes_photo.router)
+app.include_router(routes_scanner.router)

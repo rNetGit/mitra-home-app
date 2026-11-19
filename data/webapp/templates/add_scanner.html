@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Scan from a scanner · {{ brand }}{% endblock %}
+{% block main %}
+<header class="head"><div><h1>Add</h1><p class="sub">Scan from a scanner on your home network. Each page goes into the Inbox and is filed like any other paper.</p></div>
+  <a class="btn alt" href="/add">Back to Add</a></header>
+{% if flash %}<p class="{{ 'notice' if flash[0] else 'alert' }}" role="status">{{ flash[1] }}</p>{% endif %}
+{% if sc %}
+<section class="card" id="scan-now">
+  <h2>{{ sc.name }}</h2>
+  <p class="muted small">{{ sc.host }}. Put the paper on the glass, or in the feeder, then press Scan. A scan takes up to a minute.</p>
+  <form class="nform" hx-post="/add/scanner/scan" hx-disabled-elt="find button" hx-indicator="#scan-wait">
+    <label>From<select name="source"><option value="glass">The glass (one page)</option><option value="feeder">The feeder (every sheet)</option></select></label>
+    <button class="btn" type="submit">Scan</button> <span id="scan-wait" class="htmx-indicator muted">Scanning, please wait...</span>
+  </form>
+  <form hx-post="/add/scanner/forget"><button class="btn alt" type="submit">Use a different scanner</button></form>
+</section>
+{% else %}
+<section class="card" id="scan-find">
+  <h2>Find your scanner</h2>
+  <p class="muted small">Works with scanners that support AirScan, Mopria or eSCL (most from 2016 on). Your PC only talks to a scanner on this home network.</p>
+  <form hx-post="/add/scanner/find"><button class="btn" type="submit">Look for scanners</button></form>
+  {% if found %}
+  <form class="nform" hx-post="/add/scanner/use">
+    {% for s in found %}<label class="check"><input type="radio" name="pick" value="{{ loop.index0 }}"{{ ' checked' if loop.first }}> {{ s.name }} <span class="muted small">{{ s.host }}</span></label>{% endfor %}
+    <button class="btn" type="submit">Use this scanner</button>
+  </form>
+  {% endif %}
+  <details class="more-form"><summary class="btn alt">Type its address instead</summary>
+    <form class="nform" hx-post="/add/scanner/use">
+      <label>Address<input name="host" maxlength="100" placeholder="192.168.1.20" required></label>
+      <label class="check"><input type="checkbox" name="tls" value="1"> Secure (https)</label>
+      <button class="btn" type="submit">Check and use</button>
+    </form>
+  </details>
+</section>
+{% endif %}
+{% endblock %}

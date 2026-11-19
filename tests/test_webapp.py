@@ -392,7 +392,7 @@ def test_inbox_needs_an_adult_and_a_token(web):
     r = c.get("/add?view=files")
     assert r.status_code == 200 and "Drop files here" in r.text and "<h1>Add</h1>" in r.text
     tiles = r.text.split('class="addtiles"', 1)[1].split("</nav>", 1)[0]
-    assert tiles.count('class="addtile"') == 11 and 'href="/records?domain=people&amp;section=people#add-members"' in tiles
+    assert tiles.count('class="addtile"') == 12 and 'href="/records?domain=people&amp;section=people#add-members"' in tiles
     assert 'id="add-members"' in c.get("/records?domain=people&section=people").text, "the tile opens that form"
     assert c.get("/inbox/progress").status_code == 200
     for v in ("all", "files", "money", "family", "decisions", "questions", "nonsense"):

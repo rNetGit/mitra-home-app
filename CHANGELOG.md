@@ -4,6 +4,7 @@ Format: newest first. Each release lists what changed for families and anything 
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
 ## Unreleased
+- New: **Scan from a scanner on your home network.** Add > Scan with a scanner finds scanners that support AirScan / Mopria / eSCL (or takes the address you type), then Scan puts each page, from the glass or the feeder, in the Inbox to be filed like any other paper. Only an address on your own network is used; nothing goes out to the internet.
 - New: **Add event button on the Calendar.** Next to Manage calendar, it opens Manage calendar with the "Add an event or a yearly date" form already open.
 
 ## 0.152.0
