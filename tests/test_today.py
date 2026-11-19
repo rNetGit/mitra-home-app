@@ -183,7 +183,7 @@ def test_today_first_needs_you_leads_with_counts_and_done_paid_on_the_rows(web, 
     _sql(modules, "INSERT INTO life_items(domain, member, title, due_date, status) VALUES ('school',?,'Zebra trip form',?,'open')",
          name, (today - dt.timedelta(days=5)).isoformat())
     page = c.get("/").text
-    assert page.index('id="h-late"') < page.index('id="h-today"') < page.index('aria-label="Money, house and renewals"')
+    assert page.index('id="h-now"') < page.index('id="h-today"') < page.index('aria-label="Money, house and renewals"') < page.index('id="h-late"'),         "Needs you now leads, the full list folds below the side tiles"
     assert "Zebra trip form" in page and 'class="story deck' not in page, "the old day card is gone"
     n = int(re.search(r'Late <span class="cnt">(\d+)</span>', page).group(1))
     assert n >= 2, "the count in the heading"
@@ -270,6 +270,29 @@ def test_today_folds_later_and_documents_and_family_cards(web, modules):
     assert "Zebra <b>form" not in fam and "Zebra <b>form" not in body
 
 
+def test_focus_groups_overdue_bills_and_keeps_only_what_is_critical(td):
+    """Today's top: overdue bills as one row, then expired papers, critical kinds, long-late jobs; at most 5. Chores,
+    seasonal jobs and subscription renewals stay on the full list."""
+    needs = [row(-3, "Bill", "Water", amount=40.0), row(-10, "Bill", "Power", amount=60.0),
+             row(-38, "Spike", "Price change: Power", amount=202.34),
+             row(-36, "ID", "Mateo passport EXPIRED"), row(-20, "Medical", "Tdap booster (Sofia)"),
+             row(-14, "Chore", "Take out recycling (Mateo)"), row(-19, "Seasonal", "Flu shots"),
+             row(-13, "Renewal", "Subscription: Netflix", ref=("subscriptions", 1)), row(-2, "School", "Field-trip form")]
+    v = td.assemble(needs, [row(1, "Event", "Board meeting 17:30"), row(4, "Appointment", "Eye exam 11:00 (Marcus)")], T, NAMES)
+    f = td.focus(v, T)
+    money = f["rows"][0]
+    assert money["group"] == "bills" and money["title"] == "2 bills overdue · 1 price change" and money["amount"] == 100.0,         "a price change folds into the bills row; its amount is the bill's, not counted twice"
+    assert money["pill"] == "Overdue 38d" and money["n"] == 3
+    assert [r["title"] for r in f["rows"][1:]] == ["Passport EXPIRED", "Tdap booster", "Flu shots"],         "expired first, then a critical kind, then a job more than 14 days late"
+    assert f["more"] == len(v["needs"]) - 6, "2 bills + 1 price change + 3 rows covered; the rest is counted for the full list"
+    assert [r["title"] for r in f["coming"]] == ["Board meeting 17:30", "Eye exam 11:00"]
+    one = td.focus(td.assemble([row(-3, "Bill", "Water", amount=40.0)], [], T, NAMES), T)
+    assert "group" not in one["rows"][0] and one["more"] == 0, "a single overdue bill keeps its own Paid button"
+    alone = td.focus(td.assemble([row(-5, "Spike", "Price change: Power")], [], T, NAMES), T)
+    assert alone["rows"][0]["kind"] == "Spike" and alone["more"] == 0, "a lone price change keeps its own row"
+    assert td.focus(td.assemble([], [], T, NAMES), T)["rows"] == []
+
+
 def _said(lines):
     return " ".join("".join(t for t, _ in line) for line in lines)
 
@@ -299,7 +322,7 @@ def test_today_shows_the_brief_and_the_ask_bar(web):
     c = web
     c.post("/login", data={"name": "Ann", "pin": "1234"})
     page = c.get("/").text
-    assert 'class="brief"' in page and "Mitra noticed" in page and 'id="askq"' in page
+    assert 'class="brief bfold"' in page and "Needs you now" in page and 'id="askq"' in page
     assert 'href="/chat">Chat</a>' not in page, "the Ask Mitra bar took over the Chat button"
     assert 'id="askq"' not in c.get("/chat").text, "Chat has its own box"
 

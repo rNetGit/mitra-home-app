@@ -259,10 +259,65 @@ def summary(ctx, who=""):
             "on_today": len(v["today"]), "money": v["money"]}
 
 
+# ---- Today's focus: the few things that matter now; the full list folds away below -----------------------------
+FOCUS_CAP, COMING_CAP, DUE_CAP = 5, 4, 3
+LONG_LATE = 14  # days late before an ordinary job counts as needing someone now
+CRITICAL = {"ID", "Renewal", "Insurance", "Medical", "Health", "Vaccine", "Legal", "Cancel"}
+
+
+def _critical(r, today):
+    """0 expired paper, 1 overdue / due today and of a kind that costs money, legal standing or health, 2 any job more
+    than LONG_LATE days late, None = not urgent enough for the top of Today (it stays in the full list)."""
+    if r["sev"] == 0:
+        return 0
+    if r["kind"] in CRITICAL and _ref(r) != "subscriptions":
+        return 1
+    if r["sev"] == 1 and (today - r["date"]).days > LONG_LATE:
+        return 2
+    return None
+
+
+def focus(v, today):
+    """{rows, more, coming, coming_more, due}: Needs you now = overdue bills and bill price changes as ONE row (the
+    Bills page has the detail), then expired papers, critical kinds and long-late jobs, at most FOCUS_CAP; `more` = the
+    jobs not covered there. Coming up = the timed things of today and the week, at most COMING_CAP. Due = house and
+    renewals ahead, merged."""
+    jobs = v["needs"]
+    bills = [r for r in jobs if r["kind"] == "Bill" and r["sev"] <= 1]
+    spikes = [r for r in jobs if r["kind"] == "Spike"]
+    money = bills + spikes
+    rows = []
+    if len(money) > 1:
+        oldest = min(money, key=lambda r: r["date"])
+        names = list(dict.fromkeys(r["title"] for r in bills))
+        parts = [f"{len(bills)} bill{'s' if len(bills) != 1 else ''} overdue"] if bills else []
+        if spikes:
+            parts.append(f"{len(spikes)} price change{'s' if len(spikes) != 1 else ''}")
+        rows.append({"group": "bills", "title": " · ".join(parts), "n": len(money),
+                     "names": ", ".join(names[:3]) + (f" and {len(names) - 3} more" if len(names) > 3 else ""),
+                     "amount": sum(r.get("amount") or 0 for r in bills), "pill": oldest["pill"], "tone": "danger"})
+    else:
+        rows += money
+    picked = sorted([(c, r) for r in jobs if r not in money for c in [_critical(r, today)] if c is not None],
+                    key=lambda cr: (cr[0], cr[1]["date"], cr[1]["title"]))
+    rows += [r for _, r in picked][:FOCUS_CAP - len(rows)]
+    shown = len(money) + sum(1 for r in rows if not r.get("group") and r not in money)
+    timed = [r for r in v["today"] + v["week"] if r["kind"] in TIMED]
+    due, seen = [], set()
+    for r in rank(v["house"] + v["renewals"]):
+        k = (r["title"], r["date"])
+        if k not in seen:
+            seen.add(k)
+            due.append(r)
+    return {"rows": rows, "more": len(jobs) - shown, "coming": timed[:COMING_CAP],
+            "coming_more": len(v["today"]) + v["week_total"] - min(len(timed), COMING_CAP), "due": due[:DUE_CAP]}
+
+
 def today_view(ctx, who=""):
     mem, needs, coming = _load(ctx)
     who = valid_who(mem, who)
     v = assemble(needs, coming, ctx.today, [m for m, _ in mem], who or None)
+    v["focus"] = focus(v, ctx.today)
     h = dt.datetime.now().hour
     v.update(chips=chips(mem, who), names=[m for m, _ in mem], who=who,
              greeting="Good morning" if h < 12 else "Good afternoon" if h < 18 else "Good evening",
