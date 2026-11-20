@@ -3,6 +3,11 @@
 Format: newest first. Each release lists what changed for families and anything they must do. Database changes are
 additive migrations applied automatically by `python onboard.py update` (or `upgrade`).
 
+## 0.154.0
+No database changes.
+- Changed: **Today shows what needs you now, not everything at once.** The page opens with one line ("4 things need you", and how many smaller items are on the full list), then **Needs you now**: overdue bills and bill price changes as one row with **Pay** (opens Money > Bills), then expired papers, renewals, insurance, medical, health, legal and cancel items and anything more than two weeks late, at most five rows, each with Done and the ⋯ menu as before. Next to it: **Coming up** (today's and this week's appointments and events), Money, the next 7 days, the Inbox count, notices (**Heads up**, which was "Mitra noticed") and house and car dates **coming due**. Everything else is still there under **Full list** at the bottom (Late, Today, This week, Later this month), with Documents. Mitra's brief folds under the top line; the person chips are behind one **Everyone** button.
+- Changed: **Settings > About is a page of its own.** It has the version and the website, download, source code and licence links, the **Updates** card (check for updates, install, the daily look; it was Settings > Data > Updates) and **How updates work**: an update replaces the app, never your papers, settings, PINs or records; the Windows installer closes the running Mitra Home first and keeps your household folder; the first start backs up the database before changing it. The version at the foot of Settings opens it, and Today's "new version" line points there.
+
 ## 0.153.0
 No database changes.
 - New: **Scan from a scanner on your home network.** Add > Scan with a scanner finds scanners that support AirScan / Mopria / eSCL (or takes the address you type), then Scan puts each page, from the glass or the feeder, in the Inbox to be filed like any other paper. Only an address on your own network is used; nothing goes out to the internet.
