@@ -28,11 +28,12 @@ import db
 import paths
 
 GROUPS = [("household", "Household profile"), ("agent", "Home Profile"), ("connections", "Connections"), ("bank", "Bank sync"),
-          ("phones", "Phones and walls"), ("data", "Data")]
+          ("phones", "Phones and walls"), ("data", "Data"), ("about", "About")]
 # The pills: Phones is a part of Connections (a card there opens it) and Data is a lane on the Settings home; both still open
 # by their own address.
 PILLS = [("household", "Household profile"), ("agent", "Home Profile")]  # the chips on those two pages; the other groups have their own card on the home
-HOME_LANES = PILLS + [("phones", "Phones and walls"), ("connections", "Connections"), ("bank", "Bank sync"), ("data", "Data")]
+HOME_LANES = PILLS + [("phones", "Phones and walls"), ("connections", "Connections"), ("bank", "Bank sync"), ("data", "Data"),
+                      ("about", "About")]
 # The tabs of each group page: (key, label, advanced_only). The page shows one tab at a time (app.js [data-stab]); the
 # address keeps ?tab= so a save comes back to it. Phones and walls has its own tabs (DEVICE_TABS).
 TABS = {
@@ -42,7 +43,7 @@ TABS = {
     "connections": [("ai", "AI helper", False), ("bot", "Phone bot", False), ("google", "Google", False),
                     ("mail", "Mail folder", False), ("calendars", "Other calendars", False)],
     "data": [("health", "Health", False), ("backups", "Backups", False), ("schedule", "Runs on its own", False),
-             ("updates", "Updates", False), ("system", "This PC", False)],
+             ("system", "This PC", False)],
 }
 
 
@@ -747,7 +748,8 @@ LANES = {"household": ("Who lives here, names on papers, traditions and optional
          "connections": ("AI helper, phone bot, Google, mail folder and other calendars.", "i-plug", "g-flow"),
          "bank": ("Balances and new transactions from your banks every morning (SimpleFIN).", "i-bank", "g-over"),
          "phones": ("Pair phones on the home Wi-Fi and choose what each carries.", "i-phone", "g-trend"),
-         "data": ("Health check, data check, backups, restore, scheduled jobs and updates.", "i-data", "g-high")}
+         "data": ("Health check, data check, backups, restore and scheduled jobs.", "i-data", "g-high"),
+         "about": ("Version, updates and how they work, website, source code and licence.", "i-info", "g-cat")}
 ATTENTION_MAX = 6
 
 
@@ -769,12 +771,21 @@ def _bank_figure():
             f"Last good pull {st['last_ok'][:10]}" if st["last_ok"] else "No pull yet", "")
 
 
+def _version():
+    """This install's version for the About lane (no network call)."""
+    try:
+        import updater
+        return updater.current_version()
+    except Exception:  # noqa: BLE001 (the Settings home must still render)
+        return ""
+
+
 def _where_fix(here):
     """The page a health row's "Fix it in" text points at."""
     h = str(here or "").lower()
     for word, url in (("data check", "/settings/audit"), ("inbox", "/add"), ("bank sync", "/settings?group=bank"),
                       ("back up", "/settings?group=data&tab=backups"), ("runs on its own", "/settings?group=data&tab=schedule"),
-                      ("updates", "/settings?group=data&tab=updates"),
+                      ("updates", "/settings?group=about#data-update"),
                       ("connections", "/settings?group=connections"),
                       ("phones", "/settings?group=phones"), ("household", "/settings?group=household"),
                       ("agent", "/settings?group=agent"), ("records", "/records")):
@@ -809,6 +820,7 @@ def overview(today, groups):
         "data": (str(len(warn)) if warn else "OK", "to fix" if warn else "health check",
                  ", ".join(r["name"] for r in warn[:2]) + (" ..." if len(warn) > 2 else "") if warn else "All checks passed",
                  "bad" if warn else ""),
+        "about": (_version(), "", "Updates, website, source, licence", ""),
     }
     lanes = []
     for k, label in groups:

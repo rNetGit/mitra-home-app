@@ -1,4 +1,4 @@
-"""The daily "is there a new version?" look (Settings > Data > Updates > "Check for new versions every day").
+"""The daily "is there a new version?" look (Settings > About > Updates > "Check for new versions every day").
 
   python data/update_notice.py daily     ask GitHub once a day (the daily scheduled task calls this), quiet
   python data/update_notice.py status    print what the last look found
@@ -13,7 +13,7 @@ read of the public release list (with the read-only MITRAHOME_TOKEN while the pr
 logs/update_check.json: {checked_at, current, latest, newer, notes, last_error, last_ok, failing_since}.
 
 What it feeds, all without AI: one Inbox item "Mitra Home X is available" (proposals.py source "update": Update now
-runs the same signed update as Settings > Data > Updates, through admin_actions, adults only; Later snoozes a week),
+runs the same signed update as Settings > About > Updates, through admin_actions, adults only; Later snoozes a week),
 a short line on Today and the Brief for adults, and a health row after 7 days of failed looks (a missing or expired
 update token is the usual cause). A failed look is otherwise silent. The update itself is never started from here.
 """
@@ -41,7 +41,7 @@ def _file():
 
 
 def enabled(cfg=None):
-    """Settings > Data > Updates: "Check for new versions every day" (on unless switched off)."""
+    """Settings > About > Updates: "Check for new versions every day" (on unless switched off)."""
     cfg = config.family() if cfg is None else cfg
     return (cfg.get("updates") or {}).get("daily_check", True) is not False
 

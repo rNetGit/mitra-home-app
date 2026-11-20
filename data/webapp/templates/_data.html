@@ -81,20 +81,6 @@
 {% endif %}
 
 {% if dpart == 'updates' %}
-<section class="card"><h2>About {{ brand }}</h2><p class="muted small">Version, website, source and licence</p>
-<div id="data-about">
-  <p class="muted">{{ brand }} {{ upd.current }}. Free to use, no account, no subscription. Your records stay on this PC.</p>
-  <p class="optrow">
-    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/" target="_blank" rel="noopener noreferrer">{{ brand }} website</a>
-    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/install.html" target="_blank" rel="noopener noreferrer">Download the latest version</a>
-    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/source.html" target="_blank" rel="noopener noreferrer">Source code</a>
-  </p>
-  <p class="muted small">Licence: GNU AGPL-3.0-or-later (the file LICENSE in the app folder). Records and checklists only, not financial, tax, legal, insurance or medical advice.</p>
-</div>
-</section>
-{% endif %}
-
-{% if dpart == 'updates' %}
 <section class="card"><h2>Updates</h2><p class="muted small">Check for and install new versions</p>
 <div id="data-update">
   <p class="muted">This is {{ brand }} {{ upd.current }}.{% if upd.error %} {{ upd.error }}{% elif upd.newer %} Version {{ upd.newer }} is available.{% elif upd.checked %} Up to date.{% endif %}</p>
@@ -105,6 +91,7 @@
     <span id="upd-wait" class="setting-up muted" role="status">Updating (signed; your data is not touched, the database is backed up first)...</span>{% endif %}
   </div>
   {% if upd.container %}<p class="muted small">{{ upd.container }}</p>{% endif %}
+  <p class="muted small">What an update changes and what it keeps: <a href="#about-updates">How updates work</a> below.</p>
   <div class="job" id="upd-daily">
     <div class="job-head">
       <h3>Check for new versions every day</h3>

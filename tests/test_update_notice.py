@@ -114,7 +114,7 @@ def test_a_failure_is_silent_for_a_week_then_one_health_row(un, modules):
     assert note and note.startswith("could not look for new versions for 7 days")
     health = modules("health")
     rows = [r for r in health.checks(TODAY + dt.timedelta(days=8)) if r["name"] == "New versions"]
-    assert rows and rows[0]["status"] == "warn" and rows[0]["here"] == "Settings > Data > Updates"
+    assert rows and rows[0]["status"] == "warn" and rows[0]["here"] == "Settings > About > Updates"
     assert not [r for r in health.checks(TODAY + dt.timedelta(days=3)) if r["name"] == "New versions"]
     un.daily(TODAY + dt.timedelta(days=9), check=Fake())  # a good look clears it
     assert un.health_row(TODAY + dt.timedelta(days=30)) is None
@@ -240,9 +240,14 @@ def test_web_updates_card_switch_and_today_line(un, root, modules):
         home = c.get("/").text
         assert "1.2.0 is available." in home
         token = re.search(r'name="csrf-token" content="([^"]+)"', home).group(1)
-        page = c.get("/settings?group=data").text
+        page = c.get("/settings?group=about").text
         assert "Check for new versions every day" in page and "api.github.com" in page and "Update to 1.2.0" in page
         assert "About " in page and "data-about" in page and "rnetgit.github.io/mitra-home/install.html" in page and "rnetgit.github.io/mitra-home/source.html" in page
+        assert 'id="about-updates"' in page and "How updates work" in page and "This copy can also update itself" in page
+        assert 'href="/settings?group=about"' in c.get("/settings").text, "About has its own lane on the Settings home"
+        data_page = c.get("/settings?group=data").text
+        assert 'data-stab="updates"' not in data_page and 'id="data-update"' not in data_page and "data-about" not in data_page,             "Updates and About left Settings > Data"
+        assert "Settings &gt; About" in home, "Today's update line points at About"
         r = c.post("/settings/update", data={"op": "daily"}, headers={"X-CSRF-Token": token})  # unticked = off
         assert r.status_code == 200 and un.enabled() is False
         assert "1.2.0 is available." not in c.get("/").text
@@ -252,7 +257,7 @@ def test_web_updates_card_switch_and_today_line(un, root, modules):
         modules("proposals").sync()
         home = c.get("/").text
         assert "1.3.0 is available." in home and "site</a>" in home and "Download it from the" in home
-        page = c.get("/settings?group=data").text
+        page = c.get("/settings?group=about").text
         assert "Open the download page for 1.3.0" in page and "Update to 1.3.0" not in page
         c.post("/logout", headers={"X-CSRF-Token": token})
         c.cookies.clear()

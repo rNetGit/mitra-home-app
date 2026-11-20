@@ -1400,3 +1400,6 @@ a.ttile:hover{border-color:var(--accent)}.ttile .big{font-size:1.35rem}.ttile .b
 .av.avbill{background:var(--danger-soft);color:var(--danger);font-weight:700}
 .tall>summary .sec{margin-top:4px}
 @media (max-width:900px){.tfocus{grid-template-columns:1fr}}
+
+/* Settings > About: How updates work */
+.updsteps{margin:8px 0 12px;padding-left:1.3em;display:flex;flex-direction:column;gap:8px;line-height:1.45}
