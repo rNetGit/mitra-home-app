@@ -510,7 +510,7 @@ def privacy_default_set(user, on):
 
 
 def update_check_set(user, on):
-    """Settings > Data > Updates: "Check for new versions every day" (config updates.daily_check). Off = no network
+    """Settings > About > Updates: "Check for new versions every day" (config updates.daily_check). Off = no network
     call at all from the daily task. -> (ok, message)."""
     if not _is_adult(user):
         return False, "Only adults can change this."

@@ -300,7 +300,7 @@ def restore_live(src, name, passphrase=None, wait_pid=None, relaunch=None, by="l
         if newer:
             tmp.unlink(missing_ok=True)
             raise RuntimeError(f"That backup was made by a newer {brand.PRODUCT} ({newer}) than this PC runs. Update this "
-                               "PC first (Settings > Data > Updates), then restore. Nothing was changed.")
+                               "PC first (Settings > About > Updates), then restore. Nothing was changed.")
         import joblock
         try:
             hold = joblock.maintenance(wait_jobs=120)  # running jobs finish first; new ones skip their turn until done

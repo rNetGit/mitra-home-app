@@ -14,7 +14,7 @@ DEFAULT = "advanced"  # no setting saved = an install that predates the switch
 NEW_INSTALL = "advanced"
 # What Simple keeps (keys of webapp.app.PAGES; Today is always there) and which Settings groups it lists.
 SIMPLE_PAGES = ("family", "calendar", "wallet", "inbox", "records", "notes", "settings")
-SIMPLE_GROUPS = ("household", "agent", "phones", "connections")
+SIMPLE_GROUPS = ("household", "agent", "phones", "connections", "about")
 
 
 def get():

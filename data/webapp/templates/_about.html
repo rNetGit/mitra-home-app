@@ -1,0 +1,27 @@
+{# Settings > About (settings_data GROUPS "about"): the version, how an update works and what it keeps, the links. #}
+<section class="card" id="data-about"><h2>About {{ brand }}</h2>
+  <p class="muted">Version {{ upd.current }}. Free to use, no account, no subscription. Your records stay on this PC.</p>
+  <p class="optrow">
+    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/" target="_blank" rel="noopener noreferrer">{{ brand }} website</a>
+    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/install.html" target="_blank" rel="noopener noreferrer">Download the latest version</a>
+    <a class="btn alt" href="https://rnetgit.github.io/mitra-home/source.html" target="_blank" rel="noopener noreferrer">Source code</a>
+  </p>
+  <p class="muted small">Licence: GNU AGPL-3.0-or-later (the file LICENSE in the app folder). Records and checklists only, not financial, tax, legal, insurance or medical advice.</p>
+</section>
+
+{% set dpart = 'updates' %}{% include "_data.html" %}
+
+<section class="card" id="about-updates"><h2>How updates work</h2>
+  <p class="muted small">An update replaces the app. Your household (papers, settings, the database) lives in a folder of its own and is not touched.</p>
+  <ol class="updsteps">
+    <li><b>You hear about it.</b> Once a day {{ brand }} looks for a newer version (the switch above turns this off). A new version shows on Today and in the Inbox. Nothing installs without you.</li>
+    <li><b>You install it.</b> Download the new installer from the {{ brand }} website and run it, the same way you installed it the first time.
+      On Windows the installer closes the {{ brand }} that is running, then replaces the app files; it keeps using your household folder and does not ask for it again.
+      On a Mac, quit {{ brand }}, open the new download and drag it to Applications, replacing the old one.
+      {% if upd.newer and not upd.site and not upd.container %}This copy can also update itself with Update to {{ upd.newer }} above. It checks the release signature, keeps a copy of the old app files, and starts {{ brand }} again by itself.{% endif %}</li>
+    <li><b>The first start brings the records up to date.</b> Before any change to the database, a copy of it is saved. If that step cannot finish, {{ brand }} does not start and your records stay as they were; the copy is kept in the backups folder.</li>
+  </ol>
+  <p class="muted small">Never replaced or removed by an update: your papers (archive), the inbox, your records in the database (the first start only adds what the new version needs), settings and PINs, reports and briefs, and anything you added yourself. Old app files that a new version no longer needs are moved aside, not deleted.</p>
+  <p class="muted small">To be extra safe, back up first: <a href="/settings?group=data&amp;tab=backups">Settings &gt; Data &gt; Backups &gt; Back up now</a>.</p>
+  {% if where %}<p class="muted small">Your household folder: <span class="wpath">{{ where.rows[1].path if where.rows|length > 1 else where.db }}</span></p>{% endif %}
+</section>

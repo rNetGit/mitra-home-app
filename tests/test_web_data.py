@@ -38,11 +38,16 @@ def _page(c):
     return c.get("/settings?group=data").text
 
 
+def _about(c):
+    return c.get("/settings?group=about").text
+
+
 def test_data_group_backup_export_and_download(data, modules, monkeypatch):
     c, t, md = data
     page = _page(c)
-    for words in ("Back up now", "Restore from backup", "Runs on its own", "Check for updates", "Run full check"):
+    for words in ("Back up now", "Restore from backup", "Runs on its own", "Run full check"):
         assert words in page, words
+    assert "Check for updates" in _about(c) and "Check for updates" not in page, "updates live on Settings > About"
     assert "classic" not in page.lower()
     aa = modules("admin_actions")
     monkeypatch.setattr(aa, "backup_now", lambda user: (True, "snapshot written"))
@@ -111,7 +116,7 @@ def test_tasks_updates_and_full_check(data, modules, monkeypatch):
     upd = modules("updater")
     monkeypatch.setattr(upd, "check", lambda quiet=True: ("0.1", {"version": "9.9.9"}, True))
     _post(c, "/settings/update", t, op="check")
-    page = _page(c)
+    page = _about(c)
     assert "9.9.9 is available" in page and "Update to 9.9.9" in page
     monkeypatch.setattr(aa, "update_now", lambda user: (True, "done"))
     rb = modules("restore_backup")
@@ -184,7 +189,7 @@ def test_a_container_never_installs_an_update_from_inside(data, modules, monkeyp
     upd = modules("updater")
     monkeypatch.setattr(upd, "check", lambda quiet=True: ("0.1", {"version": "9.9.9"}, True))
     _post(c, "/settings/update", t, op="check")
-    page = _page(c)
+    page = _about(c)
     assert "9.9.9 is available" in page and "Update to 9.9.9" not in page
     assert "docker compose build" in page and "replacing the image" in page
 
@@ -194,7 +199,8 @@ def test_a_container_never_installs_an_update_from_inside(data, modules, monkeyp
     again = []
     monkeypatch.setattr(modules("restore_backup"), "start_relaunch", lambda port, lan=False: again.append(port))
     _post(c, "/settings/update", t, op="go")
-    assert "did not finish" in _page(c) and "docker compose build" in _page(c) and not again
+    page = _about(c)
+    assert "did not finish" in page and "docker compose build" in page and not again
 
 
 def test_onboard_update_refuses_in_a_container():

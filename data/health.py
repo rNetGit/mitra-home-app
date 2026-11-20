@@ -149,7 +149,7 @@ def checks(today=None):
         note = None
     if note:
         out.append(_row("New versions", "warn", note, "set MITRAHOME_TOKEN to a read-only GitHub token (it may have run out)",
-                        "Settings > Data > Updates"))
+                        "Settings > About > Updates"))
 
     # chat bots
     chat = cfg.get("chat") or {}

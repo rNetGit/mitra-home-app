@@ -605,7 +605,7 @@ def from_update(con, today):
                  {"version": a["version"], "source": "site", "fix_link": {"href": a["url"], "label": "Open the download page"}})
         return
     yield _p(f"update:{a['version']}", "update", "decision", f"{brand.PRODUCT} {a['version']} is available",
-             notes + "Update now uses the same signed update as Settings > Data > Updates: your data is not touched and "
+             notes + "Update now uses the same signed update as Settings > About > Updates: your data is not touched and "
              "the database is backed up first. Start the app again afterwards.", {"version": a["version"]})
 
 
@@ -877,7 +877,7 @@ def _handle(p, option, answer, actor, today):
         if option == "later":
             return True, "I will remind you in a week.", "snoozed", (today + dt.timedelta(days=LATER_DAYS[src])).isoformat()
         import maintenance_data
-        ok, msg = maintenance_data.update(actor)  # the Settings > Data > Updates path: admin_actions.update_now, adults
+        ok, msg = maintenance_data.update(actor)  # the Settings > About > Updates path: admin_actions.update_now, adults
         return ok, msg, "done" if ok else None, None
     return False, "I do not know how to handle that item.", None, None
 

@@ -127,6 +127,8 @@ def settings(request: Request, group: str = "", tab: str = ""):
         tab = "walls" if wpair else "phones" if pair else tab if tab in settings_data.DEVICE_TABS else "phones"
         ctx.update(ph=settings_data.phones(), local=A.is_local(request), pair=pair, wl=settings_data.walls(),
                    wpair=wpair, tab=tab, pm=settings_data.phones_mode())
+    elif g == "about":
+        ctx.update(upd=A._update_state(), where=settings_data.where())
     else:
         rows = settings_data.health(today)
         ctx.update(checks=rows, bad=[r for r in rows if r["status"] == "warn"], snaps=maintenance_data.snapshots(),
@@ -777,19 +779,19 @@ async def settings_update(request: Request):
     if op == "check":
         u = await run_in_threadpool(maintenance_data.check_update, True)
         if u["error"]:
-            return await data_go(request, False, u["error"])
-        return await data_go(request, True, f"Version {u['newer']} is available." if u["newer"] else "Up to date.")
+            return await settings_go(request, False, u["error"], "about")
+        return await settings_go(request, True, f"Version {u['newer']} is available." if u["newer"] else "Up to date.", "about")
     if op == "go":
         port = int(os.environ.get("MITRAHOME_WEB_PORT") or request.url.port or 8601)
         ok, msg = await run_in_threadpool(maintenance_data.update, A.current_user(request), port,
                                           os.environ.get("MITRAHOME_WEB_LAN") == "1")
         if not ok:
-            return await data_go(request, ok, msg)
+            return await settings_go(request, ok, msg, "about")
         maintenance_data.close_soon()  # the old code stops serving; restore_backup.py relaunch starts the new one
-        return A.page(request, "_restoring.html", msg=msg, title="Update")
+        return A.page(request, "_restoring.html", msg=msg, title="Update", back="/settings?group=about")
     if op == "daily":
         ok, msg = maintenance_data.daily_check_set(A.current_user(request), data.get("on") == "1")
-        return await data_go(request, ok, msg)
+        return await settings_go(request, ok, msg, "about")
     return PlainTextResponse("Bad request", status_code=400)
 
 
