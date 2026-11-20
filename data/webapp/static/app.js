@@ -61,6 +61,12 @@
     var d = location.hash && document.getElementById(location.hash.slice(1));
     if (d && d.tagName === 'DETAILS') { d.open = true; d.scrollIntoView({block: 'start'}); }
   })();
+  // Today's "See the full list": opens the folded list it points at (same page, so the load-time look above misses it).
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a[data-open-fold]') : null;
+    var d = a && document.getElementById((a.getAttribute('href') || '').slice(1));
+    if (d && d.tagName === 'DETAILS') { e.preventDefault(); d.open = true; d.scrollIntoView({block: 'start', behavior: 'smooth'}); }
+  });
 
   // A chip row wider than the screen (Money, Family and their parts on a phone) opens with the chosen chip in view.
   document.querySelectorAll('.mtabs, .fchips').forEach(function (row) {
